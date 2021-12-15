@@ -7,7 +7,8 @@ pub struct GameBuilder{
     turn_order:Vec<Entity>,
     active_player:Option<Entity>,
 }
-
+//Implement debug trait!
+//Implement clone trait???
 pub struct Game{
     ents:World,
     battlefield:HashSet<Entity>,
@@ -30,14 +31,14 @@ impl GameBuilder{
     }
     //If this function fails the game is corrupted
     //Potentialy fail game creation if player can't be added?
-    pub fn add_player(&mut self,name:&str,db:&CardDB,card_names:&Vec<&String>)->Result<Entity>{
+    pub fn add_player(&mut self,name:&str,db:&CardDB,card_names:&Vec<String>)->Result<Entity>{
         let mut cards=Vec::new();
         let name=PlayerName(name.to_owned());
         let hand=Hand(HashSet::new());
         let life=Life(20);
         let player:Entity=self.ents.spawn((name,hand,life));
         for cardname in card_names{
-            let card:Entity=db.spawn_card(&mut self.ents,cardname)?;
+            let card:Entity=db.spawn_card(&mut self.ents,&cardname)?;
             self.ents.insert_one(card,Owner(player))?;
             cards.push(card);
         }
@@ -76,3 +77,14 @@ pub struct Life(i32);
 pub struct Deck(Vec<Entity>);
 #[derive(Clone,Debug)]
 pub struct Hand(HashSet<Entity>);
+
+#[derive(Clone,Copy,Debug)]
+pub struct ManaCost{
+    generic:i32,
+    white:i32,
+    blue:i32,
+    red:i32,
+    black:i32,
+    green:i32,
+}
+

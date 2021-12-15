@@ -1,6 +1,8 @@
 
-#[derive(Clone,Copy,PartialEq)]
-#[repr(u32)]
+#[derive(Clone,Copy,PartialEq,Eq,Debug,Hash)]
+#[repr(C)] //Will be needed for shenanigans to let me
+//iterate over creature subtypes
+#[allow(dead_code)]
 pub enum Subtype{
 Advisor, Aetherborn, Ally, Angel, Antelope, Ape, Archer, Archon, Army,
 Artificer, Assassin, AssemblyWorker, Atog, Aurochs, Avatar, Azra, 
