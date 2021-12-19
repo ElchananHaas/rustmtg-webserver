@@ -13,3 +13,4 @@ rand = {version="0.8.4",features = ["getrandom"]}
 rand_xoshiro = "0.6.0"
 hecs = "0.7.1"
 anyhow = "1.0.51"
+strum_macros = "0.23.1"

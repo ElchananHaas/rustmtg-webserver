@@ -2,7 +2,7 @@ use hecs::{World,Entity,EntityBuilder};
 use anyhow::{Result,bail};
 use crate::subtypes::Subtype;
 use std::collections::{HashSet,HashMap};
-
+use std::fmt;
 //It returns mut cardbuilder due to method chaining
 type Cardbuildtype=fn(&mut CardBuilder)->&mut CardBuilder;
 pub struct CardDB{
@@ -43,6 +43,7 @@ pub struct CardBuilder{
     abilities:Vec<Ability>,
     types:Types,
     subtypes:HashSet<Subtype>,
+    costs:Vec<Cost>,
 }
 impl CardBuilder{
     pub fn new()->Self{
@@ -51,7 +52,12 @@ impl CardBuilder{
             abilities:Vec::new(),
             types:Types::default(),
             subtypes:HashSet::new(),
+            costs:Vec::new(),
         }
+    }
+    pub fn cost(&mut self,cost:Cost)->&mut Self{
+        self.costs.push(cost);
+        self
     }
     pub fn pt(&mut self,power:i32,toughness:i32)->&mut Self{
         self.builder.add(PT{power:power,toughness:toughness});
@@ -111,7 +117,30 @@ pub struct PT{
     toughness:i32
 }
 #[derive(Clone,Debug)]
-pub struct Ability{
+pub struct TriggeredAbility{
+
+}
+#[derive(Clone)]
+pub struct ActivatedAbility{
+    mana_ability:bool,
+    effect:Cardbuildtype
+}
+impl fmt::Debug for ActivatedAbility{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ActivatedAbility")
+         .field("mana_ability", &self.mana_ability)
+         .finish()
+    }
+}
+#[derive(Clone,Debug)]
+pub struct StaticAbility{
+
+}
+#[derive(Clone,Debug)]
+pub enum Ability{
+    Activated(ActivatedAbility),
+    Triggered(TriggeredAbility),
+    Static(StaticAbility),
 }
 
 #[derive(Clone,Copy,Debug)]
@@ -129,4 +158,25 @@ pub struct Types{
     planeswalker:bool,
     instant:bool,
     sorcery:bool,
+}
+pub enum Cost{
+    Generic(i32),
+    White(i32),
+    Blue(i32),
+    Black(i32),
+    Red(i32),
+    Green(i32),
+    Selftap,
+}
+impl Cost{
+    //Takes in the game, the player paying the cost and a vector of 
+    //objects used to pay the cost. Returns a vector of references
+    //to the entities used to pay the costs, or an error if it could not
+    //be paid. 
+    //Also includes the source for prevention effects
+    pub fn pay(&self,game:&mut Game,source:Entity,player:Entity,payment:Vec<Entity>)->Result<Vec<Entity>>{
+        match self{
+            Generic(x)=>
+        }
+    }
 }

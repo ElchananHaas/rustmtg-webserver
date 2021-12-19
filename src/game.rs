@@ -78,13 +78,5 @@ pub struct Deck(Vec<Entity>);
 #[derive(Clone,Debug)]
 pub struct Hand(HashSet<Entity>);
 
-#[derive(Clone,Copy,Debug)]
-pub struct ManaCost{
-    generic:i32,
-    white:i32,
-    blue:i32,
-    red:i32,
-    black:i32,
-    green:i32,
-}
+
 
