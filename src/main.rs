@@ -1,10 +1,12 @@
 use actix_web::{get, web, App, HttpServer, Responder};
-use anyhow::{Result};
+use anyhow::{Result,bail};
 //use actix_files::NamedFile;
 //use actix_web::{HttpRequest, Result};
 mod game; 
-mod subtypes;
+mod types;
 mod carddb;
+mod ability;
+mod cost;
 
 #[get("/{id}/{name}/index.html")]
 async fn index(web::Path((id, name)): web::Path<(u32, String)>) -> impl Responder {
@@ -30,7 +32,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_bad_add()->Result<()> {
+    fn test_game_init()->Result<()> {
         let db=carddb::CardDB::new();
         let mut gamebuild=game::GameBuilder::new();
         let mut deck=Vec::new();

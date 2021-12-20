@@ -1,182 +1,168 @@
-use hecs::{World,Entity,EntityBuilder};
-use anyhow::{Result,bail};
-use crate::subtypes::Subtype;
-use std::collections::{HashSet,HashMap};
-use std::fmt;
+use crate::types::Subtype;
+use crate::ability::Ability;
+use crate::types::Types;
+use crate::cost::Cost;
+use crate::game::Color;
+use anyhow::{bail, Result};
+use hecs::{Entity, EntityBuilder, World};
+use std::collections::{HashMap, HashSet};
+use std::convert::TryFrom;
 //It returns mut cardbuilder due to method chaining
-type Cardbuildtype=fn(&mut CardBuilder)->&mut CardBuilder;
-pub struct CardDB{
-    builders:HashMap<String,Cardbuildtype>
+pub type Cardbuildtype = fn(&mut CardBuilder) -> &mut CardBuilder;
+pub struct CardDB {
+    builders: HashMap<String, Cardbuildtype>,
 }
 
-impl CardDB{
-    pub fn new()->Self{
-        let cards:[(String,Cardbuildtype);1]=[
-                ("Staunch Shieldmate".to_owned(), |builder: &mut CardBuilder| 
-builder.creature().pt(1,3).subtype(Subtype::Dwarf).subtype(Subtype::Soldier)  )
-            ];
-        let mut map=HashMap::<String,Cardbuildtype>::new();
-        for (name,constructor) in cards{
-            map.insert(name,constructor);
+impl CardDB {
+    pub fn new() -> Self {
+        let cards: [(String, Cardbuildtype); 1] = [(
+            "Staunch Shieldmate".to_owned(),
+            |builder: &mut CardBuilder| {
+                builder
+                    .creature()
+                    .pt(1, 3)
+                    .subtype(Subtype::Dwarf)
+                    .subtype(Subtype::Soldier)
+                    .mana_string("W")
+            },
+        )];
+        let mut map = HashMap::<String, Cardbuildtype>::new();
+        for (name, constructor) in cards {
+            map.insert(name, constructor);
         }
-        CardDB{
-            builders:map
-        }
+        CardDB { builders: map }
     }
-    pub fn spawn_card(&self,ents:&mut World,card_name:&str)->Result<Entity>{
-        match self.builders.get(card_name){
-            Some(cardmaker)=>{
-                let mut builder=CardBuilder::new();
+    pub fn spawn_card(&self, ents: &mut World, card_name: &str) -> Result<Entity> {
+        match self.builders.get(card_name) {
+            Some(cardmaker) => {
+                let mut builder = CardBuilder::new();
                 builder.name(card_name.to_owned());
                 cardmaker(&mut builder);
-                let res=ents.spawn(builder.build().build());//Two build calls
+                let res = ents.spawn(builder.build().build()); //Two build calls
                 Ok(res)
-                //because builder returns an entitybuilder, 
+                //because builder returns an entitybuilder,
                 //and builtentity has lifetime issues
             }
-            None=> bail!("Card not found")
+            None => bail!("Card not found"),
         }
     }
 }
-pub struct CardBuilder{
-    builder:EntityBuilder,
-    abilities:Vec<Ability>,
-    types:Types,
-    subtypes:HashSet<Subtype>,
-    costs:Vec<Cost>,
+pub struct CardBuilder {
+    builder: EntityBuilder,
+    abilities: Vec<Ability>,
+    types: Types,
+    subtypes: HashSet<Subtype>,
+    costs: Vec<Cost>,
 }
-impl CardBuilder{
-    pub fn new()->Self{
-        CardBuilder{
-            builder:EntityBuilder::new(),
-            abilities:Vec::new(),
-            types:Types::default(),
-            subtypes:HashSet::new(),
-            costs:Vec::new(),
+impl CardBuilder {
+    pub fn new() -> Self {
+        CardBuilder {
+            builder: EntityBuilder::new(),
+            abilities: Vec::new(),
+            types: Types::default(),
+            subtypes: HashSet::new(),
+            costs: Vec::new(),
         }
     }
-    pub fn cost(&mut self,cost:Cost)->&mut Self{
+    pub fn mana_string(&mut self,coststr:&str)-> &mut Self{
+        let mut generic:i32=0;
+        for letter in coststr.chars(){
+            if letter.is_digit(10){
+                generic*=10;
+//This should be safe bc/ these are hardcoded within the code
+                generic+=i32::try_from(letter.to_digit(10).unwrap()).unwrap();
+            }
+            if letter=='W'{
+                self.cost(Cost::Color(Color::White));
+            }
+            if letter=='U'{
+                self.cost(Cost::Color(Color::Blue));
+            }
+            if letter=='B'{
+                self.cost(Cost::Color(Color::Black));
+            }
+            if letter=='R'{
+                self.cost(Cost::Color(Color::Red));
+            }
+            if letter=='G'{
+                self.cost(Cost::Color(Color::Green));
+            }
+        }
+        for i in 0..generic{
+            self.cost(Cost::Generic);
+        }
+        self
+    }
+    pub fn cost(&mut self, cost: Cost) -> &mut Self {
         self.costs.push(cost);
         self
     }
-    pub fn pt(&mut self,power:i32,toughness:i32)->&mut Self{
-        self.builder.add(PT{power:power,toughness:toughness});
+    pub fn pt(&mut self, power: i32, toughness: i32) -> &mut Self {
+        self.builder.add(PT {
+            power: power,
+            toughness: toughness,
+        });
         self
     }
-    pub fn name(&mut self,name:String)->&mut Self{
+    pub fn name(&mut self, name: String) -> &mut Self {
         self.builder.add(CardName(name));
         self
     }
-    pub fn ability(&mut self,ability:Ability)->&mut Self{
+    pub fn ability(&mut self, ability: Ability) -> &mut Self {
         self.abilities.push(ability);
         self
     }
-    pub fn land(&mut self)->&mut Self{
-        self.types.land=true;
+    pub fn land(&mut self) -> &mut Self {
+        self.types.land = true;
         self
     }
-    pub fn creature(&mut self)->&mut Self{
-        self.types.creature=true;
+    pub fn creature(&mut self) -> &mut Self {
+        self.types.creature = true;
         self
     }
-    pub fn enchantment(&mut self)->&mut Self{
-        self.types.enchantment=true;
+    pub fn enchantment(&mut self) -> &mut Self {
+        self.types.enchantment = true;
         self
     }
-    pub fn artifact(&mut self)->&mut Self{
-        self.types.artifact=true;
+    pub fn artifact(&mut self) -> &mut Self {
+        self.types.artifact = true;
         self
     }
-    pub fn planeswalker(&mut self)->&mut Self{
-        self.types.planeswalker=true;
+    pub fn planeswalker(&mut self) -> &mut Self {
+        self.types.planeswalker = true;
         self
     }
-    pub fn instant(&mut self)->&mut Self{
-        self.types.instant=true;
+    pub fn instant(&mut self) -> &mut Self {
+        self.types.instant = true;
         self
     }
-    pub fn sorcery(&mut self)->&mut Self{
-        self.types.sorcery=true;
+    pub fn sorcery(&mut self) -> &mut Self {
+        self.types.sorcery = true;
         self
     }
-    pub fn subtype(&mut self,subtype:Subtype)->&mut Self{
+    pub fn subtype(&mut self, subtype: Subtype) -> &mut Self {
         self.subtypes.insert(subtype);
         self
     }
-    pub fn build(mut self)->EntityBuilder{
-        if !self.abilities.is_empty() {self.builder.add(self.abilities);};
-        if !self.subtypes.is_empty() {self.builder.add(self.subtypes);};
+    pub fn build(mut self) -> EntityBuilder {
+        if !self.abilities.is_empty() {
+            self.builder.add(self.abilities);
+        };
+        if !self.subtypes.is_empty() {
+            self.builder.add(self.subtypes);
+        };
+        self.builder.add(self.types);
+        if !self.costs.is_empty() {
+            self.builder.add(self.costs);
+        };
         self.builder
     }
 }
-#[derive(Clone,Debug)]
+#[derive(Clone, Debug)]
 pub struct CardName(String);
-#[derive(Copy,Clone,Debug)]
-pub struct PT{
-    power:i32,
-    toughness:i32
-}
-#[derive(Clone,Debug)]
-pub struct TriggeredAbility{
-
-}
-#[derive(Clone)]
-pub struct ActivatedAbility{
-    mana_ability:bool,
-    effect:Cardbuildtype
-}
-impl fmt::Debug for ActivatedAbility{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("ActivatedAbility")
-         .field("mana_ability", &self.mana_ability)
-         .finish()
-    }
-}
-#[derive(Clone,Debug)]
-pub struct StaticAbility{
-
-}
-#[derive(Clone,Debug)]
-pub enum Ability{
-    Activated(ActivatedAbility),
-    Triggered(TriggeredAbility),
-    Static(StaticAbility),
+#[derive(Copy, Clone, Debug)]
+pub struct PT {
+    power: i32,
+    toughness: i32,
 }
 
-#[derive(Clone,Copy,Debug)]
-pub enum KeywordAbility{
-    FirstStrike,
-    Flying,
-    Haste,
-}
-#[derive(Clone,Copy,Debug,Default)]
-pub struct Types{
-    land:bool,
-    creature:bool,
-    artifact:bool,
-    enchantment:bool,
-    planeswalker:bool,
-    instant:bool,
-    sorcery:bool,
-}
-pub enum Cost{
-    Generic(i32),
-    White(i32),
-    Blue(i32),
-    Black(i32),
-    Red(i32),
-    Green(i32),
-    Selftap,
-}
-impl Cost{
-    //Takes in the game, the player paying the cost and a vector of 
-    //objects used to pay the cost. Returns a vector of references
-    //to the entities used to pay the costs, or an error if it could not
-    //be paid. 
-    //Also includes the source for prevention effects
-    pub fn pay(&self,game:&mut Game,source:Entity,player:Entity,payment:Vec<Entity>)->Result<Vec<Entity>>{
-        match self{
-            Generic(x)=>
-        }
-    }
-}
