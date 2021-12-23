@@ -35,6 +35,6 @@ pub enum Ability {
 }
 impl Ability {
     pub fn keyword(&self) -> Option<KeywordAbility> {
-        None
+        todo!("Can't tell if ability is keyword yet!");
     }
 }

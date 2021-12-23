@@ -7,7 +7,7 @@ mod types;
 mod carddb;
 mod ability;
 mod cost;
-
+mod event;
 #[get("/{id}/{name}/index.html")]
 async fn index(web::Path((id, name)): web::Path<(u32, String)>) -> impl Responder {
     format!("Hello {}! id:{}!", name,id)
