@@ -6,7 +6,6 @@ use crate::types::Types;
 use anyhow::{bail, Result};
 use hecs::{Entity, World};
 use std::collections::HashSet;
-use std::collections::VecDeque;
 pub struct GameBuilder {
     ents: World,
     turn_order: Vec<Entity>,
@@ -22,7 +21,6 @@ pub struct Game {
     pub stack: Vec<Entity>,
     pub turn_order: Vec<Entity>,
     pub active_player: Entity,
-    event_stack: Vec<TagEvent>,
 }
 
 impl GameBuilder {
@@ -41,19 +39,25 @@ impl GameBuilder {
         db: &CardDB,
         card_names: &Vec<String>,
     ) -> Result<Entity> {
-        let mut cards = VecDeque::new();
-        let name = PlayerName(name.to_owned());
-        let hand = Hand(HashSet::new());
-        let life = Life(20);
-        let pool = ManaPool(HashSet::new());
-        let player: Entity = self.ents.spawn((name, hand, life, pool));
+        let mut cards = Vec::new();
+        let mut player = Player {
+            name: name.to_owned(),
+            hand: HashSet::new(),
+            life: 20,
+            mana_pool: HashSet::new(),
+            graveyard: Vec::new(),
+            lost: false,
+            won: false,
+            deck: Vec::new(),
+        };
+        let player: Entity = self.ents.spawn((player,));
         for cardname in card_names {
             let card: Entity = db.spawn_card(&mut self.ents, &cardname)?;
-            self.ents.insert_one(card, (Owner(player),Zone::Library))?;
-            cards.push_back(card);
+            self.ents.insert(card, (Owner(player), Zone::Library))?;
+            cards.push(card);
         }
-        let deck = Deck(cards);
-        self.ents.insert_one(player, deck)?;
+        //Now that the deck has been constructed, set the players deck
+        self.ents.get_mut::<Player>(player).unwrap().deck = cards;
         self.turn_order.push(player);
         if self.active_player.is_none() {
             self.active_player = Some(player);
@@ -82,10 +86,11 @@ impl GameBuilder {
     }
 }
 impl Game {
-    fn resolve_events(&mut self) -> Vec<EventResult> {
-        let results: Vec<EventResult> = Vec::new();
+    fn handle_event(&mut self, event: Event) -> Vec<EventResult> {
+        let mut results: Vec<EventResult> = Vec::new();
+        let mut events: Vec<TagEvent> = Vec::new();
         loop {
-            let mut event: TagEvent = match game.stack.pop() {
+            let event: TagEvent = match events.pop() {
                 Some(x) => x,
                 None => {
                     return results;
@@ -95,29 +100,101 @@ impl Game {
             //By the time the loop reaches here, the game is ready to
             //Execute the event. No more prevention/replacement effects
             match event.event {
-                Event::Draw { player, _ignore } => {
-                    if let Ok(deck) = self.ents.get::<Deck>(player) {
-                        match deck.front() {
-                            Some(card) =>{
-                                self.move_ent(card,Zone::Library,Zone::Hand);
-                            },
-                            None => self.add_event(Lose{player:player}),
+                Event::Tap { ent } => {
+                    if self.battlefield.contains(&ent) && self.ents.get::<Tapped>(ent).is_err() {
+                        if self.ents.insert_one(ent, Tapped()).is_ok() {
+                            results.push(EventResult::Tap(ent));
                         }
+                    }
+                }
+                Event::Draw { player, controller } => {
+                    if let Ok(pl) = self.ents.get::<Player>(player) {
+                        match pl.deck.last() {
+                            Some(card) => {
+                                Game::add_event(
+                                    &mut events,
+                                    Event::MoveZones {
+                                        ent: *card,
+                                        origin: Zone::Library,
+                                        dest: Zone::Hand,
+                                    },
+                                );
+                                results.push(EventResult::Draw(*card));
+                            }
+                            None => Game::add_event(&mut events, Event::Lose { player: player }),
+                        }
+                    }
+                }
+                Event::Cast { player, spell } => {
+                    //The spell has already had costs/modes chosen.
+                    //this is just handling triggered abilities
+                    //So there is nothing to do here.
+                    //Spells are handled differently from other actions
+                    //Because of the rules complexity
+                }
+                Event::Activate { player, ability } => {
+                    //Similar to spell casting
+                }
+                Event::Lose { player } => {
+                    if let Ok(mut pl) = self.ents.get_mut::<Player>(player) {
+                        (*pl).lost = true;
+                    }
+                }
+                Event::MoveZones { ent, origin, dest } => {
+                    if origin == dest {
+                        continue;
+                    };
+                    if let Ok(owner) = self.ents.get::<Owner>(ent) {
+                        if let Ok(mut player) = self.ents.get_mut::<Player>(owner.0) {
+                            let removed = match origin {
+                                Zone::Exile => self.exile.remove(&ent),
+                                Zone::Command => self.command.remove(&ent),
+                                Zone::Battlefield => self.battlefield.remove(&ent),
+                                Zone::Hand => player.hand.remove(&ent),
+                                Zone::Library => match player.deck.iter().position(|x| *x == ent) {
+                                    Some(i) => {
+                                        player.deck.remove(i);
+                                        true
+                                    }
+                                    None => false,
+                                },
+                                Zone::Graveyard => {
+                                    match player.graveyard.iter().position(|x| *x == ent) {
+                                        Some(i) => {
+                                            player.graveyard.remove(i);
+                                            true
+                                        }
+                                        None => false,
+                                    }
+                                }
+                                Zone::Stack => match self.stack.iter().position(|x| *x == ent) {
+                                    Some(i) => {
+                                        self.stack.remove(i);
+                                        true
+                                    }
+                                    None => false,
+                                },
+                            };
+                        } else {
+                            panic!("Owners must be players");
+                        }
+                    } else {
+                        panic!("All entities need an owner");
                     }
                 }
             }
         }
     }
-    fn add_event(&mut self, event: Event) {
-        game.event_stack.push(TagEvent {
+
+    fn add_event(events: &mut Vec<TagEvent>, event: Event) {
+        events.push(TagEvent {
             event: event,
             replacements: Vec::new(),
         });
     }
-    //Wraps and adds an event to the event stack
-    pub fn handle_event(&mut self, event: Event) {
-        self.add_event(event);
-        game.resolve_events();
+    pub fn tap(&mut self, ent: Entity) -> bool {
+        self.handle_event(Event::Tap { ent: ent })
+            .contains(&EventResult::Tap(ent))
     }
     //Can this creature tap to be declared an attacker or to activate an ability?
     //Doesn't include prevention effects, just if it can tap w/o them
@@ -152,16 +229,16 @@ impl Game {
 #[derive(Clone, Copy, Debug)]
 pub struct Owner(pub Entity);
 #[derive(Clone, Debug)]
-pub struct PlayerName(pub String);
-#[derive(Clone, Copy, Debug)]
-pub struct Life(pub i32);
-#[derive(Clone, Debug)]
-pub struct Deck(pub VecDeque<Entity>);
-#[derive(Clone, Debug)]
-pub struct Hand(pub HashSet<Entity>);
-#[derive(Clone, Debug)]
-pub struct ManaPool(pub HashSet<Entity>);
-
+pub struct Player {
+    pub name: String,
+    pub life: i32,
+    pub deck: Vec<Entity>,
+    pub hand: HashSet<Entity>,
+    pub mana_pool: HashSet<Entity>,
+    pub graveyard: Vec<Entity>,
+    pub lost: bool,
+    pub won: bool,
+}
 //Entered or changed control, use the game function
 //to check if it has summoning sickness
 pub struct SummoningSickness();

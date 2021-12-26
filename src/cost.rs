@@ -1,5 +1,5 @@
 use crate::game::Game;
-use crate::game::{Color, ManaPool};
+use crate::game::{Color,Player};
 use anyhow::{bail, Result};
 use hecs::Entity;
 
@@ -28,27 +28,28 @@ impl Cost {
     ) -> bool {
         match self {
             Cost::Generic => {
-                match game.ents.get::<ManaPool>(controller) {
-                    //TODO Handle prevention effects/restrictions here!
-                    Ok(pool) => (pool.0.contains(&payment)),
-                    _ => false,
+                if let Ok(player)=game.ents.get::<Player>(controller){
+                    //Handle prevention effects
+                    player.mana_pool.contains(&payment)
+                }else{
+                    false
                 }
             }
             Cost::Color(color) => {
-                match game.ents.get::<ManaPool>(controller) {
-                    Ok(pool) => {
-                        if let Some(mana) = pool.0.get(&payment) {
-                            if let Ok(poolcolor) = game.ents.get::<Color>(*mana) {
-                                //Handle prevention effects/restrictions here!
-                                *color == *poolcolor
-                            } else {
-                                false
-                            }
+                if let Ok(player)=game.ents.get::<Player>(controller){
+                    //Handle prevention effects
+                    if let Some(mana) = player.mana_pool.get(&payment) {
+                        if let Ok(poolcolor) = game.ents.get::<Color>(*mana) {
+                            //Handle prevention effects/restrictions here!
+                            *color == *poolcolor
                         } else {
                             false
                         }
+                    } else {
+                        false
                     }
-                    _ => false,
+                } else {
+                    false
                 }
             }
             Cost::Selftap => {
@@ -74,18 +75,16 @@ impl Cost {
         }
         match self {
             Cost::Generic | Cost::Color(_) => {
-                match game.ents.get::<ManaPool>(controller) {
+                if let Ok(mut player)=game.ents.get_mut::<Player>(controller){
                     //TODO Handle prevention effects/restrictions here!
-                    Ok(pool) => {
-                        if pool.0.remove(&payment) {
-                            Ok(payment)
-                        } else {
-                            bail!("Mana not present in pool!")
-                        }
+                    if player.mana_pool.remove(&payment){
+                        Ok(payment) 
                     }
-                    _ => {
-                        bail!("Player is gone!")
+                    else{
+                        bail!("Mana not present in pool!")
                     }
+                }else{
+                    bail!("Player is gone!")
                 }
             }
             Cost::Selftap => {

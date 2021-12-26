@@ -16,11 +16,16 @@ pub enum Event{
     Activate{player:Entity,ability:Entity},
     MoveZones{ent:Entity,origin:Zone,dest:Zone},
     Lose{player:Entity},
+    Tap{ent:Entity},
+    //Tap
+    //Dies
+    
 }
-
+#[derive(Clone, Debug,PartialEq)]
 pub enum EventResult{
-    Draw{card:Entity},
-    Cast{spell:Entity},
-    Activate{ability:Entity},
-    MoveZones{ent:Entity,origin:Zone,dest:Zone}
+    Draw(Entity),
+    Cast(Entity),
+    Activate(Entity),
+    MoveZones{oldent:Entity,newent:Zone,dest:Zone},
+    Tap(Entity),
 }
