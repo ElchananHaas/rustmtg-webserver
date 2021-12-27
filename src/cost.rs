@@ -1,5 +1,6 @@
 use crate::game::Game;
 use crate::game::{Color,Player};
+use crate::event::EventCause;
 use anyhow::{bail, Result};
 use hecs::Entity;
 
@@ -89,7 +90,7 @@ impl Cost {
             }
             Cost::Selftap => {
                 //Similarly handle prevention effects here!
-                game.tap(payment);
+                game.tap(payment,EventCause::None);
                 Ok(payment)
             }
         }

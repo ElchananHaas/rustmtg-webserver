@@ -41,7 +41,7 @@ mod tests {
         }
         gamebuild.add_player("p1",&db,&deck)?;
         gamebuild.add_player("p2",&db,&deck)?;
-        let _game=gamebuild.build();
+        let _game=gamebuild.build(&db);
         Ok(())
     }
 }

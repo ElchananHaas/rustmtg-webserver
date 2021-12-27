@@ -1,7 +1,7 @@
 use crate::ability::Ability;
 use crate::ability::KeywordAbility;
-use crate::carddb::CardDB;
-use crate::event::{Event, EventResult, TagEvent};
+use crate::carddb::{CardDB,CardIdentity};
+use crate::event::{Event, EventCause, EventResult, TagEvent};
 use crate::types::Types;
 use anyhow::{bail, Result};
 use hecs::{Entity, World};
@@ -13,7 +13,7 @@ pub struct GameBuilder {
 }
 //Implement debug trait!
 //Implement clone trait???
-pub struct Game {
+pub struct Game<'a> {
     pub ents: World,
     pub battlefield: HashSet<Entity>,
     pub exile: HashSet<Entity>,
@@ -21,6 +21,7 @@ pub struct Game {
     pub stack: Vec<Entity>,
     pub turn_order: Vec<Entity>,
     pub active_player: Entity,
+    db: &'a CardDB
 }
 
 impl GameBuilder {
@@ -40,7 +41,7 @@ impl GameBuilder {
         card_names: &Vec<String>,
     ) -> Result<Entity> {
         let mut cards = Vec::new();
-        let mut player = Player {
+        let player = Player {
             name: name.to_owned(),
             hand: HashSet::new(),
             life: 20,
@@ -53,7 +54,7 @@ impl GameBuilder {
         let player: Entity = self.ents.spawn((player,));
         for cardname in card_names {
             let card: Entity = db.spawn_card(&mut self.ents, &cardname)?;
-            self.ents.insert(card, (Owner(player), Zone::Library))?;
+            self.ents.insert(card, (Owner(player),))?;
             cards.push(card);
         }
         //Now that the deck has been constructed, set the players deck
@@ -64,7 +65,7 @@ impl GameBuilder {
         }
         Ok(player)
     }
-    pub fn build(self) -> Result<Game> {
+    pub fn build<'a>(self,db: &'a CardDB) -> Result<Game> {
         let active_player = match self.active_player {
             Some(player) => player,
             None => {
@@ -82,13 +83,19 @@ impl GameBuilder {
             stack: Vec::new(),
             turn_order: self.turn_order,
             active_player: active_player,
+            db:db
         })
     }
 }
-impl Game {
-    fn handle_event(&mut self, event: Event) -> Vec<EventResult> {
+impl<'a> Game<'a> {
+    fn handle_event(&mut self, event: Event, cause: EventCause) -> Vec<EventResult> {
         let mut results: Vec<EventResult> = Vec::new();
         let mut events: Vec<TagEvent> = Vec::new();
+        events.push(TagEvent {
+            event: event,
+            replacements: Vec::new(),
+            cause: cause,
+        });
         loop {
             let event: TagEvent = match events.pop() {
                 Some(x) => x,
@@ -118,21 +125,26 @@ impl Game {
                                         origin: Zone::Library,
                                         dest: Zone::Hand,
                                     },
+                                    event.cause,
                                 );
                                 results.push(EventResult::Draw(*card));
                             }
-                            None => Game::add_event(&mut events, Event::Lose { player: player }),
+                            None => Game::add_event(
+                                &mut events,
+                                Event::Lose { player: player },
+                                EventCause::Trigger(event.event.clone()),
+                            ),
                         }
                     }
                 }
-                Event::Cast { player, spell } => {
+                Event::Cast { player: _, spell: _ } => {
                     //The spell has already had costs/modes chosen.
                     //this is just handling triggered abilities
                     //So there is nothing to do here.
                     //Spells are handled differently from other actions
                     //Because of the rules complexity
                 }
-                Event::Activate { player, ability } => {
+                Event::Activate { controller: _, ability: _ } => {
                     //Similar to spell casting
                 }
                 Event::Lose { player } => {
@@ -144,6 +156,7 @@ impl Game {
                     if origin == dest {
                         continue;
                     };
+                    let mut truename=None;
                     if let Ok(owner) = self.ents.get::<Owner>(ent) {
                         if let Ok(mut player) = self.ents.get_mut::<Player>(owner.0) {
                             let removed = match origin {
@@ -175,25 +188,48 @@ impl Game {
                                     None => false,
                                 },
                             };
+                            if removed{
+                                if let Ok(iden)=self.ents.get::<CardIdentity>(ent){
+                                    if !iden.token{
+                                        truename=Some(iden.name.clone());
+                                    }
+                                }
+                            }
                         } else {
                             panic!("Owners must be players");
                         }
                     } else {
                         panic!("All entities need an owner");
                     }
+                    if let Some(name)=truename{
+                        let newent=self.db.spawn_card(&mut self.ents,&name).unwrap();
+                        let owner = self.ents.get::<Owner>(ent).unwrap();
+                        let mut player = self.ents.get_mut::<Player>(owner.0).unwrap();
+                        match dest{
+                            Zone::Exile => {self.exile.insert(newent);},
+                            Zone::Command => {self.command.insert(newent);},
+                            Zone::Battlefield => {self.battlefield.insert(newent);},
+                            Zone::Hand => {player.hand.insert(newent);},
+                            //Handle inserting a distance from the top. Perhaps swap them afterwards?
+                            Zone::Library => player.deck.push(newent),
+                            Zone::Graveyard => player.graveyard.push(newent),
+                            Zone::Stack => self.stack.push(newent),
+                        }
+                    }
                 }
             }
         }
     }
 
-    fn add_event(events: &mut Vec<TagEvent>, event: Event) {
+    fn add_event(events: &mut Vec<TagEvent>, event: Event, cause: EventCause) {
         events.push(TagEvent {
             event: event,
             replacements: Vec::new(),
+            cause: cause,
         });
     }
-    pub fn tap(&mut self, ent: Entity) -> bool {
-        self.handle_event(Event::Tap { ent: ent })
+    pub fn tap(&mut self, ent: Entity, cause: EventCause) -> bool {
+        self.handle_event(Event::Tap { ent: ent }, cause)
             .contains(&EventResult::Tap(ent))
     }
     //Can this creature tap to be declared an attacker or to activate an ability?

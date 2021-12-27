@@ -35,8 +35,7 @@ impl CardDB {
     pub fn spawn_card(&self, ents: &mut World, card_name: &str) -> Result<Entity> {
         match self.builders.get(card_name) {
             Some(cardmaker) => {
-                let mut builder = CardBuilder::new();
-                builder.name(card_name.to_owned());
+                let mut builder = CardBuilder::new(card_name.to_owned());
                 cardmaker(&mut builder);
                 let res = ents.spawn(builder.build().build()); //Two build calls
                 Ok(res)
@@ -53,16 +52,22 @@ pub struct CardBuilder {
     types: Types,
     subtypes: HashSet<Subtype>,
     costs: Vec<Cost>,
+    token: bool,
+    name: String,
 }
 impl CardBuilder {
-    pub fn new() -> Self {
-        CardBuilder {
+    pub fn new(name:String) -> Self {
+        let mut builder=CardBuilder {
             builder: EntityBuilder::new(),
             abilities: Vec::new(),
             types: Types::default(),
             subtypes: HashSet::new(),
             costs: Vec::new(),
-        }
+            token: false,
+            name: (&name).clone()
+        };
+        builder.builder.add(CardName(name));
+        builder
     }
     pub fn mana_string(&mut self,coststr:&str)-> &mut Self{
         let mut generic:i32=0;
@@ -88,9 +93,13 @@ impl CardBuilder {
                 self.cost(Cost::Color(Color::Green));
             }
         }
-        for i in 0..generic{
+        for _ in 0..generic{
             self.cost(Cost::Generic);
         }
+        self
+    }
+    pub fn token(&mut self)-> &mut Self{
+        self.token=true;
         self
     }
     pub fn cost(&mut self, cost: Cost) -> &mut Self {
@@ -102,10 +111,6 @@ impl CardBuilder {
             power: power,
             toughness: toughness,
         });
-        self
-    }
-    pub fn name(&mut self, name: String) -> &mut Self {
-        self.builder.add(CardName(name));
         self
     }
     pub fn ability(&mut self, ability: Ability) -> &mut Self {
@@ -145,6 +150,7 @@ impl CardBuilder {
         self
     }
     pub fn build(mut self) -> EntityBuilder {
+        self.builder.add(CardIdentity{name:self.name,token:self.token});
         if !self.abilities.is_empty() {
             self.builder.add(self.abilities);
         };
@@ -160,9 +166,14 @@ impl CardBuilder {
 }
 #[derive(Clone, Debug)]
 pub struct CardName(String);
+#[derive(Clone, Debug)]
+pub struct CardIdentity{
+    pub name:String,
+    pub token:bool,
+}
 #[derive(Copy, Clone, Debug)]
 pub struct PT {
-    power: i32,
-    toughness: i32,
+    pub power: i32,
+    pub toughness: i32,
 }
 
