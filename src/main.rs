@@ -1,5 +1,9 @@
-use actix_web::{get, web, App, HttpServer, Responder};
 use anyhow::{Result,bail};
+use warp::Filter;
+use tokio::sync::{RwLock};
+use warp::ws::{Message,WebSocket};
+use futures_util::{SinkExt, StreamExt, TryFutureExt};
+use std::sync::{Arc};
 //use actix_files::NamedFile;
 //use actix_web::{HttpRequest, Result};
 mod game; 
@@ -8,24 +12,36 @@ mod carddb;
 mod ability;
 mod cost;
 mod event;
-#[get("/{id}/{name}/index.html")]
-async fn index(web::Path((id, name)): web::Path<(u32, String)>) -> impl Responder {
-    format!("Hello {}! id:{}!", name,id)
+
+
+type Pairing = Arc<RwLock<Option<warp::ws::Ws>>>;
+#[tokio::main]
+async fn main() {
+    // GET /hello/warp => 200 OK with body "Hello, warp!"
+    let pairer=Pairing::default();
+    let pairer = warp::any().map(move || pairer.clone());
+    let hello = warp::path!("hello" / String)
+        .map(|name| format!("Hello, {}!", name));
+    let static_files = warp::path("static").and(warp::fs::dir("static"));
+    let game_setup= warp::path("gamesetup").and(warp::ws()).and(pairer).map(|ws: warp::ws::Ws, users| {
+        // This will call our function if the handshake succeeds.
+        ws.on_upgrade(move |socket| user_connected(socket, users))
+    });
+
+    warp::serve(hello.or(static_files).or(game_setup))
+        .run(([127, 0, 0, 1], 3030))
+        .await;
 }
 
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| {
-        App::new()
-            .service(index)
-            .service(actix_files::Files::new("/static", "static").show_files_listing())
+async fn user_connected(ws: WebSocket, pair: Pairing) {
+    let (mut user_ws_tx, mut user_ws_rx) = ws.split();
+    user_ws_tx
+    .send(Message::text("Hello!".clone()))
+    .unwrap_or_else(|e| {
+        eprintln!("websocket send error: {}", e);
     })
-    .bind("127.0.0.1:8000")?
-    .run()
-    .await
+    .await;
 }
-
-
 #[cfg(test)]
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.

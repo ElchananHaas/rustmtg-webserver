@@ -33,6 +33,6 @@ pub enum EventResult{
     Draw(Entity),
     Cast(Entity),
     Activate(Entity),
-    MoveZones{oldent:Entity,newent:Zone,dest:Zone},
+    MoveZones{oldent:Entity,newent:Entity,dest:Zone},
     Tap(Entity),
 }

@@ -215,6 +215,7 @@ impl<'a> Game<'a> {
                             Zone::Graveyard => player.graveyard.push(newent),
                             Zone::Stack => self.stack.push(newent),
                         }
+                        results.push(EventResult::MoveZones{oldent:ent,newent:newent,dest:dest});
                     }
                 }
             }
