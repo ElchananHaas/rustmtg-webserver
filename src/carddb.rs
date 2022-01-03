@@ -1,16 +1,23 @@
-use crate::types::Subtype;
 use crate::ability::Ability;
-use crate::types::Types;
 use crate::cost::Cost;
 use crate::game::Color;
+use crate::types::Subtype;
+use crate::types::Types;
 use anyhow::{bail, Result};
 use hecs::{Entity, EntityBuilder, World};
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
+use std::fmt;
 //It returns mut cardbuilder due to method chaining
 pub type Cardbuildtype = fn(&mut CardBuilder) -> &mut CardBuilder;
 pub struct CardDB {
     builders: HashMap<String, Cardbuildtype>,
+}
+
+impl fmt::Debug for CardDB {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CardDB").finish()
+    }
 }
 
 impl CardDB {
@@ -55,51 +62,64 @@ pub struct CardBuilder {
     token: bool,
     name: String,
 }
+
+impl fmt::Debug for CardBuilder {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CardBuilder")
+            .field("abilities", &self.abilities)
+            .field("types", &self.types)
+            .field("subtypes", &self.subtypes)
+            .field("costs", &self.costs)
+            .field("token", &self.token)
+            .field("name", &self.name)
+            .finish()
+    }
+}
 impl CardBuilder {
-    pub fn new(name:String) -> Self {
-        let mut builder=CardBuilder {
+    pub fn new(name: String) -> Self {
+        let mut builder = CardBuilder {
             builder: EntityBuilder::new(),
             abilities: Vec::new(),
             types: Types::default(),
             subtypes: HashSet::new(),
             costs: Vec::new(),
             token: false,
-            name: (&name).clone()
+            name: (&name).clone(),
         };
         builder.builder.add(CardName(name));
         builder
     }
-    pub fn mana_string(&mut self,coststr:&str)-> &mut Self{
-        let mut generic:i32=0;
-        for letter in coststr.chars(){
-            if letter.is_digit(10){
-                generic*=10;
-//This should be safe bc/ these are hardcoded within the code
-                generic+=i32::try_from(letter.to_digit(10).unwrap()).unwrap();
+    pub fn mana_string(&mut self, coststr: &str) -> &mut Self {
+        let mut generic: i32 = 0;
+        for letter in coststr.chars() {
+            if letter.is_digit(10) {
+                generic *= 10;
+                //This should be safe bc/ these are hardcoded within the code
+                generic += i32::try_from(letter.to_digit(10).unwrap()).unwrap();
             }
-            if letter=='W'{
+            if letter == 'W' {
                 self.cost(Cost::Color(Color::White));
             }
-            if letter=='U'{
+            if letter == 'U' {
                 self.cost(Cost::Color(Color::Blue));
             }
-            if letter=='B'{
+            if letter == 'B' {
                 self.cost(Cost::Color(Color::Black));
             }
-            if letter=='R'{
+            if letter == 'R' {
                 self.cost(Cost::Color(Color::Red));
             }
-            if letter=='G'{
+            if letter == 'G' {
                 self.cost(Cost::Color(Color::Green));
             }
         }
-        for _ in 0..generic{
+        for _ in 0..generic {
             self.cost(Cost::Generic);
         }
         self
     }
-    pub fn token(&mut self)-> &mut Self{
-        self.token=true;
+    pub fn token(&mut self) -> &mut Self {
+        self.token = true;
         self
     }
     pub fn cost(&mut self, cost: Cost) -> &mut Self {
@@ -150,7 +170,10 @@ impl CardBuilder {
         self
     }
     pub fn build(mut self) -> EntityBuilder {
-        self.builder.add(CardIdentity{name:self.name,token:self.token});
+        self.builder.add(CardIdentity {
+            name: self.name,
+            token: self.token,
+        });
         if !self.abilities.is_empty() {
             self.builder.add(self.abilities);
         };
@@ -167,13 +190,12 @@ impl CardBuilder {
 #[derive(Clone, Debug)]
 pub struct CardName(String);
 #[derive(Clone, Debug)]
-pub struct CardIdentity{
-    pub name:String,
-    pub token:bool,
+pub struct CardIdentity {
+    pub name: String,
+    pub token: bool,
 }
 #[derive(Copy, Clone, Debug)]
 pub struct PT {
     pub power: i32,
     pub toughness: i32,
 }
-

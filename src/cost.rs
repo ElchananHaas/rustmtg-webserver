@@ -1,6 +1,6 @@
-use crate::game::Game;
-use crate::game::{Color,Player};
 use crate::event::EventCause;
+use crate::game::Game;
+use crate::game::{Color, Player};
 use anyhow::{bail, Result};
 use hecs::Entity;
 
@@ -29,15 +29,15 @@ impl Cost {
     ) -> bool {
         match self {
             Cost::Generic => {
-                if let Ok(player)=game.ents.get::<Player>(controller){
+                if let Ok(player) = game.ents.get::<Player>(controller) {
                     //Handle prevention effects
                     player.mana_pool.contains(&payment)
-                }else{
+                } else {
                     false
                 }
             }
             Cost::Color(color) => {
-                if let Ok(player)=game.ents.get::<Player>(controller){
+                if let Ok(player) = game.ents.get::<Player>(controller) {
                     //Handle prevention effects
                     if let Some(mana) = player.mana_pool.get(&payment) {
                         if let Ok(poolcolor) = game.ents.get::<Color>(*mana) {
@@ -76,21 +76,20 @@ impl Cost {
         }
         match self {
             Cost::Generic | Cost::Color(_) => {
-                if let Ok(mut player)=game.ents.get_mut::<Player>(controller){
+                if let Ok(mut player) = game.ents.get_mut::<Player>(controller) {
                     //TODO Handle prevention effects/restrictions here!
-                    if player.mana_pool.remove(&payment){
-                        Ok(payment) 
-                    }
-                    else{
+                    if player.mana_pool.remove(&payment) {
+                        Ok(payment)
+                    } else {
                         bail!("Mana not present in pool!")
                     }
-                }else{
+                } else {
                     bail!("Player is gone!")
                 }
             }
             Cost::Selftap => {
                 //Similarly handle prevention effects here!
-                game.tap(payment,EventCause::None);
+                game.tap(payment, EventCause::None);
                 Ok(payment)
             }
         }

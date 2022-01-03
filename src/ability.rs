@@ -1,4 +1,3 @@
-
 use std::fmt;
 //use crate::carddb::CardBuilder;
 use crate::carddb::Cardbuildtype;
@@ -9,7 +8,6 @@ pub enum KeywordAbility {
     Flying,
     Haste,
 }
-
 
 #[derive(Clone, Debug)]
 pub struct TriggeredAbility {}

@@ -2,17 +2,24 @@
 name = "mtg_webserver"
 version = "0.1.0"
 authors = ["Elchanan Haas <haas2376@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 rand = {version="0.8.4",features = ["getrandom"]}
 rand_xoshiro = "0.6.0"
-hecs = "0.7.1" 
+hecs = {version="0.7.1",features= ["row-serialize"]} 
 anyhow = "1.0.51"
 strum_macros = "0.23.1"
 if_chain = "1.0.2"
 tokio = { version = "1", features = ["full"] }
 warp = "0.3.2"
 futures-util = "0.3"
+once_cell = "1.9.0"
+serde = "1.0.133"
+serde_json = "1.0"
+serde_derive= "1.0"
+derivative = "2.2.0"
+async-trait = "0.1.52"
+futures = "0.3.19"
