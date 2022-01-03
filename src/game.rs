@@ -13,10 +13,12 @@ use serde_json;
 use std::collections::HashSet;
 use std::sync::Mutex;
 use warp::ws::WebSocket;
+use warp::filters::ws::Message;
 use derivative::Derivative;
-use std::io::Read;
+use std::io::{Read,Write};
 use async_trait::async_trait;
 use futures::{executor, future, FutureExt};
+use futures_util::SinkExt;
 
 pub struct GameBuilder {
     ents: World,
@@ -167,13 +169,16 @@ impl<'a> Game<'a> {
         let mut buffer=Vec::<u8>::new();
         {
             let mut cursor = std::io::Cursor::new(&mut buffer);
+            cursor.write("[".as_bytes());
             let mut json_serial = serde_json::Serializer::new(cursor);
             let mut serial_context = GameSerializer { player: player };
             hecs::serialize::row::serialize(&self.ents, &mut serial_context, &mut json_serial)?;
+            cursor.write(",".as_bytes());
             self.serialize(&mut json_serial)?;
+            cursor.write("]".as_bytes());
         }
         if let Ok(mut pl) = self.ents.get_mut::<Player>(player) {
-           pl.player_con.send_state(std::io::Cursor::new(&buffer)).await;
+           pl.player_con.send_state(buffer).await?;
         }
         Ok(())
     }
@@ -453,7 +458,7 @@ pub trait PlayerCon: Send + Sync {
         }
     }
     async fn ask_user(&mut self, ents: &Vec<Entity>) -> usize;
-    async fn send_state(&mut self,state: std::io::Cursor<&Vec<u8>>);
+    async fn send_state(&mut self,state: Vec<u8>)->Result<()>;
 }
 
 #[async_trait]
@@ -461,8 +466,9 @@ impl PlayerCon for Mutex<WebSocket> {
     async fn ask_user(&mut self, ents: &Vec<Entity>) -> usize {
         0
     }
-    async fn send_state(&mut self,state:std::io::Cursor<&Vec<u8>>){
+    async fn send_state(&mut self,state: Vec<u8>)->Result<()>{
         let socket=self.get_mut().unwrap();
-        
+        socket.send(Message::binary(state)).await?;
+        Ok(())
     }
 }
