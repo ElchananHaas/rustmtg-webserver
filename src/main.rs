@@ -14,6 +14,7 @@ mod cost;
 mod event;
 mod game;
 mod types;
+mod components;
 
 static CARDDB: OnceCell<carddb::CardDB> = OnceCell::new();
 type Pairing = Arc<Mutex<Option<WebSocket>>>;

@@ -3,6 +3,7 @@ use crate::cost::Cost;
 use crate::game::Color;
 use crate::types::Subtype;
 use crate::types::Types;
+use crate::components::{CardName,CardIdentity,PT};
 use anyhow::{bail, Result};
 use hecs::{Entity, EntityBuilder, World};
 use std::collections::{HashMap, HashSet};
@@ -186,16 +187,4 @@ impl CardBuilder {
         };
         self.builder
     }
-}
-#[derive(Clone, Debug)]
-pub struct CardName(String);
-#[derive(Clone, Debug)]
-pub struct CardIdentity {
-    pub name: String,
-    pub token: bool,
-}
-#[derive(Copy, Clone, Debug)]
-pub struct PT {
-    pub power: i32,
-    pub toughness: i32,
 }

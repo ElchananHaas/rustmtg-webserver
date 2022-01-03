@@ -1,6 +1,7 @@
 use crate::ability::Ability;
 use crate::ability::KeywordAbility;
-use crate::carddb::{CardDB, CardIdentity};
+use crate::carddb::{CardDB};
+use crate::components::{SummoningSickness,Tapped,Owner,CardName,CardIdentity,PT};
 use crate::event::{Event, EventCause, EventResult, TagEvent};
 use crate::types::Types;
 use anyhow::{bail, Result};
@@ -19,6 +20,7 @@ use std::io::{Read,Write};
 use async_trait::async_trait;
 use futures::{executor, future, FutureExt};
 use futures_util::SinkExt;
+use crate::types::Subtype;
 
 pub struct GameBuilder {
     ents: World,
@@ -139,6 +141,11 @@ impl SerializeContext for GameSerializer {
         //Perhaps generate a playerView struct that has only the 
         //known information for each player?
         try_serialize::<Player,_,_>(&entity,"player",map)?;
+        try_serialize::<CardName, _, _>(&entity,"name", map)?;
+        try_serialize::<CardIdentity, _, _>(&entity,"base_identity", map)?;
+        try_serialize::<PT, _, _>(&entity,"pt", map)?;
+        try_serialize::<Types, _, _>(&entity,"types", map)?;
+        try_serialize::<HashSet<Subtype>, _, _>(&entity,"subtypes", map)?;
         // Call `try_serialize` for every serializable component we want to save
         // Or do something custom for more complex cases.
         Ok(())
@@ -393,8 +400,6 @@ impl<'a> Game<'a> {
         }
     }
 }
-#[derive(Clone, Copy, Debug, Serialize)]
-pub struct Owner(pub Entity);
 #[derive(Serialize)]
 #[derive(Derivative)]
 #[derivative(Debug)]
@@ -411,12 +416,6 @@ pub struct Player {
     #[derivative(Debug="ignore")]
     pub player_con: Box<dyn PlayerCon>,
 }
-//Utility structure for figuring out if a creature can tap
-//Added the turn it ETBs or changes control
-#[derive(Clone, Copy, Debug, Serialize, PartialEq)]
-pub struct SummoningSickness();
-#[derive(Clone, Copy, Debug, Serialize, PartialEq)]
-pub struct Tapped();
 #[derive(Clone, Copy, Debug, Serialize, PartialEq)]
 pub enum Phase{
     Untap,

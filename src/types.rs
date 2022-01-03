@@ -1,4 +1,7 @@
-#[derive(Clone, Copy, Debug, Default)]
+use serde::Serialize;
+use serde_derive::Serialize;
+
+#[derive(Clone, Copy, Debug, Default, Serialize)]
 pub struct Types {
     pub land: bool,
     pub creature: bool,
@@ -9,10 +12,8 @@ pub struct Types {
     pub sorcery: bool,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
-#[repr(C)] //Will be needed for shenanigans to let me
-//iterate over creature subtypes
-#[allow(dead_code)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize)]
+#[allow(dead_code)] //allow dead code to reduce warnings noise on each variant
 pub enum Subtype {
     Advisor,
     Aetherborn,
