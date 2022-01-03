@@ -169,13 +169,16 @@ impl<'a> Game<'a> {
         let mut buffer=Vec::<u8>::new();
         {
             let mut cursor = std::io::Cursor::new(&mut buffer);
-            cursor.write("[".as_bytes());
+            cursor.write_all("[".as_bytes())?;
             let mut json_serial = serde_json::Serializer::new(cursor);
             let mut serial_context = GameSerializer { player: player };
             hecs::serialize::row::serialize(&self.ents, &mut serial_context, &mut json_serial)?;
-            cursor.write(",".as_bytes());
+            let mut cursor=json_serial.into_inner();
+            cursor.write_all(",".as_bytes())?;
+            let mut json_serial = serde_json::Serializer::new(cursor);
             self.serialize(&mut json_serial)?;
-            cursor.write("]".as_bytes());
+            let mut cursor=json_serial.into_inner();
+            cursor.write_all("]".as_bytes())?;
         }
         if let Ok(mut pl) = self.ents.get_mut::<Player>(player) {
            pl.player_con.send_state(buffer).await?;

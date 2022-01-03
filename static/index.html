@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="utf-8"/>
     <script src="/static/phaser.min.js"></script>
 </head>
 <body>
@@ -40,15 +41,13 @@
         socket.send('Hello Server!');
         });
         socket.addEventListener('message', function (event) {
-        console.log('Message from server ', event.data);
         event.data.text().then(
             function(json_text){
-                console.log("json text is:",json_text);
                 parsed=JSON.parse(json_text);
-                console.log('parsed', parsed);
+                console.log('parsed json is', parsed);
             }
         )
-        
+
         });
         console.log("created websocket");
         this.add.image(400, 300, 'sky');
