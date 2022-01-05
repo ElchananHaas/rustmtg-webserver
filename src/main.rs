@@ -15,12 +15,16 @@ mod event;
 mod game;
 mod types;
 mod components;
+mod player;
 
 static CARDDB: OnceCell<carddb::CardDB> = OnceCell::new();
+static JS_UNKNOWN:OnceCell<Entity> = OnceCell::new();
+
 type Pairing = Arc<Mutex<Option<WebSocket>>>;
 #[tokio::main]
 async fn main() {
     CARDDB.set(carddb::CardDB::new()).unwrap();
+    JS_UNKNOWN.set(Entity::from_bits(0x00000001FFFFFFFF).unwrap()).unwrap();
     let pairer = Pairing::default();
     let pairer = warp::any().map(move || pairer.clone());
     let hello = warp::path!("hello" / String).map(|name| format!("Hello, {}!", name));
@@ -57,7 +61,7 @@ async fn launch_game(mut sockets: Vec<WebSocket>) -> Result<()> {
     let db: &carddb::CardDB = CARDDB.get().expect("Card database not initialized!");
     let mut gamebuild = game::GameBuilder::new();
     let mut deck = Vec::new();
-    for _ in 1..60 {
+    for _ in 0..60 {
         deck.push(String::from("Staunch Shieldmate"));
     }
     let users: Vec<Entity> = sockets
@@ -81,14 +85,15 @@ mod tests {
 
     #[test]
     fn test_game_init() -> Result<()> {
-        let db = carddb::CardDB::new();
+        CARDDB.set(carddb::CardDB::new()).unwrap();
+        let db: &carddb::CardDB = CARDDB.get().expect("Card database not initialized!");
         let mut gamebuild = game::GameBuilder::new();
         let mut deck = Vec::new();
         for _ in 1..60 {
             deck.push(String::from("Staunch Shieldmate"));
         }
-        gamebuild.add_player("p1", &db, &deck)?;
-        gamebuild.add_player("p2", &db, &deck)?;
+        gamebuild.add_player("p1", &db, &deck, Box::new(()))?;
+        gamebuild.add_player("p2", &db, &deck, Box::new(()))?;
         let _game = gamebuild.build(&db);
         Ok(())
     }

@@ -1,27 +1,23 @@
 use crate::ability::Ability;
 use crate::ability::KeywordAbility;
 use crate::carddb::{CardDB};
-use crate::components::{SummoningSickness,Tapped,Owner,CardName,CardIdentity,PT};
+use crate::components::{SummoningSickness,Tapped,CardName,EntCore,PT};
 use crate::event::{Event, EventCause, EventResult, TagEvent};
 use crate::types::Types;
 use anyhow::{bail, Result};
 use hecs::serialize::row::{try_serialize, SerializeContext};
 use hecs::{Entity, EntityRef, World};
 use serde::Serialize;
+use serde::ser::SerializeStruct;
 use serde::Serializer;
 use serde_derive::Serialize;
 use serde_json;
 use std::collections::HashSet;
-use std::sync::Mutex;
-use warp::ws::WebSocket;
-use warp::filters::ws::Message;
-use derivative::Derivative;
-use std::io::{Read,Write};
-use async_trait::async_trait;
+use std::io::{Read,Write}; 
 use futures::{executor, future, FutureExt};
-use futures_util::SinkExt;
+use std::result::Result::Ok;
 use crate::types::Subtype;
-
+use crate::player::{Player,PlayerCon,PlayerSerialHelper};
 pub struct GameBuilder {
     ents: World,
     turn_order: Vec<Entity>,
@@ -81,8 +77,7 @@ impl GameBuilder {
         };
         let player: Entity = self.ents.spawn((player,));
         for cardname in card_names {
-            let card: Entity = db.spawn_card(&mut self.ents, &cardname)?;
-            self.ents.insert(card, (Owner(player),))?;
+            let card: Entity = db.spawn_card(&mut self.ents, &cardname, player)?;
             cards.push(card);
         }
         //Now that the deck has been constructed, set the players deck
@@ -101,7 +96,7 @@ impl GameBuilder {
             }
         };
         if self.turn_order.len() < 2 {
-            bail!("Game needs at least two players in initilization")
+            bail!("Game needs at least two players in initialization")
         };
         Ok(Game {
             ents: self.ents,
@@ -118,8 +113,9 @@ impl GameBuilder {
 }
 //This structure serializes a game from the view of
 //the playet for sending to the client
-struct GameSerializer {
+struct GameSerializer<'a> {
     player: Entity,
+    ents: &'a World
 }
 /*
 #[derive(Clone, Copy, Debug)]
@@ -127,27 +123,32 @@ pub struct SummoningSickness();
 #[derive(Clone, Copy, Debug)]
 pub struct Tapped();
 */
-impl SerializeContext for GameSerializer {
+impl <'a> SerializeContext for GameSerializer <'a> {
     fn serialize_entity<S>(&mut self, entity: EntityRef<'_>, map: &mut S) -> Result<(), S::Error>
     where
         S: serde::ser::SerializeMap,
     {
-        try_serialize::<SummoningSickness, _, _>(&entity, "summoning_sickness", map)?;
-        try_serialize::<Tapped, _, _>(&entity,"tapped", map)?;
-        try_serialize::<Owner, _, _>(&entity,"owner", map)?;
-        //TODO Fix this serialization to not send
-        //Unknown information to clients, such as the order
-        //of the deck and the identity of cards in hand
-        //Perhaps generate a playerView struct that has only the 
-        //known information for each player?
-        try_serialize::<Player,_,_>(&entity,"player",map)?;
-        try_serialize::<CardName, _, _>(&entity,"name", map)?;
-        try_serialize::<CardIdentity, _, _>(&entity,"base_identity", map)?;
-        try_serialize::<PT, _, _>(&entity,"pt", map)?;
-        try_serialize::<Types, _, _>(&entity,"types", map)?;
-        try_serialize::<HashSet<Subtype>, _, _>(&entity,"subtypes", map)?;
-        // Call `try_serialize` for every serializable component we want to save
-        // Or do something custom for more complex cases.
+        let toshow=match entity.get::<EntCore>(){
+            Some(core)=>core.known.contains(&self.player),
+            None=>true
+        };
+        if toshow{
+            try_serialize::<SummoningSickness, _, _>(&entity, "summoning_sickness", map)?;
+            try_serialize::<Tapped, _, _>(&entity,"tapped", map)?;
+            try_serialize::<CardName, _, _>(&entity,"name", map)?;
+            try_serialize::<EntCore, _, _>(&entity,"base_identity", map)?;
+            try_serialize::<PT, _, _>(&entity,"pt", map)?;
+            try_serialize::<Types, _, _>(&entity,"types", map)?;
+            try_serialize::<HashSet<Subtype>, _, _>(&entity,"subtypes", map)?;
+        }
+        if let Some(pl) =entity.get::<Player>(){
+            let helper=PlayerSerialHelper{
+                viewpoint:self.player,
+                player:&pl,
+                world:self.ents,
+            };
+            map.serialize_entry("player", &helper)?;
+        }
         Ok(())
     }
 }
@@ -176,20 +177,33 @@ impl<'a> Game<'a> {
         let mut buffer=Vec::<u8>::new();
         {
             let mut cursor = std::io::Cursor::new(&mut buffer);
-            cursor.write_all("[".as_bytes())?;
+            cursor.write_all(b"[")?;
             let mut json_serial = serde_json::Serializer::new(cursor);
-            let mut serial_context = GameSerializer { player: player };
+            let mut serial_context = GameSerializer { player: player, ents: &self.ents };
             hecs::serialize::row::serialize(&self.ents, &mut serial_context, &mut json_serial)?;
             let mut cursor=json_serial.into_inner();
-            cursor.write_all(",".as_bytes())?;
+            cursor.write_all(b",")?;
             let mut json_serial = serde_json::Serializer::new(cursor);
-            self.serialize(&mut json_serial)?;
+            self.serialize_game(&mut json_serial,player)?;
             let mut cursor=json_serial.into_inner();
-            cursor.write_all("]".as_bytes())?;
+            cursor.write_all(b"]")?;
         }
         if let Ok(mut pl) = self.ents.get_mut::<Player>(player) {
            pl.player_con.send_state(buffer).await?;
         }
+        Ok(())
+    }
+    //This function will be needed later for face-down cards. For now,
+    //Just show all information for these entities
+    fn serialize_game<W: std::io::Write>(&self,S:&mut serde_json::Serializer<W>,player:Entity)->Result<()>{
+        let mut sergame= S.serialize_struct("game", 6)?;
+        sergame.serialize_field("exile",&self.exile)?;
+        sergame.serialize_field("command",&self.command)?;
+        sergame.serialize_field("stack",&self.stack)?;
+        sergame.serialize_field("turn_order",&self.turn_order)?;
+        sergame.serialize_field("active_player",&self.active_player)?;
+        sergame.serialize_field("outcome",&self.outcome)?;
+        sergame.end()?;
         Ok(())
     }
     fn handle_event(&mut self, event: Event, cause: EventCause) -> Vec<EventResult> {
@@ -218,7 +232,7 @@ impl<'a> Game<'a> {
                         }
                     }
                 }
-                Event::Draw { player, controller } => {
+                Event::Draw { player, controller:_ } => {
                     if let Ok(pl) = self.ents.get::<Player>(player) {
                         match pl.deck.last() {
                             Some(card) => {
@@ -267,55 +281,66 @@ impl<'a> Game<'a> {
                     if origin == dest {
                         continue;
                     };
-                    let mut truename = None;
-                    if let Ok(owner) = self.ents.get::<Owner>(ent) {
-                        if let Ok(mut player) = self.ents.get_mut::<Player>(owner.0) {
-                            let removed = match origin {
-                                Zone::Exile => self.exile.remove(&ent),
-                                Zone::Command => self.command.remove(&ent),
-                                Zone::Battlefield => self.battlefield.remove(&ent),
-                                Zone::Hand => player.hand.remove(&ent),
-                                Zone::Library => match player.deck.iter().position(|x| *x == ent) {
-                                    Some(i) => {
-                                        player.deck.remove(i);
-                                        true
-                                    }
-                                    None => false,
-                                },
-                                Zone::Graveyard => {
-                                    match player.graveyard.iter().position(|x| *x == ent) {
-                                        Some(i) => {
-                                            player.graveyard.remove(i);
-                                            true
-                                        }
-                                        None => false,
-                                    }
+                    let mut core;
+                    {
+                        let coreborrow=self.ents.get::<EntCore>(ent).expect("All cards and abilites need a core");
+                        let refentcore=&(*coreborrow);
+                        core=refentcore.clone();
+                    }
+                    let removed;
+                    {
+                        let mut player=self.ents.get_mut::<Player>(core.owner).expect("Owners must be players");
+                        removed = match origin {
+                            Zone::Exile => self.exile.remove(&ent),
+                            Zone::Command => self.command.remove(&ent),
+                            Zone::Battlefield => self.battlefield.remove(&ent),
+                            Zone::Hand => player.hand.remove(&ent),
+                            Zone::Library => match player.deck.iter().position(|x| *x == ent) {
+                                Some(i) => {
+                                    player.deck.remove(i);
+                                    true
                                 }
-                                Zone::Stack => match self.stack.iter().position(|x| *x == ent) {
+                                None => false,
+                            },
+                            Zone::Graveyard => {
+                                match player.graveyard.iter().position(|x| *x == ent) {
                                     Some(i) => {
-                                        self.stack.remove(i);
+                                        player.graveyard.remove(i);
                                         true
                                     }
                                     None => false,
-                                },
-                            };
-                            if removed {
-                                if let Ok(iden) = self.ents.get::<CardIdentity>(ent) {
-                                    if !iden.token {
-                                        truename = Some(iden.name.clone());
-                                    }
                                 }
                             }
-                        } else {
-                            panic!("Owners must be players");
-                        }
-                    } else {
-                        panic!("All entities need an owner");
+                            Zone::Stack => match self.stack.iter().position(|x| *x == ent) {
+                                Some(i) => {
+                                    self.stack.remove(i);
+                                    true
+                                }
+                                None => false,
+                            },
+                        };
                     }
-                    if let Some(name) = truename {
-                        let newent = self.db.spawn_card(&mut self.ents, &name).unwrap();
-                        let owner = self.ents.get::<Owner>(ent).unwrap();
-                        let mut player = self.ents.get_mut::<Player>(owner.0).unwrap();
+                    if removed && core.real_card{
+                        let newent = self.db.spawn_card(&mut self.ents, &core.name, core.owner).unwrap();
+                        match dest{
+                            Zone::Exile | Zone::Stack | Zone::Command | Zone::Battlefield | Zone::Graveyard=>{
+                                core.known.extend(self.turn_order.iter());//Public zone
+                                //Morphs **are** publicly known, just some attributes of face 
+                                //down cards will not be known. I may need a second
+                                //structure for face down cards to track who knows what they are
+                                //For MDFC and TDFC cards this isn't an issue because 
+                                //from one side, you know what the other side is. 
+                                //For moving to the hand or library 
+                                //it retains it's current knowledge set
+                                //Shuffling will destroy all knowledge of cards in the library
+                            },
+                            Zone::Hand => {
+                                core.known.insert(core.owner);
+                            },
+                            _=>{}
+                        }
+                        self.ents.insert_one(newent, core.clone()).unwrap();
+                        let mut player = self.ents.get_mut::<Player>(core.owner).unwrap();
                         match dest {
                             Zone::Exile => {
                                 self.exile.insert(newent);
@@ -400,23 +425,9 @@ impl<'a> Game<'a> {
         }
     }
 }
-#[derive(Serialize)]
-#[derive(Derivative)]
-#[derivative(Debug)]
-pub struct Player {
-    pub name: String,
-    pub life: i32,
-    pub deck: Vec<Entity>,
-    pub hand: HashSet<Entity>,
-    pub mana_pool: HashSet<Entity>,
-    pub graveyard: Vec<Entity>,
-    pub lost: bool,
-    pub won: bool,
-    #[serde(skip_serializing)]
-    #[derivative(Debug="ignore")]
-    pub player_con: Box<dyn PlayerCon>,
-}
+
 #[derive(Clone, Copy, Debug, Serialize, PartialEq)]
+#[allow(dead_code)] //allow dead code to reduce warnings noise on each variant
 pub enum Phase{
     Untap,
     Upkeep,
@@ -439,6 +450,7 @@ pub enum Color {
     Green,
 }
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[allow(dead_code)] //allow dead code to reduce warnings noise on each variant
 pub enum Zone {
     Hand,
     Library,
@@ -447,30 +459,4 @@ pub enum Zone {
     Graveyard,
     Command,
     Stack,
-}
-
-
-#[async_trait]
-pub trait PlayerCon: Send + Sync {
-    async fn choose(&mut self, ents: &Vec<Entity>) -> Result<usize> {
-        match ents.len() {
-            0 => bail!("Can't choose 0 options"),
-            1 => Ok(1),
-            _ => Ok(self.ask_user(ents).await),
-        }
-    }
-    async fn ask_user(&mut self, ents: &Vec<Entity>) -> usize;
-    async fn send_state(&mut self,state: Vec<u8>)->Result<()>;
-}
-
-#[async_trait]
-impl PlayerCon for Mutex<WebSocket> {
-    async fn ask_user(&mut self, ents: &Vec<Entity>) -> usize {
-        0
-    }
-    async fn send_state(&mut self,state: Vec<u8>)->Result<()>{
-        let socket=self.get_mut().unwrap();
-        socket.send(Message::binary(state)).await?;
-        Ok(())
-    }
 }

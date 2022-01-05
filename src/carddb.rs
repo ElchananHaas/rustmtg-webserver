@@ -3,7 +3,7 @@ use crate::cost::Cost;
 use crate::game::Color;
 use crate::types::Subtype;
 use crate::types::Types;
-use crate::components::{CardName,CardIdentity,PT};
+use crate::components::{CardName,EntCore,PT};
 use anyhow::{bail, Result};
 use hecs::{Entity, EntityBuilder, World};
 use std::collections::{HashMap, HashSet};
@@ -40,10 +40,10 @@ impl CardDB {
         }
         CardDB { builders: map }
     }
-    pub fn spawn_card(&self, ents: &mut World, card_name: &str) -> Result<Entity> {
+    pub fn spawn_card(&self, ents: &mut World, card_name: &str, owner:Entity) -> Result<Entity> {
         match self.builders.get(card_name) {
             Some(cardmaker) => {
-                let mut builder = CardBuilder::new(card_name.to_owned());
+                let mut builder = CardBuilder::new(card_name.to_owned(),owner);
                 cardmaker(&mut builder);
                 let res = ents.spawn(builder.build().build()); //Two build calls
                 Ok(res)
@@ -60,32 +60,22 @@ pub struct CardBuilder {
     types: Types,
     subtypes: HashSet<Subtype>,
     costs: Vec<Cost>,
-    token: bool,
+    real_card: bool,
     name: String,
+    owner: Entity,
 }
 
-impl fmt::Debug for CardBuilder {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("CardBuilder")
-            .field("abilities", &self.abilities)
-            .field("types", &self.types)
-            .field("subtypes", &self.subtypes)
-            .field("costs", &self.costs)
-            .field("token", &self.token)
-            .field("name", &self.name)
-            .finish()
-    }
-}
 impl CardBuilder {
-    pub fn new(name: String) -> Self {
+    pub fn new(name: String, owner:Entity) -> Self {
         let mut builder = CardBuilder {
             builder: EntityBuilder::new(),
             abilities: Vec::new(),
             types: Types::default(),
             subtypes: HashSet::new(),
             costs: Vec::new(),
-            token: false,
+            real_card: true,
             name: (&name).clone(),
+            owner:owner,
         };
         builder.builder.add(CardName(name));
         builder
@@ -120,7 +110,7 @@ impl CardBuilder {
         self
     }
     pub fn token(&mut self) -> &mut Self {
-        self.token = true;
+        self.real_card = false;
         self
     }
     pub fn cost(&mut self, cost: Cost) -> &mut Self {
@@ -171,9 +161,11 @@ impl CardBuilder {
         self
     }
     pub fn build(mut self) -> EntityBuilder {
-        self.builder.add(CardIdentity {
+        self.builder.add(EntCore {
             name: self.name,
-            token: self.token,
+            real_card: self.real_card,
+            known: HashSet::new(),
+            owner: self.owner,
         });
         if !self.abilities.is_empty() {
             self.builder.add(self.abilities);

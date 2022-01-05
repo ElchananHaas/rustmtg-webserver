@@ -1,4 +1,3 @@
-use serde::Serialize;
 use serde_derive::Serialize;
 
 #[derive(Clone, Copy, Debug, Default, Serialize)]
