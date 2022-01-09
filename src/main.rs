@@ -10,21 +10,22 @@ use warp::Filter;
 //use actix_web::{HttpRequest, Result};
 mod ability;
 mod carddb;
+mod components;
 mod cost;
 mod event;
 mod game;
-mod types;
-mod components;
 mod player;
 
 static CARDDB: OnceCell<carddb::CardDB> = OnceCell::new();
-static JS_UNKNOWN:OnceCell<Entity> = OnceCell::new();
+static JS_UNKNOWN: OnceCell<Entity> = OnceCell::new();
 
 type Pairing = Arc<Mutex<Option<WebSocket>>>;
 #[tokio::main]
 async fn main() {
     CARDDB.set(carddb::CardDB::new()).unwrap();
-    JS_UNKNOWN.set(Entity::from_bits(0x00000001FFFFFFFF).unwrap()).unwrap();
+    JS_UNKNOWN
+        .set(Entity::from_bits(0x00000001FFFFFFFF).unwrap())
+        .unwrap();
     let pairer = Pairing::default();
     let pairer = warp::any().map(move || pairer.clone());
     let hello = warp::path!("hello" / String).map(|name| format!("Hello, {}!", name));
@@ -57,7 +58,7 @@ async fn user_connected(ws1: WebSocket, pair: Pairing) {
     };
     mem::swap(&mut *state, &mut current);
 }
-async fn launch_game(mut sockets: Vec<WebSocket>) -> Result<()> {
+async fn launch_game(sockets: Vec<WebSocket>) -> Result<()> {
     let db: &carddb::CardDB = CARDDB.get().expect("Card database not initialized!");
     let mut gamebuild = game::GameBuilder::new();
     let mut deck = Vec::new();

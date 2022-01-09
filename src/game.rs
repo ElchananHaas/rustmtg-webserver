@@ -1,23 +1,23 @@
 use crate::ability::Ability;
 use crate::ability::KeywordAbility;
-use crate::carddb::{CardDB};
-use crate::components::{SummoningSickness,Tapped,CardName,EntCore,PT};
+use crate::carddb::CardDB;
+use crate::components::{CardName, Controller, EntCore, SummoningSickness, Tapped, Types, PT,Subtype};
 use crate::event::{Event, EventCause, EventResult, TagEvent};
-use crate::types::Types;
+use crate::player::{Player, PlayerCon, PlayerSerialHelper};
 use anyhow::{bail, Result};
+use futures::{executor, future, FutureExt};
 use hecs::serialize::row::{try_serialize, SerializeContext};
 use hecs::{Entity, EntityRef, World};
-use serde::Serialize;
 use serde::ser::SerializeStruct;
+use serde::Serialize;
 use serde::Serializer;
 use serde_derive::Serialize;
 use serde_json;
 use std::collections::HashSet;
-use std::io::{Read,Write}; 
-use futures::{executor, future, FutureExt};
+use std::collections::VecDeque;
+use std::io::{Read, Write};
+use std::ops::Sub;
 use std::result::Result::Ok;
-use crate::types::Subtype;
-use crate::player::{Player,PlayerCon,PlayerSerialHelper};
 pub struct GameBuilder {
     ents: World,
     turn_order: Vec<Entity>,
@@ -34,18 +34,22 @@ pub struct Game<'a> {
     pub command: HashSet<Entity>,
     pub stack: Vec<Entity>,
     pub turn_order: Vec<Entity>,
+    pub extra_turns: VecDeque<Entity>,
+    pub phases: VecDeque<Phase>,
+    pub subphases: VecDeque<Subphase>,
+    pub phase: Option<Phase>,
+    pub subphase: Option<Subphase>,
     pub active_player: Entity,
-    pub outcome:GameOutcome,
+    pub outcome: GameOutcome,
     #[serde(skip_serializing)]
     db: &'a CardDB,
 }
 
-
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
-pub enum GameOutcome{
+pub enum GameOutcome {
     Ongoing,
     Tie,
-    Winner(Entity)
+    Winner(Entity),
 }
 impl GameBuilder {
     pub fn new() -> Self {
@@ -107,7 +111,12 @@ impl GameBuilder {
             turn_order: self.turn_order,
             active_player: active_player,
             db: db,
-            outcome:GameOutcome::Ongoing
+            extra_turns: VecDeque::new(),
+            phases: VecDeque::new(),
+            subphases: VecDeque::new(),
+            phase: None,
+            subphase: None,
+            outcome: GameOutcome::Ongoing,
         })
     }
 }
@@ -115,37 +124,31 @@ impl GameBuilder {
 //the playet for sending to the client
 struct GameSerializer<'a> {
     player: Entity,
-    ents: &'a World
+    ents: &'a World,
 }
-/*
-#[derive(Clone, Copy, Debug)]
-pub struct SummoningSickness();
-#[derive(Clone, Copy, Debug)]
-pub struct Tapped();
-*/
-impl <'a> SerializeContext for GameSerializer <'a> {
+impl<'a> SerializeContext for GameSerializer<'a> {
     fn serialize_entity<S>(&mut self, entity: EntityRef<'_>, map: &mut S) -> Result<(), S::Error>
     where
         S: serde::ser::SerializeMap,
     {
-        let toshow=match entity.get::<EntCore>(){
-            Some(core)=>core.known.contains(&self.player),
-            None=>true
+        let toshow = match entity.get::<EntCore>() {
+            Some(core) => core.known.contains(&self.player),
+            None => true,
         };
-        if toshow{
+        if toshow {
             try_serialize::<SummoningSickness, _, _>(&entity, "summoning_sickness", map)?;
-            try_serialize::<Tapped, _, _>(&entity,"tapped", map)?;
-            try_serialize::<CardName, _, _>(&entity,"name", map)?;
-            try_serialize::<EntCore, _, _>(&entity,"base_identity", map)?;
-            try_serialize::<PT, _, _>(&entity,"pt", map)?;
-            try_serialize::<Types, _, _>(&entity,"types", map)?;
-            try_serialize::<HashSet<Subtype>, _, _>(&entity,"subtypes", map)?;
+            try_serialize::<Tapped, _, _>(&entity, "tapped", map)?;
+            try_serialize::<CardName, _, _>(&entity, "name", map)?;
+            try_serialize::<EntCore, _, _>(&entity, "base_identity", map)?;
+            try_serialize::<PT, _, _>(&entity, "pt", map)?;
+            try_serialize::<Types, _, _>(&entity, "types", map)?;
+            try_serialize::<HashSet<Subtype>, _, _>(&entity, "subtypes", map)?;
         }
-        if let Some(pl) =entity.get::<Player>(){
-            let helper=PlayerSerialHelper{
-                viewpoint:self.player,
-                player:&pl,
-                world:self.ents,
+        if let Some(pl) = entity.get::<Player>() {
+            let helper = PlayerSerialHelper {
+                viewpoint: self.player,
+                player: &pl,
+                world: self.ents,
             };
             map.serialize_entry("player", &helper)?;
         }
@@ -160,49 +163,60 @@ impl<'a> Game<'a> {
             }
         }
         self.send_state().await;
-        let mut cur_turn=self.turn_order[0];
-        while self.outcome==GameOutcome::Ongoing{
-            todo!();
+        while self.outcome == GameOutcome::Ongoing {
+            if let Some(subphase) = self.subphases.pop_front() {
+                continue;
+            }
+            if let Some(phase) = self.phases.pop_front() {
+                continue;
+            }
         }
         self.outcome
     }
     async fn send_state(&mut self) {
-        let mut state_futures=Vec::new();
+        let mut state_futures = Vec::new();
         for player in self.turn_order.clone() {
             state_futures.push(self.send_state_player(player));
         }
-        let _results=future::join_all(state_futures).await;
+        let _results = future::join_all(state_futures).await;
     }
     async fn send_state_player(&self, player: Entity) -> Result<()> {
-        let mut buffer=Vec::<u8>::new();
+        let mut buffer = Vec::<u8>::new();
         {
             let mut cursor = std::io::Cursor::new(&mut buffer);
             cursor.write_all(b"[")?;
             let mut json_serial = serde_json::Serializer::new(cursor);
-            let mut serial_context = GameSerializer { player: player, ents: &self.ents };
+            let mut serial_context = GameSerializer {
+                player: player,
+                ents: &self.ents,
+            };
             hecs::serialize::row::serialize(&self.ents, &mut serial_context, &mut json_serial)?;
-            let mut cursor=json_serial.into_inner();
+            let mut cursor = json_serial.into_inner();
             cursor.write_all(b",")?;
             let mut json_serial = serde_json::Serializer::new(cursor);
-            self.serialize_game(&mut json_serial,player)?;
-            let mut cursor=json_serial.into_inner();
+            self.serialize_game(&mut json_serial, player)?;
+            let mut cursor = json_serial.into_inner();
             cursor.write_all(b"]")?;
         }
         if let Ok(mut pl) = self.ents.get_mut::<Player>(player) {
-           pl.player_con.send_state(buffer).await?;
+            pl.player_con.send_state(buffer).await?;
         }
         Ok(())
     }
     //This function will be needed later for face-down cards. For now,
     //Just show all information for these entities
-    fn serialize_game<W: std::io::Write>(&self,S:&mut serde_json::Serializer<W>,player:Entity)->Result<()>{
-        let mut sergame= S.serialize_struct("game", 6)?;
-        sergame.serialize_field("exile",&self.exile)?;
-        sergame.serialize_field("command",&self.command)?;
-        sergame.serialize_field("stack",&self.stack)?;
-        sergame.serialize_field("turn_order",&self.turn_order)?;
-        sergame.serialize_field("active_player",&self.active_player)?;
-        sergame.serialize_field("outcome",&self.outcome)?;
+    fn serialize_game<W: std::io::Write>(
+        &self,
+        S: &mut serde_json::Serializer<W>,
+        player: Entity,
+    ) -> Result<()> {
+        let mut sergame = S.serialize_struct("game", 6)?;
+        sergame.serialize_field("exile", &self.exile)?;
+        sergame.serialize_field("command", &self.command)?;
+        sergame.serialize_field("stack", &self.stack)?;
+        sergame.serialize_field("turn_order", &self.turn_order)?;
+        sergame.serialize_field("active_player", &self.active_player)?;
+        sergame.serialize_field("outcome", &self.outcome)?;
         sergame.end()?;
         Ok(())
     }
@@ -225,14 +239,97 @@ impl<'a> Game<'a> {
             //By the time the loop reaches here, the game is ready to
             //Execute the event. No more prevention/replacement effects
             match event.event {
-                Event::Tap { ent } => {
-                    if self.battlefield.contains(&ent) && self.ents.get::<Tapped>(ent).is_err() {
-                        if self.ents.insert_one(ent, Tapped()).is_ok() {
-                            results.push(EventResult::Tap(ent));
+                Event::Turn { extra: _, player } => {
+                    self.active_player = player;
+                    self.phases.extend(
+                        [
+                            Phase::Begin,
+                            Phase::FirstMain,
+                            Phase::Combat,
+                            Phase::SecondMain,
+                            Phase::Ending,
+                        ]
+                        .iter(),
+                    );
+                }
+                Event::Subphase { subphase } => {
+                    self.subphase = Some(subphase);
+                    match subphase {
+                        Subphase::Untap => {
+                            for perm in self.controlled(self.active_player) {
+                                self.untap(perm, EventCause::None);
+                            }
+                        }
+                        Subphase::Upkeep => {
+                            self.run_phase();
+                        }
+                        Subphase::Draw => {
+                            self.draw(self.active_player, EventCause::None);
+                            self.run_phase();
+                        }
+                        Subphase::BeginCombat => {
+                            self.run_phase();
+                        }
+                        Subphase::Attackers => {
+                            let perms=self.players_creatures(self.active_player);
+                            
+                            self.run_phase();
                         }
                     }
                 }
-                Event::Draw { player, controller:_ } => {
+                Event::Phase { phase } => {
+                    self.phase = Some(phase);
+                    self.subphase = None;
+                    match phase {
+                        Phase::Begin => {
+                            self.subphases
+                                .extend([Subphase::Untap, Subphase::Upkeep, Subphase::Draw].iter());
+                        }
+                        Phase::FirstMain => {
+                            self.run_phase();
+                        }
+                        Phase::Combat => {
+                            self.subphases.extend(
+                                [
+                                    Subphase::BeginCombat,
+                                    Subphase::Attackers,
+                                    Subphase::Blockers,
+                                    Subphase::FirstStrikeDamage,
+                                    Subphase::Damage,
+                                    Subphase::EndCombat,
+                                ]
+                                .iter(),
+                            );
+                        }
+                        Phase::SecondMain => {
+                            self.run_phase();
+                        }
+                        Phase::Ending => {
+                            self.subphases
+                                .extend([Subphase::EndStep, Subphase::Cleanup].iter());
+                        }
+                    }
+                }
+                //Handle already being tapped as prevention effect
+                Event::Tap { ent } => {
+                    if self.battlefield.contains(&ent)
+                        && self.ents.insert_one(ent, Tapped()).is_ok()
+                    {
+                        results.push(EventResult::Tap(ent));
+                    }
+                }
+                //Handle already being untapped as prevention effect
+                Event::Untap { ent } => {
+                    if self.battlefield.contains(&ent)
+                        && self.ents.remove_one::<Tapped>(ent).is_ok()
+                    {
+                        results.push(EventResult::Untap(ent));
+                    }
+                }
+                Event::Draw {
+                    player,
+                    controller: _,
+                } => {
                     if let Ok(pl) = self.ents.get::<Player>(player) {
                         match pl.deck.last() {
                             Some(card) => {
@@ -281,95 +378,108 @@ impl<'a> Game<'a> {
                     if origin == dest {
                         continue;
                     };
-                    let mut core;
+                    let core = &mut None;
                     {
-                        let coreborrow=self.ents.get::<EntCore>(ent).expect("All cards and abilites need a core");
-                        let refentcore=&(*coreborrow);
-                        core=refentcore.clone();
+                        if let Ok(coreborrow) = self.ents.get::<EntCore>(ent) {
+                            let refentcore = &(*coreborrow);
+                            *core = Some(refentcore.clone());
+                        }
                     }
-                    let removed;
-                    {
-                        let mut player=self.ents.get_mut::<Player>(core.owner).expect("Owners must be players");
-                        removed = match origin {
-                            Zone::Exile => self.exile.remove(&ent),
-                            Zone::Command => self.command.remove(&ent),
-                            Zone::Battlefield => self.battlefield.remove(&ent),
-                            Zone::Hand => player.hand.remove(&ent),
-                            Zone::Library => match player.deck.iter().position(|x| *x == ent) {
-                                Some(i) => {
-                                    player.deck.remove(i);
-                                    true
-                                }
-                                None => false,
-                            },
-                            Zone::Graveyard => {
-                                match player.graveyard.iter().position(|x| *x == ent) {
+                    let mut removed=false;
+                    if let Some(core) = core.as_mut() {
+                        removed = if let Ok(mut player) = self.ents.get_mut::<Player>(core.owner) {
+                            match origin {
+                                Zone::Exile => self.exile.remove(&ent),
+                                Zone::Command => self.command.remove(&ent),
+                                Zone::Battlefield => self.battlefield.remove(&ent),
+                                Zone::Hand => player.hand.remove(&ent),
+                                Zone::Library => match player.deck.iter().position(|x| *x == ent) {
                                     Some(i) => {
-                                        player.graveyard.remove(i);
+                                        player.deck.remove(i);
                                         true
                                     }
                                     None => false,
+                                },
+                                Zone::Graveyard => {
+                                    match player.graveyard.iter().position(|x| *x == ent) {
+                                        Some(i) => {
+                                            player.graveyard.remove(i);
+                                            true
+                                        }
+                                        None => false,
+                                    }
                                 }
+                                Zone::Stack => match self.stack.iter().position(|x| *x == ent) {
+                                    Some(i) => {
+                                        self.stack.remove(i);
+                                        true
+                                    }
+                                    None => false,
+                                },
                             }
-                            Zone::Stack => match self.stack.iter().position(|x| *x == ent) {
-                                Some(i) => {
-                                    self.stack.remove(i);
-                                    true
-                                }
-                                None => false,
-                            },
-                        };
+                        } else {
+                            false
+                        }
                     }
-                    if removed && core.real_card{
-                        let newent = self.db.spawn_card(&mut self.ents, &core.name, core.owner).unwrap();
-                        match dest{
-                            Zone::Exile | Zone::Stack | Zone::Command | Zone::Battlefield | Zone::Graveyard=>{
-                                core.known.extend(self.turn_order.iter());//Public zone
-                                //Morphs **are** publicly known, just some attributes of face 
-                                //down cards will not be known. I may need a second
-                                //structure for face down cards to track who knows what they are
-                                //For MDFC and TDFC cards this isn't an issue because 
-                                //from one side, you know what the other side is. 
-                                //For moving to the hand or library 
-                                //it retains it's current knowledge set
-                                //Shuffling will destroy all knowledge of cards in the library
-                            },
-                            Zone::Hand => {
-                                core.known.insert(core.owner);
-                            },
-                            _=>{}
+                    if let Some(core) = core.as_mut() {
+                        if removed && core.real_card {
+                            let newent = self
+                                .db
+                                .spawn_card(&mut self.ents, &core.name, core.owner)
+                                .unwrap();
+                            match dest {
+                                Zone::Exile
+                                | Zone::Stack
+                                | Zone::Command
+                                | Zone::Battlefield
+                                | Zone::Graveyard => {
+                                    core.known.extend(self.turn_order.iter());
+                                    //Public zone
+                                    //Morphs **are** publicly known, just some attributes of face
+                                    //down cards will not be known. I may need a second
+                                    //structure for face down cards to track who knows what they are
+                                    //For MDFC and TDFC cards this isn't an issue because
+                                    //from one side, you know what the other side is.
+                                    //For moving to the hand or library
+                                    //it retains it's current knowledge set
+                                    //Shuffling will destroy all knowledge of cards in the library
+                                }
+                                Zone::Hand => {
+                                    core.known.insert(core.owner);
+                                }
+                                _ => {}
+                            }
+                            self.ents.insert_one(newent, core.clone()).unwrap();
+                            let mut player = self.ents.get_mut::<Player>(core.owner).unwrap();
+                            match dest {
+                                Zone::Exile => {
+                                    self.exile.insert(newent);
+                                }
+                                Zone::Command => {
+                                    self.command.insert(newent);
+                                }
+                                Zone::Battlefield => {
+                                    self.battlefield.insert(newent);
+                                }
+                                Zone::Hand => {
+                                    player.hand.insert(newent);
+                                }
+                                //Handle inserting a distance from the top. Perhaps swap them afterwards?
+                                Zone::Library => player.deck.push(newent),
+                                Zone::Graveyard => player.graveyard.push(newent),
+                                Zone::Stack => self.stack.push(newent),
+                            }
+                            results.push(EventResult::MoveZones {
+                                oldent: ent,
+                                newent: newent,
+                                dest: dest,
+                            });
                         }
-                        self.ents.insert_one(newent, core.clone()).unwrap();
-                        let mut player = self.ents.get_mut::<Player>(core.owner).unwrap();
-                        match dest {
-                            Zone::Exile => {
-                                self.exile.insert(newent);
-                            }
-                            Zone::Command => {
-                                self.command.insert(newent);
-                            }
-                            Zone::Battlefield => {
-                                self.battlefield.insert(newent);
-                            }
-                            Zone::Hand => {
-                                player.hand.insert(newent);
-                            }
-                            //Handle inserting a distance from the top. Perhaps swap them afterwards?
-                            Zone::Library => player.deck.push(newent),
-                            Zone::Graveyard => player.graveyard.push(newent),
-                            Zone::Stack => self.stack.push(newent),
-                        }
-                        results.push(EventResult::MoveZones {
-                            oldent: ent,
-                            newent: newent,
-                            dest: dest,
-                        });
                     }
                 }
             }
         }
     }
-
     fn add_event(events: &mut Vec<TagEvent>, event: Event, cause: EventCause) {
         events.push(TagEvent {
             event: event,
@@ -379,8 +489,13 @@ impl<'a> Game<'a> {
     }
     //Taps an entity, returns if it was sucsessfully tapped
     pub fn tap(&mut self, ent: Entity, cause: EventCause) -> bool {
-        self.handle_event(Event::Tap { ent: ent }, cause)
+        self.handle_event(Event::Tap { ent }, cause)
             .contains(&EventResult::Tap(ent))
+    }
+    //Taps an entity, returns if it was sucsessfully tapped
+    pub fn untap(&mut self, ent: Entity, cause: EventCause) -> bool {
+        self.handle_event(Event::Untap { ent }, cause)
+            .contains(&EventResult::Untap(ent))
     }
     //draws a card, returns the entities drawn
     pub fn draw(&mut self, player: Entity, cause: EventCause) -> Vec<Entity> {
@@ -394,6 +509,26 @@ impl<'a> Game<'a> {
         let drawn = Vec::new();
         drawn
         //TODO figure out which cards were drawn!
+    }
+    pub fn players_creatures(&self, player: Entity) -> Vec<Entity> {
+        let mut also_creature = Vec::new();
+        for ent in self.controlled(player) {
+            if let Ok(types) = self.ents.get::<Types>(ent) {
+                if types.creature {
+                    also_creature.push(ent);
+                }
+            }
+        }
+        also_creature
+    }
+    pub fn controlled(&self, player: Entity) -> Vec<Entity> {
+        let mut controlled = Vec::new();
+        for perm in self.battlefield.clone() {
+            if self.get_controller(perm) == Some(player) {
+                controlled.push(perm);
+            }
+        }
+        controlled
     }
     //Can this creature tap to be declared an attacker or to activate an ability?
     //Doesn't include prevention effects, just if it can tap w/o them
@@ -424,22 +559,49 @@ impl<'a> Game<'a> {
             false
         }
     }
+    //takes in a card or permanent, returns it's controller or owner if the controller
+    //is unavailable
+    pub fn get_controller(&self, ent: Entity) -> Option<Entity> {
+        if let Ok(controller) = self.ents.get::<Controller>(ent) {
+            Some(controller.0)
+        } else {
+            if let Ok(core) = self.ents.get::<EntCore>(ent) {
+                Some(core.owner)
+            } else {
+                None
+            }
+        }
+    }
+    //Cycles priority then fires an end-of-phase event
+    pub fn run_phase(&mut self) {
+        todo!();
+    }
 }
 
 #[derive(Clone, Copy, Debug, Serialize, PartialEq)]
 #[allow(dead_code)] //allow dead code to reduce warnings noise on each variant
-pub enum Phase{
+
+pub enum Phase {
+    Begin,
+    FirstMain,
+    Combat,
+    SecondMain,
+    Ending,
+}
+#[derive(Clone, Copy, Debug, Serialize, PartialEq)]
+#[allow(dead_code)]
+pub enum Subphase {
     Untap,
     Upkeep,
     Draw,
-    FirstMain,
     BeginCombat,
     Attackers,
     Blockers,
     FirstStrikeDamage,
     Damage,
     EndCombat,
-
+    EndStep,
+    Cleanup,
 }
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Color {

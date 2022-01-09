@@ -1,16 +1,16 @@
-use derivative::*;//derivative::Derivative, work around rust-analyzer bug for now
-use hecs::{Entity, EntityRef, World}; 
-use std::collections::HashSet;
-use async_trait::async_trait;
-use warp::filters::ws::Message;
-use serde::{Serialize,Serializer};
 use crate::components::EntCore;
 use crate::JS_UNKNOWN;
-use std::sync::Mutex;
-use warp::ws::WebSocket;
 use anyhow::{bail, Result};
-use serde::ser::SerializeStruct;
+use async_trait::async_trait;
+use derivative::*; //derivative::Derivative, work around rust-analyzer bug for now
 use futures_util::SinkExt;
+use hecs::{Entity, EntityRef, World};
+use serde::ser::SerializeStruct;
+use serde::{Serialize, Serializer};
+use std::collections::HashSet;
+use std::sync::Mutex;
+use warp::filters::ws::Message;
+use warp::ws::WebSocket;
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct Player {
@@ -22,29 +22,36 @@ pub struct Player {
     pub graveyard: Vec<Entity>,
     pub lost: bool,
     pub won: bool,
-    #[derivative(Debug="ignore")]
+    #[derivative(Debug = "ignore")]
     pub player_con: Box<dyn PlayerCon>,
 }
 
-impl Player{
-    fn serialize_view<S>(&self,serializer: S,ents: &World,player:Entity)
-    ->Result<S::Ok, S::Error> where S: Serializer{
-        let mut ser= serializer.serialize_struct("player", 8)?;
-        let mut deckview=Vec::new();
-        for card in &self.deck{
-            let core=ents.get::<EntCore>(*card).expect("All cards need a core");
-            if core.known.contains(&player){
+impl Player {
+    fn serialize_view<S>(
+        &self,
+        serializer: S,
+        ents: &World,
+        player: Entity,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut ser = serializer.serialize_struct("player", 8)?;
+        let mut deckview = Vec::new();
+        for card in &self.deck {
+            let core = ents.get::<EntCore>(*card).expect("All cards need a core");
+            if core.known.contains(&player) {
                 deckview.push(*card);
-            }else{
+            } else {
                 deckview.push(*JS_UNKNOWN.get().unwrap());
             }
         }
-        let mut handview=Vec::new();
-        for card in &self.hand{
-            let core=ents.get::<EntCore>(*card).expect("All cards need a core");
-            if core.known.contains(&player){
+        let mut handview = Vec::new();
+        for card in &self.hand {
+            let core = ents.get::<EntCore>(*card).expect("All cards need a core");
+            if core.known.contains(&player) {
                 handview.push(*card);
-            }else{
+            } else {
                 handview.push(*JS_UNKNOWN.get().unwrap());
             }
         }
@@ -59,40 +66,42 @@ impl Player{
         ser.end()
     }
 }
-pub struct PlayerSerialHelper<'a,'b>{
-    pub viewpoint:Entity,
+pub struct PlayerSerialHelper<'a, 'b> {
+    pub viewpoint: Entity,
     pub player: &'a Player,
     pub world: &'b World,
 }
-impl <'a, 'b> Serialize for PlayerSerialHelper<'a, 'b>{
+impl<'a, 'b> Serialize for PlayerSerialHelper<'a, 'b> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-            S: Serializer {
-        self.player.serialize_view(serializer, &self.world, self.viewpoint)
-
+        S: Serializer,
+    {
+        self.player
+            .serialize_view(serializer, &self.world, self.viewpoint)
     }
 }
 
 #[async_trait]
 pub trait PlayerCon: Send + Sync {
-    async fn choose(&mut self, ents: &Vec<Entity>) -> Result<usize> {
+    async fn choose(&mut self, ents: &Vec<Entity>,min:u32,max:u32) -> Result<usize> {
         match ents.len() {
             0 => bail!("Can't choose 0 options"),
             1 => Ok(1),
-            _ => Ok(self.ask_user(ents).await),
+            _ => Ok(self.ask_user(ents,min,max).await),
         }
     }
-    async fn ask_user(&mut self, ents: &Vec<Entity>) -> usize;
-    async fn send_state(&mut self,state: Vec<u8>)->Result<()>;
+    //Inclusive on min, exclusive on max
+    async fn ask_user(&mut self, ents: &Vec<Entity>,min:u32,max:u32) -> usize;
+    async fn send_state(&mut self, state: Vec<u8>) -> Result<()>;
 }
 
 #[async_trait]
 impl PlayerCon for Mutex<WebSocket> {
-    async fn ask_user(&mut self, ents: &Vec<Entity>) -> usize {
+    async fn ask_user(&mut self, ents: &Vec<Entity>,min:u32,max:u32) -> usize {
         0
     }
-    async fn send_state(&mut self,state: Vec<u8>)->Result<()>{
-        let socket=self.get_mut().unwrap();
+    async fn send_state(&mut self, state: Vec<u8>) -> Result<()> {
+        let socket = self.get_mut().unwrap();
         socket.send(Message::binary(state)).await?;
         Ok(())
     }
@@ -100,10 +109,11 @@ impl PlayerCon for Mutex<WebSocket> {
 
 #[async_trait]
 impl PlayerCon for () {
-    async fn ask_user(&mut self, ents: &Vec<Entity>) -> usize {
+    //Probably would be best to make this random
+    async fn ask_user(&mut self, _ents: &Vec<Entity>,_min:u32,_max:u32) -> usize {
         0
     }
-    async fn send_state(&mut self,state: Vec<u8>)->Result<()>{
+    async fn send_state(&mut self, _state: Vec<u8>) -> Result<()> {
         Ok(())
     }
 }

@@ -1,6 +1,6 @@
 use crate::event::EventCause;
+use crate::game::Color;
 use crate::game::Game;
-use crate::game::{Color};
 use crate::player::Player;
 use anyhow::{bail, Result};
 use hecs::Entity;

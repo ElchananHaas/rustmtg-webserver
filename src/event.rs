@@ -1,4 +1,4 @@
-use crate::game::{Game, Zone};
+use crate::game::{Game, Phase, Subphase, Zone};
 use hecs::Entity;
 
 #[derive(Clone, Debug)]
@@ -42,8 +42,19 @@ pub enum Event {
     Tap {
         ent: Entity,
     },
-    //Tap
-    //Dies
+    Subphase {
+        subphase: Subphase,
+    },
+    Phase {
+        phase: Phase,
+    },
+    Turn {
+        extra: bool,
+        player: Entity,
+    },
+    Untap {
+        ent: Entity,
+    },
 }
 #[derive(Clone, Debug, PartialEq)]
 pub enum EventResult {
@@ -56,4 +67,5 @@ pub enum EventResult {
         dest: Zone,
     },
     Tap(Entity),
+    Untap(Entity),
 }

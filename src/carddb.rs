@@ -1,9 +1,7 @@
 use crate::ability::Ability;
+use crate::components::{CardName, EntCore, Types, PT, Subtype};
 use crate::cost::Cost;
 use crate::game::Color;
-use crate::types::Subtype;
-use crate::types::Types;
-use crate::components::{CardName,EntCore,PT};
 use anyhow::{bail, Result};
 use hecs::{Entity, EntityBuilder, World};
 use std::collections::{HashMap, HashSet};
@@ -40,10 +38,10 @@ impl CardDB {
         }
         CardDB { builders: map }
     }
-    pub fn spawn_card(&self, ents: &mut World, card_name: &str, owner:Entity) -> Result<Entity> {
+    pub fn spawn_card(&self, ents: &mut World, card_name: &str, owner: Entity) -> Result<Entity> {
         match self.builders.get(card_name) {
             Some(cardmaker) => {
-                let mut builder = CardBuilder::new(card_name.to_owned(),owner);
+                let mut builder = CardBuilder::new(card_name.to_owned(), owner);
                 cardmaker(&mut builder);
                 let res = ents.spawn(builder.build().build()); //Two build calls
                 Ok(res)
@@ -66,7 +64,7 @@ pub struct CardBuilder {
 }
 
 impl CardBuilder {
-    pub fn new(name: String, owner:Entity) -> Self {
+    pub fn new(name: String, owner: Entity) -> Self {
         let mut builder = CardBuilder {
             builder: EntityBuilder::new(),
             abilities: Vec::new(),
@@ -75,7 +73,7 @@ impl CardBuilder {
             costs: Vec::new(),
             real_card: true,
             name: (&name).clone(),
-            owner:owner,
+            owner: owner,
         };
         builder.builder.add(CardName(name));
         builder
