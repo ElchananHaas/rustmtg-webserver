@@ -7,11 +7,13 @@ use futures_util::SinkExt;
 use hecs::{Entity, EntityRef, World};
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
+use std::cell::RefCell;
 use std::collections::HashSet;
-use std::sync::Mutex;
+use std::rc::Rc;
+use std::sync::{Mutex, Arc};
 use warp::filters::ws::Message;
 use warp::ws::WebSocket;
-#[derive(Derivative)]
+#[derive(Derivative,Clone)]
 #[derivative(Debug)]
 pub struct Player {
     pub name: String,
@@ -23,7 +25,7 @@ pub struct Player {
     pub lost: bool,
     pub won: bool,
     #[derivative(Debug = "ignore")]
-    pub player_con: Box<dyn PlayerCon>,
+    pub player_con:Arc<Mutex<Box<dyn PlayerCon>>>,
 }
 
 impl Player {
@@ -65,6 +67,19 @@ impl Player {
         ser.serialize_field("lost", &self.lost)?;
         ser.end()
     }
+    pub async fn send_state(&mut self, state: Vec<u8>) -> Result<()>{
+        let mut tempcon:Box<(dyn PlayerCon + 'static)>=Box::new(());
+        {
+            let mut lock=self.player_con.lock().unwrap();
+            std::mem::swap(&mut tempcon,&mut (*lock));
+        }
+        tempcon.send_state(state);
+        {
+            let mut lock=self.player_con.lock().unwrap();
+            std::mem::swap(&mut tempcon,&mut (*lock));
+        }
+        Ok(())
+    }
 }
 pub struct PlayerSerialHelper<'a, 'b> {
     pub viewpoint: Entity,
@@ -82,27 +97,26 @@ impl<'a, 'b> Serialize for PlayerSerialHelper<'a, 'b> {
 }
 
 #[async_trait]
-pub trait PlayerCon: Send + Sync {
-    async fn choose(&mut self, ents: &Vec<Entity>,min:u32,max:u32) -> Result<usize> {
+pub trait PlayerCon: Send+ Sync{
+    async fn choose(&mut self, ents: &Vec<Entity>, min: u32, max: u32) -> Result<usize> {
         match ents.len() {
             0 => bail!("Can't choose 0 options"),
             1 => Ok(1),
-            _ => Ok(self.ask_user(ents,min,max).await),
+            _ => Ok(self.ask_user(ents, min, max).await),
         }
     }
     //Inclusive on min, exclusive on max
-    async fn ask_user(&mut self, ents: &Vec<Entity>,min:u32,max:u32) -> usize;
+    async fn ask_user(&mut self, ents: &Vec<Entity>, min: u32, max: u32) -> usize;
     async fn send_state(&mut self, state: Vec<u8>) -> Result<()>;
 }
 
 #[async_trait]
 impl PlayerCon for Mutex<WebSocket> {
-    async fn ask_user(&mut self, ents: &Vec<Entity>,min:u32,max:u32) -> usize {
+    async fn ask_user(&mut self, ents: &Vec<Entity>, min: u32, max: u32) -> usize {
         0
     }
     async fn send_state(&mut self, state: Vec<u8>) -> Result<()> {
-        let socket = self.get_mut().unwrap();
-        socket.send(Message::binary(state)).await?;
+        self.get_mut().unwrap().send(Message::binary(state)).await?;
         Ok(())
     }
 }
@@ -110,7 +124,7 @@ impl PlayerCon for Mutex<WebSocket> {
 #[async_trait]
 impl PlayerCon for () {
     //Probably would be best to make this random
-    async fn ask_user(&mut self, _ents: &Vec<Entity>,_min:u32,_max:u32) -> usize {
+    async fn ask_user(&mut self, _ents: &Vec<Entity>, _min: u32, _max: u32) -> usize {
         0
     }
     async fn send_state(&mut self, _state: Vec<u8>) -> Result<()> {

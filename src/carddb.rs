@@ -1,5 +1,5 @@
 use crate::ability::Ability;
-use crate::components::{CardName, EntCore, Types, PT, Subtype};
+use crate::components::{CardName, EntCore, Subtype, Types, PT};
 use crate::cost::Cost;
 use crate::game::Color;
 use anyhow::{bail, Result};

@@ -1,7 +1,10 @@
 //This file stores varius components that entities may
-use hecs::Entity;
+use hecs::{Component, Entity, EntityBuilder, EntityRef, World};
 use serde_derive::Serialize;
-use std::collections::HashSet;
+use std::any::{Any, TypeId};
+use std::collections::{HashMap, HashSet};
+
+
 //Utility structure for figuring out if a creature can tap
 //Added the turn it ETBs or changes control
 #[derive(Clone, Copy, Debug, Serialize, PartialEq)]
@@ -35,7 +38,6 @@ pub struct Types {
     pub instant: bool,
     pub sorcery: bool,
 }
-
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize)]
 #[allow(dead_code)] //allow dead code to reduce warnings noise on each variant

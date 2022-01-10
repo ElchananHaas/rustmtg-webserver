@@ -1,23 +1,64 @@
 use crate::ability::Ability;
 use crate::ability::KeywordAbility;
 use crate::carddb::CardDB;
-use crate::components::{CardName, Controller, EntCore, SummoningSickness, Tapped, Types, PT,Subtype};
+use crate::components::{
+    CardName, Controller, EntCore, Subtype, SummoningSickness, Tapped, Types, PT,
+};
 use crate::event::{Event, EventCause, EventResult, TagEvent};
 use crate::player::{Player, PlayerCon, PlayerSerialHelper};
 use anyhow::{bail, Result};
 use futures::{executor, future, FutureExt};
 use hecs::serialize::row::{try_serialize, SerializeContext};
-use hecs::{Entity, EntityRef, World};
+use hecs::{Entity, EntityRef, World,EntityBuilder};
 use serde::ser::SerializeStruct;
 use serde::Serialize;
 use serde::Serializer;
 use serde_derive::Serialize;
 use serde_json;
+use std::cell::RefCell;
 use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::io::{Read, Write};
 use std::ops::Sub;
+use std::rc::Rc;
 use std::result::Result::Ok;
+use std::sync::Arc;
+use std::sync::Mutex;
+
+mod handle_event;
+
+macro_rules! backuprestore {
+    ( $( $x:ty ),* ) => {
+        fn copy_simple_comp(source:&mut World,dest:&mut World){
+            let mut build=EntityBuilder::new();
+            for entref in source.iter(){
+            $(
+                if let Some(comp)=entref.get::<$x>(){
+                    build.add((*comp).clone());
+                }
+            )*
+            let entid=entref.entity();
+            if(!dest.contains(entid)){
+                dest.spawn_at(entid, build.build());
+            }else{
+                dest.insert(entid,build.build());
+            }
+            }
+        }
+        fn clear_comp(ents: &mut World){
+            let entids=ents.iter().map(|entref| entref.entity() ).collect::<Vec<Entity>>();
+            for id in entids{
+            $(
+                let _=ents.remove_one::<$x>(id);
+            )*
+            }
+        }
+
+    };
+}
+
+backuprestore!{Tapped,SummoningSickness,Player}
+
 pub struct GameBuilder {
     ents: World,
     turn_order: Vec<Entity>,
@@ -26,7 +67,7 @@ pub struct GameBuilder {
 //Implement debug trait!
 //Implement clone trait???
 #[derive(Serialize)]
-pub struct Game<'a> {
+pub struct Game {
     #[serde(skip_serializing)]
     pub ents: World,
     pub battlefield: HashSet<Entity>,
@@ -42,9 +83,18 @@ pub struct Game<'a> {
     pub active_player: Entity,
     pub outcome: GameOutcome,
     #[serde(skip_serializing)]
-    db: &'a CardDB,
+    db: &'static CardDB,
+    #[serde(skip_serializing)]
+    backup: Option<BackupGame>,
 }
 
+pub struct BackupGame{
+    pub ents: World,
+    pub battlefield: HashSet<Entity>,
+    pub exile: HashSet<Entity>,
+    pub command: HashSet<Entity>,
+    pub stack: Vec<Entity>,
+}
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub enum GameOutcome {
     Ongoing,
@@ -77,7 +127,7 @@ impl GameBuilder {
             lost: false,
             won: false,
             deck: Vec::new(),
-            player_con: player_con,
+            player_con: Arc::new(Mutex::new(player_con)),
         };
         let player: Entity = self.ents.spawn((player,));
         for cardname in card_names {
@@ -92,7 +142,7 @@ impl GameBuilder {
         }
         Ok(player)
     }
-    pub fn build<'a>(self, db: &'a CardDB) -> Result<Game> {
+    pub fn build(self, db: &'static CardDB) -> Result<Game> {
         let active_player = match self.active_player {
             Some(player) => player,
             None => {
@@ -117,11 +167,12 @@ impl GameBuilder {
             phase: None,
             subphase: None,
             outcome: GameOutcome::Ongoing,
+            backup: None,
         })
     }
 }
 //This structure serializes a game from the view of
-//the playet for sending to the client
+//the player for sending to the client
 struct GameSerializer<'a> {
     player: Entity,
     ents: &'a World,
@@ -155,7 +206,7 @@ impl<'a> SerializeContext for GameSerializer<'a> {
         Ok(())
     }
 }
-impl<'a> Game<'a> {
+impl Game {
     pub async fn run(&mut self) -> GameOutcome {
         for player in self.turn_order.clone() {
             for _i in 0..7 {
@@ -199,7 +250,7 @@ impl<'a> Game<'a> {
             cursor.write_all(b"]")?;
         }
         if let Ok(mut pl) = self.ents.get_mut::<Player>(player) {
-            pl.player_con.send_state(buffer).await?;
+            pl.send_state(buffer).await?;
         }
         Ok(())
     }
@@ -220,265 +271,30 @@ impl<'a> Game<'a> {
         sergame.end()?;
         Ok(())
     }
-    fn handle_event(&mut self, event: Event, cause: EventCause) -> Vec<EventResult> {
-        let mut results: Vec<EventResult> = Vec::new();
-        let mut events: Vec<TagEvent> = Vec::new();
-        events.push(TagEvent {
-            event: event,
-            replacements: Vec::new(),
-            cause: cause,
-        });
-        loop {
-            let event: TagEvent = match events.pop() {
-                Some(x) => x,
-                None => {
-                    return results;
-                }
-            };
-            //Handle prevention, replacement, triggered abilties here
-            //By the time the loop reaches here, the game is ready to
-            //Execute the event. No more prevention/replacement effects
-            match event.event {
-                Event::Turn { extra: _, player } => {
-                    self.active_player = player;
-                    self.phases.extend(
-                        [
-                            Phase::Begin,
-                            Phase::FirstMain,
-                            Phase::Combat,
-                            Phase::SecondMain,
-                            Phase::Ending,
-                        ]
-                        .iter(),
-                    );
-                }
-                Event::Subphase { subphase } => {
-                    self.subphase = Some(subphase);
-                    match subphase {
-                        Subphase::Untap => {
-                            for perm in self.controlled(self.active_player) {
-                                self.untap(perm, EventCause::None);
-                            }
-                        }
-                        Subphase::Upkeep => {
-                            self.run_phase();
-                        }
-                        Subphase::Draw => {
-                            self.draw(self.active_player, EventCause::None);
-                            self.run_phase();
-                        }
-                        Subphase::BeginCombat => {
-                            self.run_phase();
-                        }
-                        Subphase::Attackers => {
-                            let perms=self.players_creatures(self.active_player);
-                            
-                            self.run_phase();
-                        }
-                    }
-                }
-                Event::Phase { phase } => {
-                    self.phase = Some(phase);
-                    self.subphase = None;
-                    match phase {
-                        Phase::Begin => {
-                            self.subphases
-                                .extend([Subphase::Untap, Subphase::Upkeep, Subphase::Draw].iter());
-                        }
-                        Phase::FirstMain => {
-                            self.run_phase();
-                        }
-                        Phase::Combat => {
-                            self.subphases.extend(
-                                [
-                                    Subphase::BeginCombat,
-                                    Subphase::Attackers,
-                                    Subphase::Blockers,
-                                    Subphase::FirstStrikeDamage,
-                                    Subphase::Damage,
-                                    Subphase::EndCombat,
-                                ]
-                                .iter(),
-                            );
-                        }
-                        Phase::SecondMain => {
-                            self.run_phase();
-                        }
-                        Phase::Ending => {
-                            self.subphases
-                                .extend([Subphase::EndStep, Subphase::Cleanup].iter());
-                        }
-                    }
-                }
-                //Handle already being tapped as prevention effect
-                Event::Tap { ent } => {
-                    if self.battlefield.contains(&ent)
-                        && self.ents.insert_one(ent, Tapped()).is_ok()
-                    {
-                        results.push(EventResult::Tap(ent));
-                    }
-                }
-                //Handle already being untapped as prevention effect
-                Event::Untap { ent } => {
-                    if self.battlefield.contains(&ent)
-                        && self.ents.remove_one::<Tapped>(ent).is_ok()
-                    {
-                        results.push(EventResult::Untap(ent));
-                    }
-                }
-                Event::Draw {
-                    player,
-                    controller: _,
-                } => {
-                    if let Ok(pl) = self.ents.get::<Player>(player) {
-                        match pl.deck.last() {
-                            Some(card) => {
-                                Game::add_event(
-                                    &mut events,
-                                    Event::MoveZones {
-                                        ent: *card,
-                                        origin: Zone::Library,
-                                        dest: Zone::Hand,
-                                    },
-                                    event.cause,
-                                );
-                                results.push(EventResult::Draw(*card));
-                            }
-                            None => Game::add_event(
-                                &mut events,
-                                Event::Lose { player: player },
-                                EventCause::Trigger(event.event.clone()),
-                            ),
-                        }
-                    }
-                }
-                Event::Cast {
-                    player: _,
-                    spell: _,
-                } => {
-                    //The spell has already had costs/modes chosen.
-                    //this is just handling triggered abilities
-                    //So there is nothing to do here.
-                    //Spells are handled differently from other actions
-                    //Because of the rules complexity
-                }
-                Event::Activate {
-                    controller: _,
-                    ability: _,
-                } => {
-                    //Similar to spell casting
-                }
-                Event::Lose { player } => {
-                    //TODO add in the logic to have the game terminate such as setting winners
-                    if let Ok(mut pl) = self.ents.get_mut::<Player>(player) {
-                        (*pl).lost = true;
-                    }
-                }
-                Event::MoveZones { ent, origin, dest } => {
-                    if origin == dest {
-                        continue;
-                    };
-                    let core = &mut None;
-                    {
-                        if let Ok(coreborrow) = self.ents.get::<EntCore>(ent) {
-                            let refentcore = &(*coreborrow);
-                            *core = Some(refentcore.clone());
-                        }
-                    }
-                    let mut removed=false;
-                    if let Some(core) = core.as_mut() {
-                        removed = if let Ok(mut player) = self.ents.get_mut::<Player>(core.owner) {
-                            match origin {
-                                Zone::Exile => self.exile.remove(&ent),
-                                Zone::Command => self.command.remove(&ent),
-                                Zone::Battlefield => self.battlefield.remove(&ent),
-                                Zone::Hand => player.hand.remove(&ent),
-                                Zone::Library => match player.deck.iter().position(|x| *x == ent) {
-                                    Some(i) => {
-                                        player.deck.remove(i);
-                                        true
-                                    }
-                                    None => false,
-                                },
-                                Zone::Graveyard => {
-                                    match player.graveyard.iter().position(|x| *x == ent) {
-                                        Some(i) => {
-                                            player.graveyard.remove(i);
-                                            true
-                                        }
-                                        None => false,
-                                    }
-                                }
-                                Zone::Stack => match self.stack.iter().position(|x| *x == ent) {
-                                    Some(i) => {
-                                        self.stack.remove(i);
-                                        true
-                                    }
-                                    None => false,
-                                },
-                            }
-                        } else {
-                            false
-                        }
-                    }
-                    if let Some(core) = core.as_mut() {
-                        if removed && core.real_card {
-                            let newent = self
-                                .db
-                                .spawn_card(&mut self.ents, &core.name, core.owner)
-                                .unwrap();
-                            match dest {
-                                Zone::Exile
-                                | Zone::Stack
-                                | Zone::Command
-                                | Zone::Battlefield
-                                | Zone::Graveyard => {
-                                    core.known.extend(self.turn_order.iter());
-                                    //Public zone
-                                    //Morphs **are** publicly known, just some attributes of face
-                                    //down cards will not be known. I may need a second
-                                    //structure for face down cards to track who knows what they are
-                                    //For MDFC and TDFC cards this isn't an issue because
-                                    //from one side, you know what the other side is.
-                                    //For moving to the hand or library
-                                    //it retains it's current knowledge set
-                                    //Shuffling will destroy all knowledge of cards in the library
-                                }
-                                Zone::Hand => {
-                                    core.known.insert(core.owner);
-                                }
-                                _ => {}
-                            }
-                            self.ents.insert_one(newent, core.clone()).unwrap();
-                            let mut player = self.ents.get_mut::<Player>(core.owner).unwrap();
-                            match dest {
-                                Zone::Exile => {
-                                    self.exile.insert(newent);
-                                }
-                                Zone::Command => {
-                                    self.command.insert(newent);
-                                }
-                                Zone::Battlefield => {
-                                    self.battlefield.insert(newent);
-                                }
-                                Zone::Hand => {
-                                    player.hand.insert(newent);
-                                }
-                                //Handle inserting a distance from the top. Perhaps swap them afterwards?
-                                Zone::Library => player.deck.push(newent),
-                                Zone::Graveyard => player.graveyard.push(newent),
-                                Zone::Stack => self.stack.push(newent),
-                            }
-                            results.push(EventResult::MoveZones {
-                                oldent: ent,
-                                newent: newent,
-                                dest: dest,
-                            });
-                        }
-                    }
-                }
-            }
-        }
+
+    //backs the game up in case a spell casting or attacker/blocker
+    //declaration fails. Only backs up what is needed
+    pub fn backup(&mut self){
+        let mut bup=BackupGame{
+            ents:World::new(),
+            battlefield:self.battlefield.clone(),
+            exile:self.exile.clone(),
+            command:self.command.clone(),
+            stack:self.stack.clone(),
+        };
+        copy_simple_comp(&mut self.ents,&mut bup.ents);
+        self.backup=Some(bup);
+    }
+    pub fn restore(&mut self){
+        let mut bup=None;
+        std::mem::swap(&mut bup, &mut self.backup);
+        let mut bup=bup.expect("Game must already be backed up!");
+        self.battlefield=bup.battlefield;
+        self.exile=bup.exile;
+        self.command=bup.command;
+        self.stack=bup.stack;
+        clear_comp(&mut self.ents);
+        copy_simple_comp(&mut bup.ents, &mut self.ents);
     }
     fn add_event(events: &mut Vec<TagEvent>, event: Event, cause: EventCause) {
         events.push(TagEvent {
