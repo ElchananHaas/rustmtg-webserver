@@ -1,6 +1,9 @@
 use crate::game::*;
-use crate::player::{AskReason, AskUser, Player};
+use crate::player::{AskReason, Player};
+use async_recursion::async_recursion;
+
 impl Game {
+    #[async_recursion]
     pub async fn handle_event(&mut self, event: Event, cause: EventCause) -> Vec<EventResult> {
         let mut results: Vec<EventResult> = Vec::new();
         let mut events: Vec<TagEvent> = Vec::new();
@@ -258,8 +261,9 @@ impl Game {
         match subphase {
             Subphase::Untap => {
                 for perm in self.controlled(self.active_player) {
-                    self.untap(perm, EventCause::None);
+                    self.untap(perm, EventCause::None).await;
                 }
+                //No run phase bc/ players don't get prioirity normally
             }
             Subphase::Upkeep => {
                 self.run_phase();
@@ -283,6 +287,14 @@ impl Game {
                 }
                 self.run_phase();
             }
+            Subphase::Blockers => todo!(),
+            Subphase::FirstStrikeDamage => todo!(),
+            Subphase::Damage => todo!(),
+            Subphase::EndCombat => todo!(),
+            Subphase::EndStep => {
+                self.run_phase();
+            },
+            Subphase::Cleanup => todo!(),
         }
     }
 }

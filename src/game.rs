@@ -5,24 +5,20 @@ use crate::components::{
     CardName, Controller, EntCore, Subtype, SummoningSickness, Tapped, Types, PT,
 };
 use crate::event::{Event, EventCause, EventResult, TagEvent};
-use crate::player;
 use crate::player::{Player, PlayerCon, PlayerSerialHelper};
 use anyhow::{bail, Result};
-use futures::{executor, future, FutureExt};
+use futures::{future};
 use hecs::serialize::row::{try_serialize, SerializeContext};
 use hecs::{Entity, EntityBuilder, EntityRef, World};
 use serde::ser::SerializeStruct;
-use serde::Serialize;
 use serde::Serializer;
 use serde_derive::Serialize;
 use serde_json;
-use std::cell::RefCell;
 use std::collections::HashSet;
 use std::collections::VecDeque;
-use std::io::{Read, Write};
+use std::io::{Write};
 use std::result::Result::Ok;
 use std::sync::Arc;
-use std::sync::Mutex;
 use warp::ws::WebSocket;
 
 mod handle_event;
@@ -39,7 +35,7 @@ macro_rules! backuprestore {
             )*
             let entid=entref.entity();
             if(dest.contains(entid)){
-                dest.insert(entid,build.build());
+                let _=dest.insert(entid,build.build());
             }else{
                 dest.spawn_at(entid, build.build());
             }
@@ -269,10 +265,10 @@ impl Game {
     //Just show all information for these entities
     fn serialize_game<W: std::io::Write>(
         &self,
-        S: &mut serde_json::Serializer<W>,
+        ser: &mut serde_json::Serializer<W>,
         _player: Entity,
     ) -> Result<()> {
-        let mut sergame = S.serialize_struct("game", 6)?;
+        let mut sergame = ser.serialize_struct("game", 6)?;
         sergame.serialize_field("exile", &self.exile)?;
         sergame.serialize_field("command", &self.command)?;
         sergame.serialize_field("stack", &self.stack)?;

@@ -1,10 +1,9 @@
-use anyhow::{bail, Result};
-use futures_util::{SinkExt, StreamExt, TryFutureExt};
+use anyhow::{Result};
 use hecs::Entity;
 use once_cell::sync::OnceCell;
 use std::mem;
 use std::sync::{Arc, Mutex};
-use warp::ws::{Message, WebSocket};
+use warp::ws::{WebSocket};
 use warp::Filter;
 //use actix_files::NamedFile;
 //use actix_web::{HttpRequest, Result};
@@ -64,7 +63,7 @@ async fn launch_game(sockets: Vec<WebSocket>) -> Result<()> {
     for _ in 0..60 {
         deck.push(String::from("Staunch Shieldmate"));
     }
-    let users: Vec<Entity> = sockets
+    sockets
         .into_iter()
         .enumerate()
         .map(|(i, socket)| gamebuild.add_player(&format!("p{}", i), &db, &deck, socket))
@@ -78,7 +77,7 @@ async fn launch_game(sockets: Vec<WebSocket>) -> Result<()> {
 #[cfg(test)]
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
-    use super::*;
+    //use super::*;
     /*
     #[test]
     fn test_game_init() -> Result<()> {

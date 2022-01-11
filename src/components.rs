@@ -1,8 +1,7 @@
 //This file stores varius components that entities may
-use hecs::{Component, Entity, EntityBuilder, EntityRef, World};
+use hecs::{Entity};
 use serde_derive::Serialize;
-use std::any::{Any, TypeId};
-use std::collections::{HashMap, HashSet};
+use std::collections::{ HashSet};
 
 //Utility structure for figuring out if a creature can tap
 //Added the turn it ETBs or changes control
