@@ -5,11 +5,12 @@ use crate::components::{
     CardName, Controller, EntCore, Subtype, SummoningSickness, Tapped, Types, PT,
 };
 use crate::event::{Event, EventCause, EventResult, TagEvent};
+use crate::player;
 use crate::player::{Player, PlayerCon, PlayerSerialHelper};
 use anyhow::{bail, Result};
 use futures::{executor, future, FutureExt};
 use hecs::serialize::row::{try_serialize, SerializeContext};
-use hecs::{Entity, EntityRef, World,EntityBuilder};
+use hecs::{Entity, EntityBuilder, EntityRef, World};
 use serde::ser::SerializeStruct;
 use serde::Serialize;
 use serde::Serializer;
@@ -19,11 +20,10 @@ use std::cell::RefCell;
 use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::io::{Read, Write};
-use std::ops::Sub;
-use std::rc::Rc;
 use std::result::Result::Ok;
 use std::sync::Arc;
 use std::sync::Mutex;
+use warp::ws::WebSocket;
 
 mod handle_event;
 
@@ -38,10 +38,10 @@ macro_rules! backuprestore {
                 }
             )*
             let entid=entref.entity();
-            if(!dest.contains(entid)){
-                dest.spawn_at(entid, build.build());
-            }else{
+            if(dest.contains(entid)){
                 dest.insert(entid,build.build());
+            }else{
+                dest.spawn_at(entid, build.build());
             }
             }
         }
@@ -57,7 +57,7 @@ macro_rules! backuprestore {
     };
 }
 
-backuprestore!{Tapped,SummoningSickness,Player}
+backuprestore! {Tapped,Player}
 
 pub struct GameBuilder {
     ents: World,
@@ -88,7 +88,7 @@ pub struct Game {
     backup: Option<BackupGame>,
 }
 
-pub struct BackupGame{
+pub struct BackupGame {
     pub ents: World,
     pub battlefield: HashSet<Entity>,
     pub exile: HashSet<Entity>,
@@ -115,9 +115,10 @@ impl GameBuilder {
         name: &str,
         db: &CardDB,
         card_names: &Vec<String>,
-        player_con: Box<dyn PlayerCon>,
+        player_con: WebSocket,
     ) -> Result<Entity> {
         let mut cards = Vec::new();
+        let psocket = tokio::sync::Mutex::new(PlayerCon::new(player_con));
         let player = Player {
             name: name.to_owned(),
             hand: HashSet::new(),
@@ -127,7 +128,7 @@ impl GameBuilder {
             lost: false,
             won: false,
             deck: Vec::new(),
-            player_con: Arc::new(Mutex::new(player_con)),
+            player_con: Arc::new(psocket),
         };
         let player: Entity = self.ents.spawn((player,));
         for cardname in card_names {
@@ -210,16 +211,26 @@ impl Game {
     pub async fn run(&mut self) -> GameOutcome {
         for player in self.turn_order.clone() {
             for _i in 0..7 {
-                self.draw(player, EventCause::None);
+                self.draw(player, EventCause::None).await;
             }
         }
         self.send_state().await;
         while self.outcome == GameOutcome::Ongoing {
             if let Some(subphase) = self.subphases.pop_front() {
-                continue;
+                self.handle_event(Event::Subphase{subphase}, EventCause::None).await;
             }
-            if let Some(phase) = self.phases.pop_front() {
-                continue;
+            else if let Some(phase) = self.phases.pop_front() {
+                self.handle_event(Event::Phase{phase}, EventCause::None).await;
+            }
+            else if let Some(player)=self.extra_turns.pop_front(){
+                self.handle_event(Event::Turn{player,extra:true}, EventCause::None).await;
+            }
+            else{
+                //Make sure the active player is updated properly if a player loses or leaves!
+                let order_spot=self.turn_order.iter().position(|x|*x==self.active_player).unwrap();
+                let new_spot=(order_spot+1)%self.turn_order.len();
+                let player=self.turn_order[new_spot];
+                self.handle_event(Event::Turn{player,extra:false}, EventCause::None).await;
             }
         }
         self.outcome
@@ -259,7 +270,7 @@ impl Game {
     fn serialize_game<W: std::io::Write>(
         &self,
         S: &mut serde_json::Serializer<W>,
-        player: Entity,
+        _player: Entity,
     ) -> Result<()> {
         let mut sergame = S.serialize_struct("game", 6)?;
         sergame.serialize_field("exile", &self.exile)?;
@@ -274,25 +285,25 @@ impl Game {
 
     //backs the game up in case a spell casting or attacker/blocker
     //declaration fails. Only backs up what is needed
-    pub fn backup(&mut self){
-        let mut bup=BackupGame{
-            ents:World::new(),
-            battlefield:self.battlefield.clone(),
-            exile:self.exile.clone(),
-            command:self.command.clone(),
-            stack:self.stack.clone(),
+    pub fn backup(&mut self) {
+        let mut bup = BackupGame {
+            ents: World::new(),
+            battlefield: self.battlefield.clone(),
+            exile: self.exile.clone(),
+            command: self.command.clone(),
+            stack: self.stack.clone(),
         };
-        copy_simple_comp(&mut self.ents,&mut bup.ents);
-        self.backup=Some(bup);
+        copy_simple_comp(&mut self.ents, &mut bup.ents);
+        self.backup = Some(bup);
     }
-    pub fn restore(&mut self){
-        let mut bup=None;
+    pub fn restore(&mut self) {
+        let mut bup = None;
         std::mem::swap(&mut bup, &mut self.backup);
-        let mut bup=bup.expect("Game must already be backed up!");
-        self.battlefield=bup.battlefield;
-        self.exile=bup.exile;
-        self.command=bup.command;
-        self.stack=bup.stack;
+        let mut bup = bup.expect("Game must already be backed up!");
+        self.battlefield = bup.battlefield;
+        self.exile = bup.exile;
+        self.command = bup.command;
+        self.stack = bup.stack;
         clear_comp(&mut self.ents);
         copy_simple_comp(&mut bup.ents, &mut self.ents);
     }
@@ -304,24 +315,28 @@ impl Game {
         });
     }
     //Taps an entity, returns if it was sucsessfully tapped
-    pub fn tap(&mut self, ent: Entity, cause: EventCause) -> bool {
+    pub async fn tap(&mut self, ent: Entity, cause: EventCause) -> bool {
         self.handle_event(Event::Tap { ent }, cause)
+            .await
             .contains(&EventResult::Tap(ent))
     }
     //Taps an entity, returns if it was sucsessfully tapped
-    pub fn untap(&mut self, ent: Entity, cause: EventCause) -> bool {
+    pub async fn untap(&mut self, ent: Entity, cause: EventCause) -> bool {
         self.handle_event(Event::Untap { ent }, cause)
+            .await
             .contains(&EventResult::Untap(ent))
     }
     //draws a card, returns the entities drawn
-    pub fn draw(&mut self, player: Entity, cause: EventCause) -> Vec<Entity> {
-        let res = self.handle_event(
-            Event::Draw {
-                player: player,
-                controller: None,
-            },
-            cause,
-        );
+    pub async fn draw(&mut self, player: Entity, cause: EventCause) -> Vec<Entity> {
+        let res = self
+            .handle_event(
+                Event::Draw {
+                    player: player,
+                    controller: None,
+                },
+                cause,
+            )
+            .await;
         let drawn = Vec::new();
         drawn
         //TODO figure out which cards were drawn!
@@ -391,6 +406,15 @@ impl Game {
     //Cycles priority then fires an end-of-phase event
     pub fn run_phase(&mut self) {
         todo!();
+    }
+    pub fn attack_targets(&self, player: Entity) -> Vec<Entity> {
+        self.opponents(player)
+    }
+    pub fn opponents(&self, player: Entity) -> Vec<Entity> {
+        self.turn_order
+            .iter()
+            .filter_map(|x| if *x == player { Some(*x) } else { None })
+            .collect()
     }
 }
 
