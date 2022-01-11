@@ -1,20 +1,17 @@
 use crate::components::EntCore;
 use crate::JS_UNKNOWN;
 use anyhow::{bail, Result};
-use async_trait::async_trait;
 use derivative::*;
 use futures::StreamExt;
 //derivative::Derivative, work around rust-analyzer bug for now
 use futures_util::SinkExt;
-use hecs::{Entity, EntityRef, World};
+use hecs::{Entity, World};
 use serde::de::DeserializeOwned;
 use serde::ser::SerializeStruct;
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{Serialize, Serializer};
 use serde_derive::Serialize;
-use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
-use std::rc::Rc;
-use std::sync::{Arc, Mutex};
+use std::collections::HashSet;
+use std::sync::Arc;
 use warp::filters::ws::Message;
 use warp::ws::WebSocket;
 #[derive(Derivative, Clone)]
@@ -106,37 +103,43 @@ impl Player {
     }
     //pair attackers with blockers/attacking targets
     //Returns an adjacency matrix with either the
-    //planeswalker/player each attacker is attacking, or the
-    //list of blockers that the attacker is blocked by.
+    //planeswalker/player each attacker is attacking,
+    //or the list of creatures each blocker is blocking
     pub async fn ask_user_pair(
         &mut self,
         a: Vec<Entity>,
         b: Vec<Entity>,
+        //Min and max number of choices
+        num_choices: Vec<(usize, usize)>,
         reason: AskReason,
     ) -> Vec<Vec<Entity>> {
         let query = AskUser {
             asktype: AskType::PairAB {
                 a: a.clone(),
                 b: b.clone(),
+                num_choices: num_choices.clone(),
             },
             reason,
         };
-        loop {
+        'outer: loop {
             let mut lock = self.player_con.lock().await;
             let res = lock.ask_user::<Vec<Vec<Entity>>>(&query).await;
             if let Ok(response) = res {
                 if response.len() != a.len() {
-                    continue;
+                    continue 'outer;
                 }
                 for item in response.iter().flatten() {
                     if !b.contains(item) {
-                        continue;
+                        continue 'outer;
                     }
                 }
-                for row in response.iter() {
+                for (i,row) in response.iter().enumerate() {
+                    if row.len()<num_choices[i].0 || row.len() >=num_choices[i].1{
+                        continue 'outer;
+                    }
                     let as_set = row.iter().map(|x| *x).collect::<HashSet<Entity>>();
                     if row.len() != as_set.len() {
-                        continue;
+                        continue 'outer;
                     }
                 }
                 return response;
@@ -174,6 +177,7 @@ pub enum AskType {
     PairAB {
         a: Vec<Entity>,
         b: Vec<Entity>,
+        num_choices: Vec<(usize, usize)>,
     },
 }
 #[derive(Copy, Clone, Debug, Serialize)]
@@ -195,7 +199,7 @@ impl PlayerCon {
         {
             let cursor = std::io::Cursor::new(&mut buffer);
             let mut json_serial = serde_json::Serializer::new(cursor);
-            query.serialize(&mut json_serial);
+            query.serialize(&mut json_serial)?;
         }
         self.socket.send(Message::binary(buffer)).await?;
         let recieved = self.socket.next().await.expect("Socket is still open")?;

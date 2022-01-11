@@ -4,19 +4,18 @@ use crate::carddb::CardDB;
 use crate::components::{
     CardName, Controller, EntCore, Subtype, SummoningSickness, Tapped, Types, PT,
 };
-use crate::event::{Event, EventCause, EventResult, TagEvent};
+use crate::event::{Event, EventResult, TagEvent};
 use crate::player::{Player, PlayerCon, PlayerSerialHelper};
 use anyhow::{bail, Result};
-use futures::{future};
+use futures::future;
 use hecs::serialize::row::{try_serialize, SerializeContext};
 use hecs::{Entity, EntityBuilder, EntityRef, World};
-use serde::ser::SerializeStruct;
-use serde::Serializer;
+use serde::Serialize;
 use serde_derive::Serialize;
 use serde_json;
 use std::collections::HashSet;
 use std::collections::VecDeque;
-use std::io::{Write};
+use std::io::Write;
 use std::result::Result::Ok;
 use std::sync::Arc;
 use warp::ws::WebSocket;
@@ -25,7 +24,7 @@ mod handle_event;
 
 macro_rules! backuprestore {
     ( $( $x:ty ),* ) => {
-        fn copy_simple_comp(source:&mut World,dest:&mut World){
+        fn copy_simple_comp(source:& World,dest:&mut World){
             let mut build=EntityBuilder::new();
             for entref in source.iter(){
             $(
@@ -207,26 +206,35 @@ impl Game {
     pub async fn run(&mut self) -> GameOutcome {
         for player in self.turn_order.clone() {
             for _i in 0..7 {
-                self.draw(player, EventCause::None).await;
+                self.draw(player).await;
             }
         }
         self.send_state().await;
         while self.outcome == GameOutcome::Ongoing {
             if let Some(subphase) = self.subphases.pop_front() {
-                self.handle_event(Event::Subphase{subphase}, EventCause::None).await;
-            }
-            else if let Some(phase) = self.phases.pop_front() {
-                self.handle_event(Event::Phase{phase}, EventCause::None).await;
-            }
-            else if let Some(player)=self.extra_turns.pop_front(){
-                self.handle_event(Event::Turn{player,extra:true}, EventCause::None).await;
-            }
-            else{
+                self.handle_event(Event::Subphase { subphase }).await;
+            } else if let Some(phase) = self.phases.pop_front() {
+                self.handle_event(Event::Phase { phase }).await;
+            } else if let Some(player) = self.extra_turns.pop_front() {
+                self.handle_event(Event::Turn {
+                    player,
+                    extra: true,
+                })
+                .await;
+            } else {
                 //Make sure the active player is updated properly if a player loses or leaves!
-                let order_spot=self.turn_order.iter().position(|x|*x==self.active_player).unwrap();
-                let new_spot=(order_spot+1)%self.turn_order.len();
-                let player=self.turn_order[new_spot];
-                self.handle_event(Event::Turn{player,extra:false}, EventCause::None).await;
+                let order_spot = self
+                    .turn_order
+                    .iter()
+                    .position(|x| *x == self.active_player)
+                    .unwrap();
+                let new_spot = (order_spot + 1) % self.turn_order.len();
+                let player = self.turn_order[new_spot];
+                self.handle_event(Event::Turn {
+                    player,
+                    extra: false,
+                })
+                .await;
             }
         }
         self.outcome
@@ -252,30 +260,13 @@ impl Game {
             let mut cursor = json_serial.into_inner();
             cursor.write_all(b",")?;
             let mut json_serial = serde_json::Serializer::new(cursor);
-            self.serialize_game(&mut json_serial, player)?;
+            self.serialize(&mut json_serial)?;
             let mut cursor = json_serial.into_inner();
             cursor.write_all(b"]")?;
         }
         if let Ok(mut pl) = self.ents.get_mut::<Player>(player) {
             pl.send_state(buffer).await?;
         }
-        Ok(())
-    }
-    //This function will be needed later for face-down cards. For now,
-    //Just show all information for these entities
-    fn serialize_game<W: std::io::Write>(
-        &self,
-        ser: &mut serde_json::Serializer<W>,
-        _player: Entity,
-    ) -> Result<()> {
-        let mut sergame = ser.serialize_struct("game", 6)?;
-        sergame.serialize_field("exile", &self.exile)?;
-        sergame.serialize_field("command", &self.command)?;
-        sergame.serialize_field("stack", &self.stack)?;
-        sergame.serialize_field("turn_order", &self.turn_order)?;
-        sergame.serialize_field("active_player", &self.active_player)?;
-        sergame.serialize_field("outcome", &self.outcome)?;
-        sergame.end()?;
         Ok(())
     }
 
@@ -293,46 +284,31 @@ impl Game {
         self.backup = Some(bup);
     }
     pub fn restore(&mut self) {
-        let mut bup = None;
-        std::mem::swap(&mut bup, &mut self.backup);
-        let mut bup = bup.expect("Game must already be backed up!");
-        self.battlefield = bup.battlefield;
-        self.exile = bup.exile;
-        self.command = bup.command;
-        self.stack = bup.stack;
+        let bup = (self.backup)
+            .as_ref()
+            .expect("Game must already be backed up!");
+        self.battlefield = bup.battlefield.clone();
+        self.exile = bup.exile.clone();
+        self.command = bup.command.clone();
+        self.stack = bup.stack.clone();
         clear_comp(&mut self.ents);
-        copy_simple_comp(&mut bup.ents, &mut self.ents);
-    }
-    fn add_event(events: &mut Vec<TagEvent>, event: Event, cause: EventCause) {
-        events.push(TagEvent {
-            event: event,
-            replacements: Vec::new(),
-            cause: cause,
-        });
+        copy_simple_comp(&bup.ents, &mut self.ents);
     }
     //Taps an entity, returns if it was sucsessfully tapped
-    pub async fn tap(&mut self, ent: Entity, cause: EventCause) -> bool {
-        self.handle_event(Event::Tap { ent }, cause)
+    pub async fn tap(&mut self, ent: Entity) -> bool {
+        self.handle_event(Event::Tap { ent })
             .await
             .contains(&EventResult::Tap(ent))
     }
     //Taps an entity, returns if it was sucsessfully tapped
-    pub async fn untap(&mut self, ent: Entity, cause: EventCause) -> bool {
-        self.handle_event(Event::Untap { ent }, cause)
+    pub async fn untap(&mut self, ent: Entity) -> bool {
+        self.handle_event(Event::Untap { ent })
             .await
             .contains(&EventResult::Untap(ent))
     }
     //draws a card, returns the entities drawn
-    pub async fn draw(&mut self, player: Entity, cause: EventCause) -> Vec<Entity> {
-        let res = self
-            .handle_event(
-                Event::Draw {
-                    player: player,
-                    controller: None,
-                },
-                cause,
-            )
-            .await;
+    pub async fn draw(&mut self, player: Entity) -> Vec<Entity> {
+        let res = self.handle_event(Event::Draw { player: player }).await;
         let drawn = Vec::new();
         drawn
         //TODO figure out which cards were drawn!
@@ -411,6 +387,12 @@ impl Game {
             .iter()
             .filter_map(|x| if *x == player { Some(*x) } else { None })
             .collect()
+    }
+    //Checks if this attacking arragment is legal.
+    //Does nothing for now, will need to implement legality
+    //checking before I can make any progress on that
+    pub fn attackers_legal(&self, attacks: &Vec<Vec<Entity>>) -> bool {
+        true
     }
 }
 

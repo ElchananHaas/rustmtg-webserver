@@ -7,6 +7,7 @@ pub enum KeywordAbility {
     FirstStrike,
     Flying,
     Haste,
+    Vigilance
 }
 
 #[derive(Clone, Debug)]

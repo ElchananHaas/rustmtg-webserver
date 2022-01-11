@@ -1,18 +1,10 @@
 use crate::game::{Game, Phase, Subphase, Zone};
 use hecs::Entity;
 
-#[derive(Clone, Debug)]
-#[non_exhaustive]
-pub enum EventCause {
-    None,
-    Trigger(Event),
-    SpellAbility(Entity),
-}
 //An event tagged with replacement effects already applied to it
 #[derive(Clone, Debug)]
 pub struct TagEvent {
     pub event: Event,
-    pub cause: EventCause,
     pub replacements: Vec<i32>,
 }
 //This will be wrapped when resolving to prevent
@@ -21,7 +13,6 @@ pub struct TagEvent {
 pub enum Event {
     Draw {
         player: Entity,
-        controller: Option<Entity>,
     },
     Cast {
         player: Entity,

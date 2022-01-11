@@ -1,4 +1,3 @@
-use crate::event::EventCause;
 use crate::game::Color;
 use crate::game::Game;
 use crate::player::Player;
@@ -90,7 +89,7 @@ impl Cost {
             }
             Cost::Selftap => {
                 //Similarly handle prevention effects here!
-                game.tap(payment, EventCause::None);
+                game.tap(payment);
                 Ok(payment)
             }
         }

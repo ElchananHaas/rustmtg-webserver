@@ -1,7 +1,7 @@
 //This file stores varius components that entities may
-use hecs::{Entity};
+use hecs::Entity;
 use serde_derive::Serialize;
-use std::collections::{ HashSet};
+use std::collections::HashSet;
 
 //Utility structure for figuring out if a creature can tap
 //Added the turn it ETBs or changes control
@@ -9,6 +9,8 @@ use std::collections::{ HashSet};
 pub struct SummoningSickness();
 #[derive(Clone, Copy, Debug, Serialize, PartialEq)]
 pub struct Tapped();
+#[derive(Clone, Copy, Debug, Serialize, PartialEq)]
+pub struct Attacking(pub Entity);
 #[derive(Clone, Debug, Serialize, PartialEq)]
 pub struct CardName(pub String);
 #[derive(Clone, Debug, Serialize)]

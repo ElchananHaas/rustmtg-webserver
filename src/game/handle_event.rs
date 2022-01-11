@@ -1,16 +1,16 @@
+use crate::components::Attacking;
 use crate::game::*;
 use crate::player::{AskReason, Player};
 use async_recursion::async_recursion;
 
 impl Game {
     #[async_recursion]
-    pub async fn handle_event(&mut self, event: Event, cause: EventCause) -> Vec<EventResult> {
+    pub async fn handle_event(&mut self, event: Event) -> Vec<EventResult> {
         let mut results: Vec<EventResult> = Vec::new();
         let mut events: Vec<TagEvent> = Vec::new();
         events.push(TagEvent {
             event: event,
             replacements: Vec::new(),
-            cause: cause,
         });
         loop {
             let event: TagEvent = match events.pop() {
@@ -88,10 +88,7 @@ impl Game {
                         results.push(EventResult::Untap(ent));
                     }
                 }
-                Event::Draw {
-                    player,
-                    controller: _,
-                } => {
+                Event::Draw { player } => {
                     if let Ok(pl) = self.ents.get::<Player>(player) {
                         match pl.deck.last() {
                             Some(card) => {
@@ -102,15 +99,10 @@ impl Game {
                                         origin: Zone::Library,
                                         dest: Zone::Hand,
                                     },
-                                    event.cause,
                                 );
                                 results.push(EventResult::Draw(*card));
                             }
-                            None => Game::add_event(
-                                &mut events,
-                                Event::Lose { player: player },
-                                EventCause::Trigger(event.event.clone()),
-                            ),
+                            None => Game::add_event(&mut events, Event::Lose { player: player }),
                         }
                     }
                 }
@@ -261,7 +253,7 @@ impl Game {
         match subphase {
             Subphase::Untap => {
                 for perm in self.controlled(self.active_player) {
-                    self.untap(perm, EventCause::None).await;
+                    self.untap(perm).await;
                 }
                 //No run phase bc/ players don't get prioirity normally
             }
@@ -269,7 +261,7 @@ impl Game {
                 self.run_phase();
             }
             Subphase::Draw => {
-                self.draw(self.active_player, EventCause::None);
+                self.draw(self.active_player).await;
                 self.run_phase();
             }
             Subphase::BeginCombat => {
@@ -277,14 +269,60 @@ impl Game {
             }
             Subphase::Attackers => {
                 self.backup();
-                let attackers = self.players_creatures(self.active_player);
+                let legal_attackers = self.players_creatures(self.active_player);
+                //Only allow creatures that have haste or don't have summoning sickness to attack
+                let legal_attackers = legal_attackers
+                    .into_iter()
+                    .filter(|e| self.can_tap(*e))
+                    .collect::<Vec<Entity>>();
                 let attack_targets = self.attack_targets(self.active_player);
-                if let Ok(mut player) = self.ents.get_mut::<Player>(self.active_player) {
-                    let attackers = player
-                        .ask_user_pair(attackers.clone(), attack_targets.clone(), AskReason::Attackers)
-                        .await;
-                    
+
+                loop {
+                    let attacks;
+                    //Choice limits is inclusive on lower, exclusive on upper
+                    let choice_limits=vec![(0,2);legal_attackers.len()];
+                    if let Ok(mut player) = self.ents.get_mut::<Player>(self.active_player) {
+                        attacks = player
+                            .ask_user_pair(
+                                legal_attackers.clone(),
+                                attack_targets.clone(),
+                                choice_limits,
+                                AskReason::Attackers,
+                            )
+                            .await;
+                    } else {
+                        return;
+                    }
+                    if !self.attackers_legal(&attacks) {
+                        self.restore();
+                        continue;
+                    }
+                    for (i,&attacker) in legal_attackers.iter().enumerate(){
+                        let attacked=&attacks[i];
+                        if attacked.len()>0{
+                            let totap=if let Ok(abilities) = self.ents.get::<Vec<Ability>>(attacker) {
+                                !abilities.iter().any(|abil|abil.keyword()==Some(KeywordAbility::Vigilance))
+                            }else{
+                                true
+                            };
+                            if totap{
+                                self.tap(attacker).await;
+                            }
+                        }
+                    }
+                    //Handle costs to attack here
+                    //THis may led to a redeclaration of attackers
+                    //Now declare them attackers and queue attacking triggers 
+                    for (i,&attacker) in legal_attackers.iter().enumerate(){
+                        let attacked=&attacks[i];
+                        if attacked.len()>0{
+                            let attacked=attacked[0];
+                            let _=self.ents.insert_one(attacker, Attacking(attacked));
+                        }
+                    }
+                    break;
                 }
+
                 self.run_phase();
             }
             Subphase::Blockers => todo!(),
@@ -293,8 +331,14 @@ impl Game {
             Subphase::EndCombat => todo!(),
             Subphase::EndStep => {
                 self.run_phase();
-            },
+            }
             Subphase::Cleanup => todo!(),
         }
+    }
+    fn add_event(events: &mut Vec<TagEvent>, event: Event) {
+        events.push(TagEvent {
+            event: event,
+            replacements: Vec::new(),
+        });
     }
 }
