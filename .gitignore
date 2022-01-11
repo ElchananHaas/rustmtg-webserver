@@ -2,3 +2,4 @@
 *.zip
 *.sqlite*
 oracle-cards-*.json
+*.code-workspace

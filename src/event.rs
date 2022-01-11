@@ -1,4 +1,4 @@
-use crate::game::{Game, Phase, Subphase, Zone};
+use crate::{game::{Game, Phase, Subphase, Zone}, components::EntCore};
 use hecs::Entity;
 
 //An event tagged with replacement effects already applied to it
@@ -17,6 +17,9 @@ pub enum Event {
     Cast {
         player: Entity,
         spell: Entity,
+    },
+    Attack{
+        attackers:Vec<Entity>,
     },
     Activate {
         controller: Entity,

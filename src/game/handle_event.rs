@@ -121,7 +121,11 @@ impl Game {
                     ability: _,
                 } => {
                     //Similar to spell casting
-                }
+                },
+                //They have already been declared attackers by now,
+                //and being declared an attacker can't be replaced
+                //so this event is just for triggers
+                Event::Attack{attackers:_}=>{},
                 Event::Lose { player } => {
                     //TODO add in the logic to have the game terminate such as setting winners
                     if let Ok(mut pl) = self.ents.get_mut::<Player>(player) {
@@ -313,13 +317,16 @@ impl Game {
                     //Handle costs to attack here
                     //THis may led to a redeclaration of attackers
                     //Now declare them attackers and queue attacking triggers 
+                    let mut declared=Vec::new();
                     for (i,&attacker) in legal_attackers.iter().enumerate(){
                         let attacked=&attacks[i];
                         if attacked.len()>0{
                             let attacked=attacked[0];
                             let _=self.ents.insert_one(attacker, Attacking(attacked));
+                            declared.push(attacker);
                         }
                     }
+                    events.push(TagEvent { event: Event::Attack{attackers:declared}, replacements: Vec::new() });
                     break;
                 }
 
