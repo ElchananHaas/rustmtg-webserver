@@ -1,4 +1,4 @@
-use crate::components::Attacking;
+use crate::components::{Attacking, Blocked, Blocking};
 use crate::game::*;
 use crate::player::{AskReason, Player};
 use async_recursion::async_recursion;
@@ -23,6 +23,27 @@ impl Game {
             //By the time the loop reaches here, the game is ready to
             //Execute the event. No more prevention/replacement effects
             match event.event {
+                //The assigning as a blocker happens during the two-part block trigger
+                Event::Block{blocker:_} =>{},
+                Event::BlockedBy{attacker,blocker}=>{
+                    let unblocked=self.ents.get::<Blocked>(attacker).is_err();
+                    if unblocked {
+                        let _=self.ents.insert_one(attacker, Blocked(Vec::new()));
+                        Game::add_event(&mut events, Event::Blocked{attacker});
+                    }   
+                    if let Ok(mut blockedby)=self.ents.get_mut::<Blocked>(attacker){
+                        blockedby.0.push(blocker);
+                    }
+                    let noblock=self.ents.get::<Blocking>(blocker).is_err();
+                    if noblock{
+                        let _=self.ents.insert_one(blocker, Blocking(Vec::new()));
+                    }
+                    if let Ok(mut blocking)=self.ents.get_mut::<Blocking>(blocker){
+                        blocking.0.push(attacker);
+                    }
+                },
+                Event::Blocked{attacker:_}=>{},
+                Event::AttackUnblocked{attacker:_}=>{},
                 Event::Discard {
                     player: _,
                     card,
@@ -270,10 +291,10 @@ impl Game {
         self.subphase = Some(subphase);
         match subphase {
             Subphase::Untap => {
-                for perm in self.controlled(self.active_player) {
+                for perm in self.players_permanents(self.active_player).collect::<Vec<_>>(){
                     self.untap(perm).await;
                 }
-                //No run phase bc/ players don't get prioirity normally
+                //Don't cycle priority in untap
             }
             Subphase::Upkeep => {
                 self.cycle_priority();
@@ -287,18 +308,17 @@ impl Game {
             }
             Subphase::Attackers => {
                 self.backup();
-                let legal_attackers = self.players_creatures(self.active_player);
                 //Only allow creatures that have haste or don't have summoning sickness to attack
-                let legal_attackers = legal_attackers
-                    .into_iter()
+                let legal_attackers = self
+                    .players_creatures(self.active_player)
                     .filter(|e| self.can_tap(*e))
                     .collect::<Vec<Entity>>();
                 let attack_targets = self.attack_targets(self.active_player);
 
                 loop {
                     let attacks;
-                    //Choice limits is inclusive on lower, exclusive on upper
-                    let choice_limits = vec![(0, 2); legal_attackers.len()];
+                    //Choice limits is inclusive on both bounds
+                    let choice_limits = vec![(0, 1); legal_attackers.len()];
                     if let Ok(player) = self.ents.get_mut::<Player>(self.active_player) {
                         attacks = player
                             .ask_user_pair(
@@ -311,50 +331,111 @@ impl Game {
                     } else {
                         return;
                     }
-                    if !self.attackers_legal(&attacks) {
-                        self.restore();
-                        continue;
-                    }
+                    let mut actual_attackers=Vec::new();
+                    let mut attack_targets=Vec::new();
                     for (i, &attacker) in legal_attackers.iter().enumerate() {
                         let attacked = &attacks[i];
                         if attacked.len() > 0 {
+                            actual_attackers.push(attacker);
+                            attack_targets.push(attacked[0]);
+                        }
+                    }
+                    if !self.attackers_legal(&actual_attackers,&attack_targets) {
+                        self.restore();
+                        continue;
+                    }
+                    for &attacker in actual_attackers.iter() {
                             let totap =
-                                if let Ok(abilities) = self.ents.get::<Vec<Ability>>(attacker) {
-                                    !abilities.iter().any(|abil| {
-                                        abil.keyword() == Some(KeywordAbility::Vigilance)
-                                    })
-                                } else {
-                                    true
-                                };
+                            if let Ok(abilities) = self.ents.get::<Vec<Ability>>(attacker) {
+                                !abilities.iter().any(|abil| {
+                                    abil.keyword() == Some(KeywordAbility::Vigilance)
+                                })
+                            } else {
+                                true
+                            };
                             if totap {
                                 self.tap(attacker).await;
                             }
                         }
-                    }
+        
                     //Handle costs to attack here
                     //THis may led to a redeclaration of attackers
                     //Now declare them attackers and fire attacking events
-                    let mut declared = Vec::new();
-                    for (i, &attacker) in legal_attackers.iter().enumerate() {
-                        let attacked = &attacks[i];
-                        if attacked.len() > 0 {
-                            let attacked = attacked[0];
-                            let _ = self.ents.insert_one(attacker, Attacking(attacked));
-                            declared.push(attacker);
-                        }
+                    for (&attacker,&attacked) in actual_attackers.iter().zip(attack_targets.iter()){
+                        let _ = self.ents.insert_one(attacker, Attacking(attacked));
                     }
                     events.push(TagEvent {
                         event: Event::Attack {
-                            attackers: declared,
+                            attackers: actual_attackers,
                         },
                         replacements: Vec::new(),
                     });
                     break;
                 }
-
                 self.cycle_priority();
             }
-            Subphase::Blockers => todo!(),
+            Subphase::Blockers => {
+                for opponent in self.opponents(self.active_player) {
+                    self.backup();
+                    //Filter only attacking creatures attacking that player
+                    //Add in planeswalkers later
+                    let attacking = self
+                        .all_creatures()
+                        .filter(|&creature| 
+                            if let Ok(attack)=self.ents.get::<Attacking>(creature){
+                                attack.0==opponent
+                            }else{
+                                false
+                            }
+                        )
+                        .collect::<Vec<_>>();
+                    let potential_blockers = self
+                        .players_creatures(opponent)
+                        .filter(|&creature| self.lacks::<Tapped>(creature))
+                        .collect::<Vec<_>>();
+                    //This will be adjusted for creatres that can make multiple blocks
+                    let choice_limits = vec![(0, 1); potential_blockers.len()];
+                    loop{
+                        let blocks=if let Ok(player) = self.ents.get_mut::<Player>(opponent) {
+                            player
+                            .ask_user_pair(
+                                potential_blockers.clone(),
+                                attacking.clone(),
+                                choice_limits.clone(),
+                                AskReason::Blockers,
+                            )
+                            .await
+                        }else{
+                            return;
+                        };
+                        let mut blockers=Vec::new();
+                        let mut blocked=Vec::new();
+                        for (i,&blocker) in potential_blockers.iter().enumerate(){
+                            let blocking=&blocks[i];
+                            if blocking.len()>0{
+                                blockers.push(blocker);
+                                blocked.push(blocking.clone());
+                            }
+                        }
+                        if !self.blocks_legal(&blockers,&blocked){
+                            self.restore();
+                            continue;
+                        }
+                        for (i,&blocker) in blockers.iter().enumerate(){
+                            Game::add_event(events,Event::Block{blocker});
+                            for itsblocks in blocked[i].iter(){
+                                Game::add_event(events,Event::BlockedBy{blocker,attacker:*itsblocks});
+                            }
+                        }
+                    }
+                }
+                for attacker in self
+                        .all_creatures()
+                        .filter(|&creature| self.has::<Attacking>(creature)
+                        ){
+                            Game::add_event(events, Event::AttackUnblocked{attacker});
+                }
+            }
             Subphase::FirstStrikeDamage => todo!(),
             Subphase::Damage => todo!(),
             Subphase::EndCombat => {
@@ -373,14 +454,15 @@ impl Game {
                             .ask_user_selectn(
                                 &player.hand,
                                 diff,
-                                diff + 1,
+                                diff,
                                 AskReason::DiscardToHandSize,
                             )
                             .await;
                     }
                 }
                 for card in to_discard {
-                    self.discard(self.active_player, card, DiscardCause::GameInternal).await;
+                    self.discard(self.active_player, card, DiscardCause::GameInternal)
+                        .await;
                 }
                 //TODO clean up damage
                 //TODO handle priority being given in cleanup step by giving

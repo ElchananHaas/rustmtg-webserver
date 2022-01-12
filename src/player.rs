@@ -94,7 +94,7 @@ impl Player {
             let res = lock.ask_user::<HashSet<Entity>>(&query).await;
             if let Ok(response) = res {
                 if response.len() < min.try_into().unwrap()
-                    && response.len() >= max.try_into().unwrap()
+                    && response.len() > max.try_into().unwrap()
                 {
                     continue;
                 }
@@ -135,7 +135,7 @@ impl Player {
                     }
                 }
                 for (i, row) in response.iter().enumerate() {
-                    if row.len() < num_choices[i].0 || row.len() >= num_choices[i].1 {
+                    if row.len() < num_choices[i].0 || row.len() > num_choices[i].1 {
                         continue 'outer;
                     }
                     let as_set = row.iter().map(|x| *x).collect::<HashSet<Entity>>();

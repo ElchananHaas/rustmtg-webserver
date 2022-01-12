@@ -15,6 +15,11 @@ pub struct Tapped();
 #[derive(Clone, Copy, Debug, Serialize, PartialEq)]
 pub struct Attacking(pub Entity);
 #[derive(Clone, Debug, Serialize, PartialEq)]
+pub struct Blocked(pub Vec<Entity>);
+
+#[derive(Clone, Debug, Serialize, PartialEq)]
+pub struct Blocking(pub Vec<Entity>);
+#[derive(Clone, Debug, Serialize, PartialEq)]
 pub struct CardName(pub String);
 #[derive(Clone, Debug, Serialize)]
 pub struct EntCore {

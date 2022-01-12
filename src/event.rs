@@ -27,6 +27,19 @@ pub enum Event {
         card: Entity,
         cause: DiscardCause,
     },
+    Block{
+        blocker:Entity,
+    },
+    Blocked{
+        attacker:Entity,
+    },
+    BlockedBy{
+        attacker:Entity,
+        blocker:Entity,
+    },
+    AttackUnblocked{
+        attacker:Entity,
+    },
     Cast {
         player: Entity,
         spell: Entity,

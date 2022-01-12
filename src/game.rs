@@ -1,6 +1,9 @@
 use crate::ability::Ability;
 use crate::ability::KeywordAbility;
 use crate::carddb::CardDB;
+use crate::components::Attacking;
+use crate::components::Blocked;
+use crate::components::Blocking;
 use crate::components::{
     CardName, Controller, EntCore, Subtype, SummoningSickness, Tapped, Types, PT,
 };
@@ -10,6 +13,7 @@ use crate::player::{Player, PlayerCon, PlayerSerialHelper};
 use anyhow::{bail, Result};
 use futures::future;
 use hecs::serialize::row::{try_serialize, SerializeContext};
+use hecs::Component;
 use hecs::{Entity, EntityBuilder, EntityRef, World};
 use serde::Serialize;
 use serde_derive::Serialize;
@@ -53,7 +57,7 @@ macro_rules! backuprestore {
     };
 }
 
-backuprestore! {Tapped,Player}
+backuprestore! {Tapped,Player,Attacking,Blocked,Blocking}
 
 pub struct GameBuilder {
     ents: World,
@@ -333,25 +337,25 @@ impl Game {
         discarded
         //TODO figure out which cards were discarded!
     }
-    pub fn players_creatures(&self, player: Entity) -> Vec<Entity> {
-        let mut also_creature = Vec::new();
-        for ent in self.controlled(player) {
-            if let Ok(types) = self.ents.get::<Types>(ent) {
-                if types.creature {
-                    also_creature.push(ent);
-                }
-            }
-        }
-        also_creature
+    pub fn players_creatures<'b>(&'b self, player: Entity) -> impl Iterator<Item = Entity> + 'b {
+        self.all_creatures()
+            .into_iter()
+            .filter(move |&ent| self.get_controller(ent) == Some(player))
     }
-    pub fn controlled(&self, player: Entity) -> Vec<Entity> {
-        let mut controlled = Vec::new();
-        for perm in self.battlefield.clone() {
-            if self.get_controller(perm) == Some(player) {
-                controlled.push(perm);
+    pub fn players_permanents<'b>(&'b self, player: Entity) -> impl Iterator<Item = Entity> + 'b {
+        self.battlefield
+            .clone()
+            .into_iter()
+            .filter(move |&ent| self.get_controller(ent) == Some(player))
+    }
+    pub fn all_creatures<'b>(&'b self) -> impl Iterator<Item = Entity> + 'b {
+        self.battlefield.clone().into_iter().filter(move |&ent| {
+            if let Ok(types) = self.ents.get::<Types>(ent) {
+                types.creature
+            } else {
+                false
             }
-        }
-        controlled
+        })
     }
     //Can this creature tap to be declared an attacker or to activate an ability?
     //Doesn't include prevention effects, just if it can tap w/o them
@@ -411,8 +415,17 @@ impl Game {
     //Checks if this attacking arragment is legal.
     //Does nothing for now, will need to implement legality
     //checking before I can make any progress on that
-    pub fn attackers_legal(&self, attacks: &Vec<Vec<Entity>>) -> bool {
+    pub fn attackers_legal(&self,attackers:&Vec<Entity>, targets: &Vec<Entity>) -> bool {
         true
+    }
+    pub fn blocks_legal(&self,blockers:&Vec<Entity>, blocked: &Vec<Vec<Entity>>) -> bool {
+        true
+    }
+    fn has<T: Component>(&self, ent: Entity) -> bool {
+        self.ents.get::<T>(ent).is_ok()
+    }
+    fn lacks<T: Component>(&self, ent: Entity) -> bool {
+        self.ents.get::<T>(ent).is_err()
     }
 }
 
