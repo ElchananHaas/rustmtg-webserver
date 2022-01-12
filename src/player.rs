@@ -25,6 +25,7 @@ pub struct Player {
     pub graveyard: Vec<Entity>,
     pub lost: bool,
     pub won: bool,
+    pub max_handsize: usize,
     #[derivative(Debug = "ignore")]
     pub player_con: Arc<tokio::sync::Mutex<PlayerCon>>,
 }
@@ -74,27 +75,27 @@ impl Player {
     }
     //Select n entities from a set
     pub async fn ask_user_selectn(
-        &mut self,
-        ents: Vec<Entity>,
+        &self,
+        ents: &HashSet<Entity>,
         min: i32,
         max: i32,
         reason: AskReason,
-    ) -> Vec<Entity> {
+    ) -> HashSet<Entity> {
         let query = AskUser {
-            asktype: AskType::SelectN { ents, min, max },
+            asktype: AskType::SelectN {
+                ents: ents.clone(),
+                min,
+                max,
+            },
             reason,
         };
         loop {
             let mut lock = self.player_con.lock().await;
-            let res = lock.ask_user::<Vec<Entity>>(&query).await;
+            let res = lock.ask_user::<HashSet<Entity>>(&query).await;
             if let Ok(response) = res {
                 if response.len() < min.try_into().unwrap()
                     && response.len() >= max.try_into().unwrap()
                 {
-                    continue;
-                }
-                let as_set = response.iter().map(|x| *x).collect::<HashSet<Entity>>();
-                if response.len() != as_set.len() {
                     continue;
                 }
                 return response;
@@ -106,7 +107,7 @@ impl Player {
     //planeswalker/player each attacker is attacking,
     //or the list of creatures each blocker is blocking
     pub async fn ask_user_pair(
-        &mut self,
+        &self,
         a: Vec<Entity>,
         b: Vec<Entity>,
         //Min and max number of choices
@@ -133,8 +134,8 @@ impl Player {
                         continue 'outer;
                     }
                 }
-                for (i,row) in response.iter().enumerate() {
-                    if row.len()<num_choices[i].0 || row.len() >=num_choices[i].1{
+                for (i, row) in response.iter().enumerate() {
+                    if row.len() < num_choices[i].0 || row.len() >= num_choices[i].1 {
                         continue 'outer;
                     }
                     let as_set = row.iter().map(|x| *x).collect::<HashSet<Entity>>();
@@ -170,7 +171,7 @@ pub struct AskUser {
 #[derive(Clone, Debug, Serialize)]
 pub enum AskType {
     SelectN {
-        ents: Vec<Entity>,
+        ents: HashSet<Entity>,
         min: i32,
         max: i32,
     },
@@ -184,6 +185,7 @@ pub enum AskType {
 pub enum AskReason {
     Attackers,
     Blockers,
+    DiscardToHandSize,
 }
 
 pub struct PlayerCon {

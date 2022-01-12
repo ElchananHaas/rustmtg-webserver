@@ -23,6 +23,20 @@ impl Game {
             //By the time the loop reaches here, the game is ready to
             //Execute the event. No more prevention/replacement effects
             match event.event {
+                Event::Discard {
+                    player: _,
+                    card,
+                    cause: _,
+                } => {
+                    Game::add_event(
+                        &mut events,
+                        Event::MoveZones {
+                            ent: card,
+                            origin: Zone::Hand,
+                            dest: Zone::Graveyard,
+                        },
+                    );
+                }
                 Event::Turn { extra: _, player } => {
                     self.active_player = player;
                     self.phases.extend(
@@ -48,7 +62,7 @@ impl Game {
                                 .extend([Subphase::Untap, Subphase::Upkeep, Subphase::Draw].iter());
                         }
                         Phase::FirstMain => {
-                            self.run_phase();
+                            self.cycle_priority();
                         }
                         Phase::Combat => {
                             self.subphases.extend(
@@ -64,7 +78,7 @@ impl Game {
                             );
                         }
                         Phase::SecondMain => {
-                            self.run_phase();
+                            self.cycle_priority();
                         }
                         Phase::Ending => {
                             self.subphases
@@ -121,11 +135,11 @@ impl Game {
                     ability: _,
                 } => {
                     //Similar to spell casting
-                },
+                }
                 //They have already been declared attackers by now,
                 //and being declared an attacker can't be replaced
                 //so this event is just for triggers
-                Event::Attack{attackers:_}=>{},
+                Event::Attack { attackers: _ } => {}
                 Event::Lose { player } => {
                     //TODO add in the logic to have the game terminate such as setting winners
                     if let Ok(mut pl) = self.ents.get_mut::<Player>(player) {
@@ -249,7 +263,7 @@ impl Game {
     }
     async fn subphase(
         &mut self,
-        results: &mut Vec<EventResult>,
+        _results: &mut Vec<EventResult>,
         events: &mut Vec<TagEvent>,
         subphase: Subphase,
     ) {
@@ -262,14 +276,14 @@ impl Game {
                 //No run phase bc/ players don't get prioirity normally
             }
             Subphase::Upkeep => {
-                self.run_phase();
+                self.cycle_priority();
             }
             Subphase::Draw => {
                 self.draw(self.active_player).await;
-                self.run_phase();
+                self.cycle_priority();
             }
             Subphase::BeginCombat => {
-                self.run_phase();
+                self.cycle_priority();
             }
             Subphase::Attackers => {
                 self.backup();
@@ -284,8 +298,8 @@ impl Game {
                 loop {
                     let attacks;
                     //Choice limits is inclusive on lower, exclusive on upper
-                    let choice_limits=vec![(0,2);legal_attackers.len()];
-                    if let Ok(mut player) = self.ents.get_mut::<Player>(self.active_player) {
+                    let choice_limits = vec![(0, 2); legal_attackers.len()];
+                    if let Ok(player) = self.ents.get_mut::<Player>(self.active_player) {
                         attacks = player
                             .ask_user_pair(
                                 legal_attackers.clone(),
@@ -301,50 +315,82 @@ impl Game {
                         self.restore();
                         continue;
                     }
-                    for (i,&attacker) in legal_attackers.iter().enumerate(){
-                        let attacked=&attacks[i];
-                        if attacked.len()>0{
-                            let totap=if let Ok(abilities) = self.ents.get::<Vec<Ability>>(attacker) {
-                                !abilities.iter().any(|abil|abil.keyword()==Some(KeywordAbility::Vigilance))
-                            }else{
-                                true
-                            };
-                            if totap{
+                    for (i, &attacker) in legal_attackers.iter().enumerate() {
+                        let attacked = &attacks[i];
+                        if attacked.len() > 0 {
+                            let totap =
+                                if let Ok(abilities) = self.ents.get::<Vec<Ability>>(attacker) {
+                                    !abilities.iter().any(|abil| {
+                                        abil.keyword() == Some(KeywordAbility::Vigilance)
+                                    })
+                                } else {
+                                    true
+                                };
+                            if totap {
                                 self.tap(attacker).await;
                             }
                         }
                     }
                     //Handle costs to attack here
                     //THis may led to a redeclaration of attackers
-                    //Now declare them attackers and queue attacking triggers 
-                    let mut declared=Vec::new();
-                    for (i,&attacker) in legal_attackers.iter().enumerate(){
-                        let attacked=&attacks[i];
-                        if attacked.len()>0{
-                            let attacked=attacked[0];
-                            let _=self.ents.insert_one(attacker, Attacking(attacked));
+                    //Now declare them attackers and fire attacking events
+                    let mut declared = Vec::new();
+                    for (i, &attacker) in legal_attackers.iter().enumerate() {
+                        let attacked = &attacks[i];
+                        if attacked.len() > 0 {
+                            let attacked = attacked[0];
+                            let _ = self.ents.insert_one(attacker, Attacking(attacked));
                             declared.push(attacker);
                         }
                     }
-                    events.push(TagEvent { event: Event::Attack{attackers:declared}, replacements: Vec::new() });
+                    events.push(TagEvent {
+                        event: Event::Attack {
+                            attackers: declared,
+                        },
+                        replacements: Vec::new(),
+                    });
                     break;
                 }
 
-                self.run_phase();
+                self.cycle_priority();
             }
             Subphase::Blockers => todo!(),
             Subphase::FirstStrikeDamage => todo!(),
             Subphase::Damage => todo!(),
-            Subphase::EndCombat => todo!(),
-            Subphase::EndStep => {
-                self.run_phase();
+            Subphase::EndCombat => {
+                self.cycle_priority();
             }
-            Subphase::Cleanup => todo!(),
+            Subphase::EndStep => {
+                self.cycle_priority();
+            }
+            Subphase::Cleanup => {
+                let mut to_discard = HashSet::new();
+                if let Ok(player) = self.ents.get_mut::<Player>(self.active_player) {
+                    if player.hand.len() > player.max_handsize {
+                        let diff = player.hand.len() - player.max_handsize;
+                        let diff: i32 = diff.try_into().unwrap();
+                        to_discard = player
+                            .ask_user_selectn(
+                                &player.hand,
+                                diff,
+                                diff + 1,
+                                AskReason::DiscardToHandSize,
+                            )
+                            .await;
+                    }
+                }
+                for card in to_discard {
+                    self.discard(self.active_player, card, DiscardCause::GameInternal).await;
+                }
+                //TODO clean up damage
+                //TODO handle priority being given in cleanup step by giving
+                //another cleanup step afterwards
+            }
         }
     }
     fn add_event(events: &mut Vec<TagEvent>, event: Event) {
         events.push(TagEvent {
-            event: event,
+            event,
             replacements: Vec::new(),
         });
     }

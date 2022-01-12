@@ -4,6 +4,7 @@ use crate::carddb::CardDB;
 use crate::components::{
     CardName, Controller, EntCore, Subtype, SummoningSickness, Tapped, Types, PT,
 };
+use crate::event::DiscardCause;
 use crate::event::{Event, EventResult, TagEvent};
 use crate::player::{Player, PlayerCon, PlayerSerialHelper};
 use anyhow::{bail, Result};
@@ -123,6 +124,7 @@ impl GameBuilder {
             lost: false,
             won: false,
             deck: Vec::new(),
+            max_handsize: 7,
             player_con: Arc::new(psocket),
         };
         let player: Entity = self.ents.spawn((player,));
@@ -308,10 +310,28 @@ impl Game {
     }
     //draws a card, returns the entities drawn
     pub async fn draw(&mut self, player: Entity) -> Vec<Entity> {
-        let res = self.handle_event(Event::Draw { player: player }).await;
+        let res = self.handle_event(Event::Draw { player }).await;
         let drawn = Vec::new();
         drawn
         //TODO figure out which cards were drawn!
+    }
+    //discard cards, returns discarded cards
+    pub async fn discard(
+        &mut self,
+        player: Entity,
+        card: Entity,
+        cause: DiscardCause,
+    ) -> Vec<Entity> {
+        let res = self
+            .handle_event(Event::Discard {
+                player,
+                card,
+                cause,
+            })
+            .await;
+        let discarded = Vec::new();
+        discarded
+        //TODO figure out which cards were discarded!
     }
     pub fn players_creatures(&self, player: Entity) -> Vec<Entity> {
         let mut also_creature = Vec::new();
@@ -376,7 +396,7 @@ impl Game {
         }
     }
     //Cycles priority then fires an end-of-phase event
-    pub fn run_phase(&mut self) {
+    pub fn cycle_priority(&mut self) {
         todo!();
     }
     pub fn attack_targets(&self, player: Entity) -> Vec<Entity> {
