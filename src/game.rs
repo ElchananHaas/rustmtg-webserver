@@ -19,6 +19,7 @@ use hecs::{Entity, EntityBuilder, EntityRef, World};
 use serde::Serialize;
 use serde_derive::Serialize;
 use serde_json;
+use std::cmp::max;
 use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::io::Write;
@@ -431,6 +432,17 @@ impl Game {
     }
     fn lacks<T: Component>(&self, ent: Entity) -> bool {
         self.ents.get::<T>(ent).is_err()
+    }
+    pub fn remaining_lethal(&self, ent: Entity) -> Option<i32> {
+        if let Ok(pt) = self.ents.get::<PT>(ent) {
+            if let Ok(damage) = self.ents.get::<Damage>(ent) {
+                Some(max(pt.toughness - damage.0, 0))
+            } else {
+                Some(pt.toughness)
+            }
+        } else {
+            None
+        }
     }
 }
 

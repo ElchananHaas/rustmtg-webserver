@@ -27,11 +27,11 @@ pub enum Event {
     Draw {
         player: Entity,
     },
-    Damage{
-        amount:i32,
-        ent:Entity,
-        source:Entity,
-        reason:DamageReason,
+    Damage {
+        amount: i32,
+        ent: Entity,
+        source: Entity,
+        reason: DamageReason,
     },
     Discard {
         player: Entity,

@@ -488,6 +488,7 @@ impl Game {
         events: &mut Vec<TagEvent>,
         subphase: Subphase,
     ) {
+        //Handle first strike and normal strike
         for attacker in self
             .players_creatures(self.active_player)
             .collect::<Vec<_>>()
@@ -499,33 +500,61 @@ impl Game {
             };
             if let Some(unblocked_attack) = is_attacking {
                 if let Ok(pt) = self.ents.get::<PT>(attacker) {
-                    let mut damage_to_deal = pt.power;
-                    if damage_to_deal <= 0 {
+                    if pt.power <= 0 {
                         continue;
                     }
                     if let Ok(blocks) = self.ents.get::<Blocked>(attacker) {
-                        for &blocker in &blocks.0 {
-                            if damage_to_deal<=0{break;}
-                            if let Some(needed_damage)=self.remaining_lethal(blocker){
-                                let amount=min(damage_to_deal,needed_damage);
-                                Game::add_event(events,Event::Damage{
-                                    amount,
-                                    ent:blocker,
-                                    source:attacker,
-                                    reason:DamageReason::Combat
-                                });
-                                damage_to_deal-=amount;
-                            }
-                        }
+                        self.spread_damage(events, attacker, &blocks.0).await
                     } else {
-                        Game::add_event(events,Event::Damage{
-                            amount:damage_to_deal,
-                            ent:unblocked_attack.0,
-                            source:attacker,
-                            reason:DamageReason::Combat
-                        });
+                        Game::add_event(
+                            events,
+                            Event::Damage {
+                                amount: pt.power,
+                                ent: unblocked_attack.0,
+                                source: attacker,
+                                reason: DamageReason::Combat,
+                            },
+                        );
                     }
                 }
+            }
+        }
+        for blocker in self.all_creatures().collect::<Vec<_>>() {
+            if let Ok(blocked) = self.ents.get::<Blocking>(blocker) {
+                self.spread_damage(events, blocker, &blocked.0).await;
+            }
+        }
+    }
+    async fn spread_damage(
+        &self,
+        events: &mut Vec<TagEvent>,
+        dealer: Entity,
+        creatures: &Vec<Entity>,
+    ) {
+        let mut damage_to_deal = if let Ok(pt) = self.ents.get::<PT>(dealer) {
+            pt.power
+        } else {
+            return;
+        };
+        if damage_to_deal <= 0 {
+            return;
+        }
+        for &creature in creatures {
+            if damage_to_deal <= 0 {
+                break;
+            }
+            if let Some(needed_damage) = self.remaining_lethal(creature) {
+                let amount = min(damage_to_deal, needed_damage);
+                Game::add_event(
+                    events,
+                    Event::Damage {
+                        amount,
+                        ent: creature,
+                        source: dealer,
+                        reason: DamageReason::Combat,
+                    },
+                );
+                damage_to_deal -= amount;
             }
         }
     }

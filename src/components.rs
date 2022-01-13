@@ -4,7 +4,7 @@ use serde_derive::Serialize;
 use std::collections::HashSet;
 
 #[derive(Clone, Copy, Debug, Serialize, PartialEq)]
-pub struct Damage(i32);
+pub struct Damage(pub i32);
 
 //Utility structure for figuring out if a creature can tap
 //Added the turn it ETBs or changes control
