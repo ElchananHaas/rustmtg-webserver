@@ -430,9 +430,6 @@ impl Game {
     fn has<T: Component>(&self, ent: Entity) -> bool {
         self.ents.get::<T>(ent).is_ok()
     }
-    fn lacks<T: Component>(&self, ent: Entity) -> bool {
-        self.ents.get::<T>(ent).is_err()
-    }
     pub fn remaining_lethal(&self, ent: Entity) -> Option<i32> {
         if let Ok(pt) = self.ents.get::<PT>(ent) {
             if let Ok(damage) = self.ents.get::<Damage>(ent) {
@@ -442,6 +439,13 @@ impl Game {
             }
         } else {
             None
+        }
+    }
+    pub fn has_keyword(&self, ent: Entity, keyword: KeywordAbility) -> bool {
+        if let Ok(abilities) = self.ents.get::<Vec<Ability>>(ent) {
+            !abilities.iter().any(|abil| abil.keyword() == Some(keyword))
+        } else {
+            false
         }
     }
 }

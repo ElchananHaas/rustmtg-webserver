@@ -13,6 +13,8 @@ pub struct SummoningSickness();
 #[derive(Clone, Copy, Debug, Serialize, PartialEq)]
 pub struct Tapped();
 #[derive(Clone, Copy, Debug, Serialize, PartialEq)]
+pub struct DealtCombatDamage();
+#[derive(Clone, Copy, Debug, Serialize, PartialEq)]
 pub struct Attacking(pub Entity);
 #[derive(Clone, Debug, Serialize, PartialEq)]
 pub struct Blocked(pub Vec<Entity>);

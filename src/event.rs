@@ -10,12 +10,12 @@ pub struct TagEvent {
     pub event: Event,
     pub replacements: Vec<i32>,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum DiscardCause {
     GameInternal,
     SpellAbility(Entity),
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum DamageReason {
     Combat,
     SpellAbility(Entity),
@@ -29,7 +29,7 @@ pub enum Event {
     },
     Damage {
         amount: i32,
-        ent: Entity,
+        target: Entity,
         source: Entity,
         reason: DamageReason,
     },

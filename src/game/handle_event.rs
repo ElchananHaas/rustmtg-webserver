@@ -1,6 +1,6 @@
 use std::cmp::min;
 
-use crate::components::{Attacking, Blocked, Blocking};
+use crate::components::{Attacking, Blocked, Blocking, DealtCombatDamage};
 use crate::event::DamageReason;
 use crate::game::*;
 use crate::player::{AskReason, Player};
@@ -27,6 +27,29 @@ impl Game {
             //Execute the event. No more prevention/replacement effects
             match event.event {
                 //The assigning as a blocker happens during the two-part block trigger
+                Event::Damage {
+                    amount,
+                    target,
+                    source,
+                    reason,
+                } => {
+                    if amount <= 0 {
+                        continue;
+                    }
+                    if reason == DamageReason::Combat {
+                        let _ = self.ents.insert_one(source, DealtCombatDamage());
+                    }
+                    let already_damaged =
+                        if let Ok(mut damage) = self.ents.get_mut::<Damage>(target) {
+                            damage.0 += amount;
+                            true
+                        } else {
+                            false
+                        };
+                    if !already_damaged {
+                        let _ = self.ents.insert_one(target, Damage(amount));
+                    };
+                }
                 Event::Block { blocker: _ } => {}
                 Event::BlockedBy { attacker, blocker } => {
                     let unblocked = self.ents.get::<Blocked>(attacker).is_err();
@@ -351,14 +374,7 @@ impl Game {
                         continue;
                     }
                     for &attacker in actual_attackers.iter() {
-                        let totap = if let Ok(abilities) = self.ents.get::<Vec<Ability>>(attacker) {
-                            !abilities
-                                .iter()
-                                .any(|abil| abil.keyword() == Some(KeywordAbility::Vigilance))
-                        } else {
-                            true
-                        };
-                        if totap {
+                        if !self.has_keyword(attacker, KeywordAbility::Vigilance) {
                             self.tap(attacker).await;
                         }
                     }
@@ -397,7 +413,7 @@ impl Game {
                         .collect::<Vec<_>>();
                     let potential_blockers = self
                         .players_creatures(opponent)
-                        .filter(|&creature| self.lacks::<Tapped>(creature))
+                        .filter(|&creature| !self.has::<Tapped>(creature))
                         .collect::<Vec<_>>();
                     //This will be adjusted for creatres that can make multiple blocks
                     let choice_limits = vec![(0, 1); potential_blockers.len()];
@@ -452,35 +468,42 @@ impl Game {
             Subphase::Damage => self.damagephase(results, events, subphase).await,
             Subphase::EndCombat => {
                 self.cycle_priority();
+                for perm in self.battlefield.clone() {
+                    let _ = self.ents.remove_one::<Attacking>(perm);
+                    let _ = self.ents.remove_one::<Blocked>(perm);
+                    let _ = self.ents.remove_one::<Blocking>(perm);
+                }
             }
             Subphase::EndStep => {
                 self.cycle_priority();
             }
             Subphase::Cleanup => {
-                let mut to_discard = HashSet::new();
-                if let Ok(player) = self.ents.get_mut::<Player>(self.active_player) {
-                    if player.hand.len() > player.max_handsize {
-                        let diff = player.hand.len() - player.max_handsize;
-                        let diff: i32 = diff.try_into().unwrap();
-                        to_discard = player
-                            .ask_user_selectn(
-                                &player.hand,
-                                diff,
-                                diff,
-                                AskReason::DiscardToHandSize,
-                            )
-                            .await;
-                    }
-                }
-                for card in to_discard {
-                    self.discard(self.active_player, card, DiscardCause::GameInternal)
-                        .await;
-                }
-                //TODO clean up damage
-                //TODO handle priority being given in cleanup step by giving
-                //another cleanup step afterwards
+                self.cleanup_phase().await;
             }
         }
+    }
+    async fn cleanup_phase(&mut self) {
+        let mut to_discard = HashSet::new();
+        if let Ok(player) = self.ents.get_mut::<Player>(self.active_player) {
+            if player.hand.len() > player.max_handsize {
+                let diff = player.hand.len() - player.max_handsize;
+                let diff: i32 = diff.try_into().unwrap();
+                to_discard = player
+                    .ask_user_selectn(&player.hand, diff, diff, AskReason::DiscardToHandSize)
+                    .await;
+            }
+        }
+        for card in to_discard {
+            self.discard(self.active_player, card, DiscardCause::GameInternal)
+                .await;
+        }
+        for perm in self.battlefield.clone() {
+            let _ = self.ents.remove_one::<Damage>(perm);
+            let _ = self.ents.remove_one::<DealtCombatDamage>(perm);
+        }
+        //TODO clean up damage
+        //TODO handle priority being given in cleanup step by giving
+        //another cleanup step afterwards
     }
     async fn damagephase(
         &mut self,
@@ -490,7 +513,7 @@ impl Game {
     ) {
         //Handle first strike and normal strike
         for attacker in self
-            .players_creatures(self.active_player)
+            .damage_phase_permanents(self.players_creatures(self.active_player), subphase)
             .collect::<Vec<_>>()
         {
             let is_attacking = if let Ok(attack) = self.ents.get::<Attacking>(attacker) {
@@ -504,13 +527,13 @@ impl Game {
                         continue;
                     }
                     if let Ok(blocks) = self.ents.get::<Blocked>(attacker) {
-                        self.spread_damage(events, attacker, &blocks.0).await
+                        self.spread_damage(events, attacker, &blocks.0).await;
                     } else {
                         Game::add_event(
                             events,
                             Event::Damage {
                                 amount: pt.power,
-                                ent: unblocked_attack.0,
+                                target: unblocked_attack.0,
                                 source: attacker,
                                 reason: DamageReason::Combat,
                             },
@@ -519,12 +542,33 @@ impl Game {
                 }
             }
         }
-        for blocker in self.all_creatures().collect::<Vec<_>>() {
+        for blocker in self
+            .damage_phase_permanents(self.all_creatures(), subphase)
+            .collect::<Vec<_>>()
+        {
             if let Ok(blocked) = self.ents.get::<Blocking>(blocker) {
                 self.spread_damage(events, blocker, &blocked.0).await;
             }
         }
     }
+    pub fn damage_phase_permanents<'b>(
+        &'b self,
+        creatures: impl Iterator<Item = Entity> + 'b,
+        subphase: Subphase,
+    ) -> impl Iterator<Item = Entity> + 'b {
+        creatures.filter(move |&ent| {
+            if subphase == Subphase::FirstStrikeDamage {
+                self.has_keyword(ent, KeywordAbility::FirstStrike)
+                    || self.has_keyword(ent, KeywordAbility::DoubleStrike)
+            } else if subphase == Subphase::Damage {
+                self.has_keyword(ent, KeywordAbility::DoubleStrike)
+                    || !self.has::<DealtCombatDamage>(ent)
+            } else {
+                panic!("This function may only be called within the damage phases")
+            }
+        })
+    }
+
     async fn spread_damage(
         &self,
         events: &mut Vec<TagEvent>,
@@ -549,7 +593,7 @@ impl Game {
                     events,
                     Event::Damage {
                         amount,
-                        ent: creature,
+                        target: creature,
                         source: dealer,
                         reason: DamageReason::Combat,
                     },
