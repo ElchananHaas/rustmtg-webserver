@@ -1,4 +1,7 @@
+use std::cmp::min;
+
 use crate::components::{Attacking, Blocked, Blocking};
+use crate::event::DamageReason;
 use crate::game::*;
 use crate::player::{AskReason, Player};
 use async_recursion::async_recursion;
@@ -24,26 +27,26 @@ impl Game {
             //Execute the event. No more prevention/replacement effects
             match event.event {
                 //The assigning as a blocker happens during the two-part block trigger
-                Event::Block{blocker:_} =>{},
-                Event::BlockedBy{attacker,blocker}=>{
-                    let unblocked=self.ents.get::<Blocked>(attacker).is_err();
+                Event::Block { blocker: _ } => {}
+                Event::BlockedBy { attacker, blocker } => {
+                    let unblocked = self.ents.get::<Blocked>(attacker).is_err();
                     if unblocked {
-                        let _=self.ents.insert_one(attacker, Blocked(Vec::new()));
-                        Game::add_event(&mut events, Event::Blocked{attacker});
-                    }   
-                    if let Ok(mut blockedby)=self.ents.get_mut::<Blocked>(attacker){
+                        let _ = self.ents.insert_one(attacker, Blocked(Vec::new()));
+                        Game::add_event(&mut events, Event::Blocked { attacker });
+                    }
+                    if let Ok(mut blockedby) = self.ents.get_mut::<Blocked>(attacker) {
                         blockedby.0.push(blocker);
                     }
-                    let noblock=self.ents.get::<Blocking>(blocker).is_err();
-                    if noblock{
-                        let _=self.ents.insert_one(blocker, Blocking(Vec::new()));
+                    let noblock = self.ents.get::<Blocking>(blocker).is_err();
+                    if noblock {
+                        let _ = self.ents.insert_one(blocker, Blocking(Vec::new()));
                     }
-                    if let Ok(mut blocking)=self.ents.get_mut::<Blocking>(blocker){
+                    if let Ok(mut blocking) = self.ents.get_mut::<Blocking>(blocker) {
                         blocking.0.push(attacker);
                     }
-                },
-                Event::Blocked{attacker:_}=>{},
-                Event::AttackUnblocked{attacker:_}=>{},
+                }
+                Event::Blocked { attacker: _ } => {}
+                Event::AttackUnblocked { attacker: _ } => {}
                 Event::Discard {
                     player: _,
                     card,
@@ -284,14 +287,17 @@ impl Game {
     }
     async fn subphase(
         &mut self,
-        _results: &mut Vec<EventResult>,
+        results: &mut Vec<EventResult>,
         events: &mut Vec<TagEvent>,
         subphase: Subphase,
     ) {
         self.subphase = Some(subphase);
         match subphase {
             Subphase::Untap => {
-                for perm in self.players_permanents(self.active_player).collect::<Vec<_>>(){
+                for perm in self
+                    .players_permanents(self.active_player)
+                    .collect::<Vec<_>>()
+                {
                     self.untap(perm).await;
                 }
                 //Don't cycle priority in untap
@@ -331,8 +337,8 @@ impl Game {
                     } else {
                         return;
                     }
-                    let mut actual_attackers=Vec::new();
-                    let mut attack_targets=Vec::new();
+                    let mut actual_attackers = Vec::new();
+                    let mut attack_targets = Vec::new();
                     for (i, &attacker) in legal_attackers.iter().enumerate() {
                         let attacked = &attacks[i];
                         if attacked.len() > 0 {
@@ -340,28 +346,28 @@ impl Game {
                             attack_targets.push(attacked[0]);
                         }
                     }
-                    if !self.attackers_legal(&actual_attackers,&attack_targets) {
+                    if !self.attackers_legal(&actual_attackers, &attack_targets) {
                         self.restore();
                         continue;
                     }
                     for &attacker in actual_attackers.iter() {
-                            let totap =
-                            if let Ok(abilities) = self.ents.get::<Vec<Ability>>(attacker) {
-                                !abilities.iter().any(|abil| {
-                                    abil.keyword() == Some(KeywordAbility::Vigilance)
-                                })
-                            } else {
-                                true
-                            };
-                            if totap {
-                                self.tap(attacker).await;
-                            }
+                        let totap = if let Ok(abilities) = self.ents.get::<Vec<Ability>>(attacker) {
+                            !abilities
+                                .iter()
+                                .any(|abil| abil.keyword() == Some(KeywordAbility::Vigilance))
+                        } else {
+                            true
+                        };
+                        if totap {
+                            self.tap(attacker).await;
                         }
-        
+                    }
+
                     //Handle costs to attack here
                     //THis may led to a redeclaration of attackers
                     //Now declare them attackers and fire attacking events
-                    for (&attacker,&attacked) in actual_attackers.iter().zip(attack_targets.iter()){
+                    for (&attacker, &attacked) in actual_attackers.iter().zip(attack_targets.iter())
+                    {
                         let _ = self.ents.insert_one(attacker, Attacking(attacked));
                     }
                     events.push(TagEvent {
@@ -381,13 +387,13 @@ impl Game {
                     //Add in planeswalkers later
                     let attacking = self
                         .all_creatures()
-                        .filter(|&creature| 
-                            if let Ok(attack)=self.ents.get::<Attacking>(creature){
-                                attack.0==opponent
-                            }else{
+                        .filter(|&creature| {
+                            if let Ok(attack) = self.ents.get::<Attacking>(creature) {
+                                attack.0 == opponent
+                            } else {
                                 false
                             }
-                        )
+                        })
                         .collect::<Vec<_>>();
                     let potential_blockers = self
                         .players_creatures(opponent)
@@ -395,49 +401,55 @@ impl Game {
                         .collect::<Vec<_>>();
                     //This will be adjusted for creatres that can make multiple blocks
                     let choice_limits = vec![(0, 1); potential_blockers.len()];
-                    loop{
-                        let blocks=if let Ok(player) = self.ents.get_mut::<Player>(opponent) {
+                    loop {
+                        let blocks = if let Ok(player) = self.ents.get_mut::<Player>(opponent) {
                             player
-                            .ask_user_pair(
-                                potential_blockers.clone(),
-                                attacking.clone(),
-                                choice_limits.clone(),
-                                AskReason::Blockers,
-                            )
-                            .await
-                        }else{
+                                .ask_user_pair(
+                                    potential_blockers.clone(),
+                                    attacking.clone(),
+                                    choice_limits.clone(),
+                                    AskReason::Blockers,
+                                )
+                                .await
+                        } else {
                             return;
                         };
-                        let mut blockers=Vec::new();
-                        let mut blocked=Vec::new();
-                        for (i,&blocker) in potential_blockers.iter().enumerate(){
-                            let blocking=&blocks[i];
-                            if blocking.len()>0{
+                        let mut blockers = Vec::new();
+                        let mut blocked = Vec::new();
+                        for (i, &blocker) in potential_blockers.iter().enumerate() {
+                            let blocking = &blocks[i];
+                            if blocking.len() > 0 {
                                 blockers.push(blocker);
                                 blocked.push(blocking.clone());
                             }
                         }
-                        if !self.blocks_legal(&blockers,&blocked){
+                        if !self.blocks_legal(&blockers, &blocked) {
                             self.restore();
                             continue;
                         }
-                        for (i,&blocker) in blockers.iter().enumerate(){
-                            Game::add_event(events,Event::Block{blocker});
-                            for itsblocks in blocked[i].iter(){
-                                Game::add_event(events,Event::BlockedBy{blocker,attacker:*itsblocks});
+                        for (i, &blocker) in blockers.iter().enumerate() {
+                            Game::add_event(events, Event::Block { blocker });
+                            for itsblocks in blocked[i].iter() {
+                                Game::add_event(
+                                    events,
+                                    Event::BlockedBy {
+                                        blocker,
+                                        attacker: *itsblocks,
+                                    },
+                                );
                             }
                         }
                     }
                 }
                 for attacker in self
-                        .all_creatures()
-                        .filter(|&creature| self.has::<Attacking>(creature)
-                        ){
-                            Game::add_event(events, Event::AttackUnblocked{attacker});
+                    .all_creatures()
+                    .filter(|&creature| self.has::<Attacking>(creature))
+                {
+                    Game::add_event(events, Event::AttackUnblocked { attacker });
                 }
             }
-            Subphase::FirstStrikeDamage => todo!(),
-            Subphase::Damage => todo!(),
+            Subphase::FirstStrikeDamage => self.damagephase(results, events, subphase).await,
+            Subphase::Damage => self.damagephase(results, events, subphase).await,
             Subphase::EndCombat => {
                 self.cycle_priority();
             }
@@ -467,6 +479,53 @@ impl Game {
                 //TODO clean up damage
                 //TODO handle priority being given in cleanup step by giving
                 //another cleanup step afterwards
+            }
+        }
+    }
+    async fn damagephase(
+        &mut self,
+        _results: &mut Vec<EventResult>,
+        events: &mut Vec<TagEvent>,
+        subphase: Subphase,
+    ) {
+        for attacker in self
+            .players_creatures(self.active_player)
+            .collect::<Vec<_>>()
+        {
+            let is_attacking = if let Ok(attack) = self.ents.get::<Attacking>(attacker) {
+                Some(*attack)
+            } else {
+                None
+            };
+            if let Some(unblocked_attack) = is_attacking {
+                if let Ok(pt) = self.ents.get::<PT>(attacker) {
+                    let mut damage_to_deal = pt.power;
+                    if damage_to_deal <= 0 {
+                        continue;
+                    }
+                    if let Ok(blocks) = self.ents.get::<Blocked>(attacker) {
+                        for &blocker in &blocks.0 {
+                            if damage_to_deal<=0{break;}
+                            if let Some(needed_damage)=self.remaining_lethal(blocker){
+                                let amount=min(damage_to_deal,needed_damage);
+                                Game::add_event(events,Event::Damage{
+                                    amount,
+                                    ent:blocker,
+                                    source:attacker,
+                                    reason:DamageReason::Combat
+                                });
+                                damage_to_deal-=amount;
+                            }
+                        }
+                    } else {
+                        Game::add_event(events,Event::Damage{
+                            amount:damage_to_deal,
+                            ent:unblocked_attack.0,
+                            source:attacker,
+                            reason:DamageReason::Combat
+                        });
+                    }
+                }
             }
         }
     }

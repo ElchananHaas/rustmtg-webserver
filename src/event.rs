@@ -15,6 +15,11 @@ pub enum DiscardCause {
     GameInternal,
     SpellAbility(Entity),
 }
+#[derive(Clone, Debug)]
+pub enum DamageReason {
+    Combat,
+    SpellAbility(Entity),
+}
 //This will be wrapped when resolving to prevent
 //replacement effects from triggering twice
 #[derive(Clone, Debug)]
@@ -22,23 +27,29 @@ pub enum Event {
     Draw {
         player: Entity,
     },
+    Damage{
+        amount:i32,
+        ent:Entity,
+        source:Entity,
+        reason:DamageReason,
+    },
     Discard {
         player: Entity,
         card: Entity,
         cause: DiscardCause,
     },
-    Block{
-        blocker:Entity,
+    Block {
+        blocker: Entity,
     },
-    Blocked{
-        attacker:Entity,
+    Blocked {
+        attacker: Entity,
     },
-    BlockedBy{
-        attacker:Entity,
-        blocker:Entity,
+    BlockedBy {
+        attacker: Entity,
+        blocker: Entity,
     },
-    AttackUnblocked{
-        attacker:Entity,
+    AttackUnblocked {
+        attacker: Entity,
     },
     Cast {
         player: Entity,

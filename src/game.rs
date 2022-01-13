@@ -4,6 +4,7 @@ use crate::carddb::CardDB;
 use crate::components::Attacking;
 use crate::components::Blocked;
 use crate::components::Blocking;
+use crate::components::Damage;
 use crate::components::{
     CardName, Controller, EntCore, Subtype, SummoningSickness, Tapped, Types, PT,
 };
@@ -196,6 +197,10 @@ impl<'a> SerializeContext for GameSerializer<'a> {
             try_serialize::<PT, _, _>(&entity, "pt", map)?;
             try_serialize::<Types, _, _>(&entity, "types", map)?;
             try_serialize::<HashSet<Subtype>, _, _>(&entity, "subtypes", map)?;
+            try_serialize::<Damage, _, _>(&entity, "damage", map)?;
+            try_serialize::<Attacking, _, _>(&entity, "attacking", map)?;
+            try_serialize::<Blocking, _, _>(&entity, "blocking", map)?;
+            try_serialize::<Blocked, _, _>(&entity, "blocked", map)?;
         }
         if let Some(pl) = entity.get::<Player>() {
             let helper = PlayerSerialHelper {
@@ -415,10 +420,10 @@ impl Game {
     //Checks if this attacking arragment is legal.
     //Does nothing for now, will need to implement legality
     //checking before I can make any progress on that
-    pub fn attackers_legal(&self,attackers:&Vec<Entity>, targets: &Vec<Entity>) -> bool {
+    pub fn attackers_legal(&self, attackers: &Vec<Entity>, targets: &Vec<Entity>) -> bool {
         true
     }
-    pub fn blocks_legal(&self,blockers:&Vec<Entity>, blocked: &Vec<Vec<Entity>>) -> bool {
+    pub fn blocks_legal(&self, blockers: &Vec<Entity>, blocked: &Vec<Vec<Entity>>) -> bool {
         true
     }
     fn has<T: Component>(&self, ent: Entity) -> bool {
