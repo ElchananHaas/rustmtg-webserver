@@ -86,6 +86,7 @@ impl Game {
                 }
                 Event::Turn { extra: _, player } => {
                     self.active_player = player;
+                    println!("starting turn");
                     self.phases.extend(
                         [
                             Phase::Begin,
@@ -109,7 +110,7 @@ impl Game {
                                 .extend([Subphase::Untap, Subphase::Upkeep, Subphase::Draw].iter());
                         }
                         Phase::FirstMain => {
-                            self.cycle_priority();
+                            self.cycle_priority().await;
                         }
                         Phase::Combat => {
                             self.subphases.extend(
@@ -125,7 +126,7 @@ impl Game {
                             );
                         }
                         Phase::SecondMain => {
-                            self.cycle_priority();
+                            self.cycle_priority().await;
                         }
                         Phase::Ending => {
                             self.subphases
@@ -326,16 +327,17 @@ impl Game {
                 //Don't cycle priority in untap
             }
             Subphase::Upkeep => {
-                self.cycle_priority();
+                self.cycle_priority().await;
             }
             Subphase::Draw => {
                 self.draw(self.active_player).await;
-                self.cycle_priority();
+                self.cycle_priority().await;
             }
             Subphase::BeginCombat => {
-                self.cycle_priority();
+                self.cycle_priority().await;
             }
             Subphase::Attackers => {
+                println!("Starting combat");
                 self.backup();
                 //Only allow creatures that have haste or don't have summoning sickness to attack
                 let legal_attackers = self
@@ -394,7 +396,7 @@ impl Game {
                     });
                     break;
                 }
-                self.cycle_priority();
+                self.cycle_priority().await;
             }
             Subphase::Blockers => {
                 for opponent in self.opponents(self.active_player) {
@@ -467,7 +469,7 @@ impl Game {
             Subphase::FirstStrikeDamage => self.damagephase(results, events, subphase).await,
             Subphase::Damage => self.damagephase(results, events, subphase).await,
             Subphase::EndCombat => {
-                self.cycle_priority();
+                self.cycle_priority().await;
                 for perm in self.battlefield.clone() {
                     let _ = self.ents.remove_one::<Attacking>(perm);
                     let _ = self.ents.remove_one::<Blocked>(perm);
@@ -475,7 +477,7 @@ impl Game {
                 }
             }
             Subphase::EndStep => {
-                self.cycle_priority();
+                self.cycle_priority().await;
             }
             Subphase::Cleanup => {
                 self.cleanup_phase().await;

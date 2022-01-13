@@ -5,7 +5,6 @@ use crate::carddb::Cardbuildtype;
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum KeywordAbility {
     FirstStrike,
-    Flying,
     Haste,
     Vigilance,
     DoubleStrike,

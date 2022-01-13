@@ -64,7 +64,7 @@ impl Cost {
         }
     }
 
-    pub fn pay(
+    pub async fn pay(
         &self,
         game: &mut Game,
         source: Entity,
@@ -89,7 +89,7 @@ impl Cost {
             }
             Cost::Selftap => {
                 //Similarly handle prevention effects here!
-                game.tap(payment);
+                game.tap(payment).await;
                 Ok(payment)
             }
         }

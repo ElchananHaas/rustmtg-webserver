@@ -405,13 +405,15 @@ impl Game {
             }
         }
     }
-    //Cycles priority then fires an end-of-phase event
-    pub fn cycle_priority(&mut self) {
-        todo!();
+    //Cycles priority-This will need ALOT more work!
+    pub async fn cycle_priority(&mut self) {
+        //TODO-place all triggered abilties onto the stack
+        return;
     }
     pub fn attack_targets(&self, player: Entity) -> Vec<Entity> {
         self.opponents(player)
     }
+
     pub fn opponents(&self, player: Entity) -> Vec<Entity> {
         self.turn_order
             .iter()
