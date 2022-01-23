@@ -1,6 +1,4 @@
-use crate::{
-    game::{Phase, Subphase, Zone},
-};
+use crate::game::{Phase, Subphase, Zone};
 use hecs::Entity;
 
 //An event tagged with replacement effects already applied to it

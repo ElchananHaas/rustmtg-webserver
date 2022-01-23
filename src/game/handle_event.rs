@@ -337,7 +337,6 @@ impl Game {
                 self.cycle_priority().await;
             }
             Subphase::Attackers => {
-                println!("Starting combat");
                 self.backup();
                 //Only allow creatures that have haste or don't have summoning sickness to attack
                 let legal_attackers = self
@@ -347,6 +346,7 @@ impl Game {
                 let attack_targets = self.attack_targets(self.active_player);
 
                 loop {
+                    println!("Asking player");
                     let attacks;
                     //Choice limits is inclusive on both bounds
                     let choice_limits = vec![(0, 1); legal_attackers.len()];

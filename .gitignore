@@ -3,3 +3,6 @@
 *.sqlite*
 oracle-cards-*.json
 *.code-workspace
+perf.data
+perf.data.old
+flamegraph.svg

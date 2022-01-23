@@ -5,70 +5,10 @@
     <script src="/static/phaser.min.js"></script>
 </head>
 <body>
-
-    <script>
-    var config = {
-        type: Phaser.AUTO,
-        width: 800,
-        height: 600,
-        physics: {
-            default: 'arcade',
-            arcade: {
-                gravity: { y: 200 }
-            }
-        },
-        scene: {
-            preload: preload,
-            create: create
-        }
-    };
-
-    var game = new Phaser.Game(config);
-
-    function preload ()
-    {
-        this.load.setBaseURL('http://labs.phaser.io');
-
-        this.load.image('sky', 'assets/skies/space3.png');
-        this.load.image('logo', 'assets/sprites/phaser3-logo.png');
-        this.load.image('red', 'assets/particles/red.png');
-    }
-
-    function create ()
-    {
-        const socket = new WebSocket('ws://localhost:3030/gamesetup');
-        socket.addEventListener('open', function (event) {
-        socket.send('Hello Server!');
-        });
-        socket.addEventListener('message', function (event) {
-        event.data.text().then(
-            function(json_text){
-                parsed=JSON.parse(json_text);
-                console.log('parsed json is', parsed);
-            }
-        )
-
-        });
-        console.log("created websocket");
-        this.add.image(400, 300, 'sky');
-
-        var particles = this.add.particles('red');
-
-        var emitter = particles.createEmitter({
-            speed: 100,
-            scale: { start: 1, end: 0 },
-            blendMode: 'ADD'
-        });
-
-        var logo = this.physics.add.image(400, 100, 'logo');
-
-        logo.setVelocity(100, 200);
-        logo.setBounce(1, 1);
-        logo.setCollideWorldBounds(true);
-
-        emitter.startFollow(logo);
-    }
-    </script>
-
+    <div id="phaser-game"></div>
+    <script src="/static/index.js" type="module"></script>
 </body>
+<footer>
+    <a href='https://www.freepik.com/vectors/background'>Background vector created by coolvector - www.freepik.com</a>
+</footer>
 </html>

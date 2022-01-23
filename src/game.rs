@@ -1,29 +1,24 @@
 use crate::ability::Ability;
 use crate::ability::KeywordAbility;
 use crate::carddb::CardDB;
-use crate::components::Attacking;
-use crate::components::Blocked;
-use crate::components::Blocking;
-use crate::components::Damage;
+use crate::components::{
+    Attacking,Blocked,Blocking,Damage,ImageUrl
+};
 use crate::components::{
     CardName, Controller, EntCore, Subtype, SummoningSickness, Tapped, Types, PT,
 };
-use crate::event::DiscardCause;
-use crate::event::{Event, EventResult, TagEvent};
+use crate::event::{Event, EventResult, TagEvent,DiscardCause};
 use crate::player::{Player, PlayerCon, PlayerSerialHelper};
 use anyhow::{bail, Result};
 use futures::future;
 use hecs::serialize::row::{try_serialize, SerializeContext};
 use hecs::Component;
 use hecs::{Entity, EntityBuilder, EntityRef, World};
-use serde::Serialize;
+use serde::{Serialize,Serializer};
 use serde_derive::Serialize;
 use serde_json;
 use std::cmp::max;
-use std::collections::HashSet;
-use std::collections::VecDeque;
-use std::io::Write;
-use std::result::Result::Ok;
+use std::collections::{HashSet,VecDeque};
 use std::sync::Arc;
 use warp::ws::WebSocket;
 
@@ -120,7 +115,6 @@ impl GameBuilder {
         player_con: WebSocket,
     ) -> Result<Entity> {
         let mut cards = Vec::new();
-        let psocket = tokio::sync::Mutex::new(PlayerCon::new(player_con));
         let player = Player {
             name: name.to_owned(),
             hand: HashSet::new(),
@@ -131,7 +125,7 @@ impl GameBuilder {
             won: false,
             deck: Vec::new(),
             max_handsize: 7,
-            player_con: Arc::new(psocket),
+            player_con: PlayerCon::new(player_con),
         };
         let player: Entity = self.ents.spawn((player,));
         for cardname in card_names {
@@ -202,6 +196,7 @@ impl<'a> SerializeContext for GameSerializer<'a> {
             try_serialize::<Attacking, _, _>(&entity, "attacking", map)?;
             try_serialize::<Blocking, _, _>(&entity, "blocking", map)?;
             try_serialize::<Blocked, _, _>(&entity, "blocked", map)?;
+            try_serialize::<ImageUrl, _, _>(&entity, "image_url", map)?;
         }
         if let Some(pl) = entity.get::<Player>() {
             let helper = PlayerSerialHelper {
@@ -212,6 +207,26 @@ impl<'a> SerializeContext for GameSerializer<'a> {
             map.serialize_entry("player", &helper)?;
         }
         Ok(())
+    }
+}
+//This is a helper struct for game serialization because
+//the function takes a mutable context,
+//so serialize needs to be implemented on a different struct
+struct GameSerialContext<'a> {
+    player: Entity,
+    ents: &'a World,
+}
+
+impl<'a> Serialize for GameSerialContext<'a> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut context = GameSerializer {
+            player: self.player,
+            ents: self.ents,
+        };
+        hecs::serialize::row::serialize(&self.ents, &mut context, serializer)
     }
 }
 impl Game {
@@ -259,26 +274,21 @@ impl Game {
         let _results = future::join_all(state_futures).await;
     }
     async fn send_state_player(&self, player: Entity) -> Result<()> {
-        let mut buffer = Vec::<u8>::new();
+        let serial_context = GameSerialContext {
+            player: player,
+            ents: &self.ents,
+        };
+        let mut buffer = Vec::new();
         {
-            let mut cursor = std::io::Cursor::new(&mut buffer);
-            cursor.write_all(b"[")?;
+            let cursor = std::io::Cursor::new(&mut buffer);
             let mut json_serial = serde_json::Serializer::new(cursor);
-            let mut serial_context = GameSerializer {
-                player: player,
-                ents: &self.ents,
-            };
-            hecs::serialize::row::serialize(&self.ents, &mut serial_context, &mut json_serial)?;
-            let mut cursor = json_serial.into_inner();
-            cursor.write_all(b",")?;
-            let mut json_serial = serde_json::Serializer::new(cursor);
-            self.serialize(&mut json_serial)?;
-            let mut cursor = json_serial.into_inner();
-            cursor.write_all(b"]")?;
+            let added_context = ("GameState", player, serial_context, self);
+            added_context.serialize(&mut json_serial)?;
         }
         if let Ok(mut pl) = self.ents.get_mut::<Player>(player) {
             pl.send_state(buffer).await?;
         }
+
         Ok(())
     }
 

@@ -1,19 +1,20 @@
 use crate::components::EntCore;
 use crate::JS_UNKNOWN;
 use anyhow::{bail, Result};
-use derivative::*;
-use futures::StreamExt;
 //derivative::Derivative, work around rust-analyzer bug for now
-use futures_util::SinkExt;
+use derivative::*;
+use futures::{SinkExt, StreamExt};
 use hecs::{Entity, World};
 use serde::de::DeserializeOwned;
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
 use serde_derive::Serialize;
 use std::collections::HashSet;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use warp::filters::ws::Message;
 use warp::ws::WebSocket;
+use tokio::time::sleep;
+use std::time::Duration;
 #[derive(Derivative, Clone)]
 #[derivative(Debug)]
 pub struct Player {
@@ -27,7 +28,7 @@ pub struct Player {
     pub won: bool,
     pub max_handsize: usize,
     #[derivative(Debug = "ignore")]
-    pub player_con: Arc<tokio::sync::Mutex<PlayerCon>>,
+    pub player_con: PlayerCon,
 }
 
 impl Player {
@@ -69,9 +70,8 @@ impl Player {
         ser.serialize_field("lost", &self.lost)?;
         ser.end()
     }
-    pub async fn send_state(&mut self, state: Vec<u8>) -> Result<()> {
-        let mut lock = self.player_con.lock().await;
-        lock.send_state(state).await
+    pub async fn send_state(&mut self, buffer: Vec<u8>) -> Result<()> {
+        self.player_con.send_state(buffer).await
     }
     //Select n entities from a set
     pub async fn ask_user_selectn(
@@ -90,16 +90,13 @@ impl Player {
             reason,
         };
         loop {
-            let mut lock = self.player_con.lock().await;
-            let res = lock.ask_user::<HashSet<Entity>>(&query).await;
-            if let Ok(response) = res {
-                if response.len() < min.try_into().unwrap()
-                    && response.len() > max.try_into().unwrap()
-                {
-                    continue;
-                }
-                return response;
+            let response = self.player_con.ask_user::<HashSet<Entity>>(&query).await;
+            if response.len() < min.try_into().unwrap()
+                || response.len() > max.try_into().unwrap()
+            {
+                continue;
             }
+            return response;
         }
     }
     //pair attackers with blockers/attacking targets
@@ -123,28 +120,25 @@ impl Player {
             reason,
         };
         'outer: loop {
-            let mut lock = self.player_con.lock().await;
-            let res = lock.ask_user::<Vec<Vec<Entity>>>(&query).await;
-            if let Ok(response) = res {
-                if response.len() != a.len() {
+            let response = self.player_con.ask_user::<Vec<Vec<Entity>>>(&query).await;
+            if response.len() != a.len() {
+                continue 'outer;
+            }
+            for item in response.iter().flatten() {
+                if !b.contains(item) {
                     continue 'outer;
                 }
-                for item in response.iter().flatten() {
-                    if !b.contains(item) {
-                        continue 'outer;
-                    }
-                }
-                for (i, row) in response.iter().enumerate() {
-                    if row.len() < num_choices[i].0 || row.len() > num_choices[i].1 {
-                        continue 'outer;
-                    }
-                    let as_set = row.iter().map(|x| *x).collect::<HashSet<Entity>>();
-                    if row.len() != as_set.len() {
-                        continue 'outer;
-                    }
-                }
-                return response;
             }
+            for (i, row) in response.iter().enumerate() {
+                if row.len() < num_choices[i].0 || row.len() > num_choices[i].1 {
+                    continue 'outer;
+                }
+                let as_set = row.iter().map(|x| *x).collect::<HashSet<Entity>>();
+                if row.len() != as_set.len() {
+                    continue 'outer;
+                }
+            }
+            return response;
         }
     }
 }
@@ -165,8 +159,8 @@ impl<'a, 'b> Serialize for PlayerSerialHelper<'a, 'b> {
 
 #[derive(Clone, Debug, Serialize)]
 pub struct AskUser {
-    asktype: AskType,
     reason: AskReason,
+    asktype: AskType,
 }
 #[derive(Clone, Debug, Serialize)]
 pub enum AskType {
@@ -187,34 +181,87 @@ pub enum AskReason {
     Blockers,
     DiscardToHandSize,
 }
-
+#[derive( Clone)]
 pub struct PlayerCon {
-    socket: WebSocket,
+    socket: Arc<Mutex<Option<WebSocket>>>,
 }
 
 impl PlayerCon {
     pub fn new(socket: WebSocket) -> Self {
-        PlayerCon { socket }
+        PlayerCon { socket:Arc::new(Mutex::new(Some(socket))) }
     }
-    pub async fn ask_user<T: DeserializeOwned>(&mut self, query: &AskUser) -> Result<T> {
+    //There should be no contention on this lock,
+    //so jsut take the contents!
+    fn take_socket(&self)->WebSocket{
+        let mut guard=self.socket.lock().unwrap();
+        let mut temp=None;
+        std::mem::swap(&mut temp,&mut *guard);
+        temp.unwrap()
+    }
+    fn restore_socket(&self,socket:WebSocket){
+        let mut guard=self.socket.lock().unwrap();
+        let mut temp=Some(socket);
+        std::mem::swap(&mut temp,&mut *guard);
+    }
+    //This function ensures the socket will be restored, even in the case of an error
+    pub async fn ask_user<T: DeserializeOwned>(&self, query: &AskUser) -> T{
+        let mut socket=self.take_socket();
+        let res=self.ask_user_socket(query, &mut socket).await;
+        self.restore_socket(socket);
+        res
+    }
+    async fn ask_user_socket<T: DeserializeOwned>(&self, query: &AskUser,socket: &mut WebSocket) -> T {
         let mut buffer = Vec::<u8>::new();
         {
             let cursor = std::io::Cursor::new(&mut buffer);
             let mut json_serial = serde_json::Serializer::new(cursor);
-            query.serialize(&mut json_serial)?;
+            (&query.reason, &query.asktype).serialize(&mut json_serial).expect("State must be serializable");
         }
-        self.socket.send(Message::binary(buffer)).await?;
-        let recieved = self.socket.next().await.expect("Socket is still open")?;
-        let text = if let Ok(text) = recieved.to_str() {
-            text
-        } else {
-            bail!("Expected text!");
-        };
-        let parsed: T = serde_json::from_str(text)?;
-        Ok(parsed)
+        let mut failures=0;
+        loop{
+            let sres=socket.send(Message::binary(buffer.clone())).await;
+            
+            if sres.is_err(){
+                PlayerCon::socket_error(&mut failures).await;
+                continue;
+            };
+            let recieved= socket.next().await.expect("Socket is still open");
+            let message = if let Ok(msg) = recieved {
+                msg
+            }else{
+                PlayerCon::socket_error(&mut failures).await;
+                continue;
+            };
+            let text=if let Ok(txt)=message.to_str(){
+                txt
+            }else{
+                continue;
+            };
+            if let Ok(parsed) = serde_json::from_str(text){
+                return parsed;
+            }else{
+                continue;
+            }
+        }
     }
     pub async fn send_state(&mut self, state: Vec<u8>) -> Result<()> {
-        self.socket.send(Message::binary(state)).await?;
+        let mut socket=self.take_socket();
+        let res=self.send_state_socket(state, &mut socket).await;
+        self.restore_socket(socket);
+        res
+    }
+    async fn send_state_socket(&mut self, state: Vec<u8>,socket:&mut WebSocket) -> Result<()> {
+        socket.send(Message::binary(state)).await?;
         Ok(())
+    }
+    async fn socket_error(failures: &mut u64){
+        let max_failures=15;
+        if *failures>max_failures{
+            panic!("Connection to client broken");//Give up after around 5 min
+        }else{
+            //Use exponential backoff
+            sleep(Duration::from_millis(10* (*failures).pow(2))).await;
+            *failures+=1;
+        }
     }
 }

@@ -1,16 +1,22 @@
 use crate::ability::Ability;
-use crate::components::{CardName, EntCore, Subtype, Types, PT};
+use crate::components::{CardName, EntCore, Subtype, Types, PT, ImageUrl};
 use crate::cost::Cost;
 use crate::game::Color;
 use anyhow::{bail, Result};
 use hecs::{Entity, EntityBuilder, World};
+use serde::Deserialize;
+use serde_derive::Deserialize;
+use serde_json;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::fmt;
+use std::fs;
+use std::hash::Hash;
 //It returns mut cardbuilder due to method chaining
 pub type Cardbuildtype = fn(&mut CardBuilder) -> &mut CardBuilder;
 pub struct CardDB {
     builders: HashMap<String, Cardbuildtype>,
+    scryfall: HashMap<String, Scryfall>,
 }
 
 impl fmt::Debug for CardDB {
@@ -18,9 +24,45 @@ impl fmt::Debug for CardDB {
         f.debug_struct("CardDB").finish()
     }
 }
-
+#[derive(Deserialize, Debug)]
+#[allow(dead_code)]
+struct ScryfallImageUrls {
+    small: Option<String>,
+    normal: Option<String>,
+    large: Option<String>,
+}
+#[derive(Deserialize, Debug)]
+struct ScryfallEntry {
+    object: Option<String>,
+    name: String,
+    image_uris: Option<ScryfallImageUrls>,
+    mana_cost: Option<String>,
+    type_line: Option<String>,
+}
+#[allow(dead_code)]
+struct Scryfall {
+    object: Option<String>,
+    image_uris: Option<ScryfallImageUrls>,
+    mana_cost: Option<String>,
+    type_line: Option<String>,
+}
 impl CardDB {
     pub fn new() -> Self {
+        let path = "oracle-cards-20211212220409.json";
+        let data = fs::read_to_string(path).expect("Couldn't find oracle database file");
+        let desered: Vec<ScryfallEntry> = serde_json::from_str(&data).expect("failed to parse!");
+        let mut byname = HashMap::new();
+        for card in desered {
+            byname.insert(
+                card.name,
+                Scryfall {
+                    object: card.object,
+                    image_uris: card.image_uris,
+                    mana_cost: card.mana_cost,
+                    type_line: card.type_line,
+                },
+            );
+        }
         let cards: [(String, Cardbuildtype); 1] = [(
             "Staunch Shieldmate".to_owned(),
             |builder: &mut CardBuilder| {
@@ -36,12 +78,26 @@ impl CardDB {
         for (name, constructor) in cards {
             map.insert(name, constructor);
         }
-        CardDB { builders: map }
+        CardDB {
+            builders: map,
+            scryfall: byname,
+        }
     }
     pub fn spawn_card(&self, ents: &mut World, card_name: &str, owner: Entity) -> Result<Entity> {
         match self.builders.get(card_name) {
             Some(cardmaker) => {
                 let mut builder = CardBuilder::new(card_name.to_owned(), owner);
+                let mut url=None;
+                if let Some(scryfall_entry)=self.scryfall.get(card_name){
+                    if let Some(images)=scryfall_entry.image_uris.as_ref(){
+                        if let Some(normal_image)=images.normal.as_ref(){
+                            url=Some(normal_image.to_owned());
+                        }
+                    }
+                };
+                if let Some(url)=url{
+                    builder.add_url(url);
+                }
                 cardmaker(&mut builder);
                 let res = ents.spawn(builder.build().build()); //Two build calls
                 Ok(res)
@@ -109,6 +165,10 @@ impl CardBuilder {
     }
     pub fn token(&mut self) -> &mut Self {
         self.real_card = false;
+        self
+    }
+    pub fn add_url(&mut self,url:String)-> &mut Self{
+        self.builder.add(ImageUrl(url));
         self
     }
     pub fn cost(&mut self, cost: Cost) -> &mut Self {

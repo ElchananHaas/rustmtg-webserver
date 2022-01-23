@@ -1,7 +1,7 @@
 //This file stores varius components that entities may
 use hecs::Entity;
 use serde_derive::Serialize;
-use std::collections::HashSet;
+use std::{collections::HashSet};
 
 #[derive(Clone, Copy, Debug, Serialize, PartialEq)]
 pub struct Damage(pub i32);
@@ -30,6 +30,8 @@ pub struct EntCore {
     pub real_card: bool,
     pub known: HashSet<Entity>,
 }
+#[derive(Clone, Debug, Serialize)]
+pub struct ImageUrl(pub String);
 #[derive(Clone, Copy, Debug, Serialize)]
 pub struct PT {
     pub power: i32,
