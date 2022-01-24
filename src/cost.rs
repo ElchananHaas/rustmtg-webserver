@@ -6,9 +6,9 @@ use hecs::Entity;
 
 #[derive(Clone, Debug)]
 pub enum Cost {
-    Generic,
+    Generic, 
     Color(Color),
-    Selftap,
+    Selftap, 
 }
 
 impl Cost {

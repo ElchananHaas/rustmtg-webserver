@@ -1,5 +1,5 @@
 use crate::ability::Ability;
-use crate::components::{CardName, EntCore, Subtype, Types, PT, ImageUrl};
+use crate::components::{CardName, EntCore, ImageUrl, Subtype, Types, PT};
 use crate::cost::Cost;
 use crate::game::Color;
 use anyhow::{bail, Result};
@@ -87,15 +87,15 @@ impl CardDB {
         match self.builders.get(card_name) {
             Some(cardmaker) => {
                 let mut builder = CardBuilder::new(card_name.to_owned(), owner);
-                let mut url=None;
-                if let Some(scryfall_entry)=self.scryfall.get(card_name){
-                    if let Some(images)=scryfall_entry.image_uris.as_ref(){
-                        if let Some(normal_image)=images.normal.as_ref(){
-                            url=Some(normal_image.to_owned());
+                let mut url = None;
+                if let Some(scryfall_entry) = self.scryfall.get(card_name) {
+                    if let Some(images) = scryfall_entry.image_uris.as_ref() {
+                        if let Some(normal_image) = images.normal.as_ref() {
+                            url = Some(normal_image.to_owned());
                         }
                     }
                 };
-                if let Some(url)=url{
+                if let Some(url) = url {
                     builder.add_url(url);
                 }
                 cardmaker(&mut builder);
@@ -167,7 +167,7 @@ impl CardBuilder {
         self.real_card = false;
         self
     }
-    pub fn add_url(&mut self,url:String)-> &mut Self{
+    pub fn add_url(&mut self, url: String) -> &mut Self {
         self.builder.add(ImageUrl(url));
         self
     }

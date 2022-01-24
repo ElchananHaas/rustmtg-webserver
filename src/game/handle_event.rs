@@ -251,7 +251,7 @@ impl Game {
                 }
             } else {
                 false
-            }
+            } 
         }
         if let Some(core) = core.as_mut() {
             if removed && core.real_card {

@@ -12,6 +12,7 @@ export default class Game extends Phaser.Scene {
         this.canvas.imageSmoothingEnabled = true;
         this.load.image('game_background', './background.jpg');
         this.load.image('card_back',"https://c1.scryfall.com/file/scryfall-card-backs/large/59/597b79b3-7d77-4261-871a-60dd17403388.jpg?1561757061");
+        this.load.image('artifact_card',"./acard.jpg")
         //this.load.setBaseURL('http://labs.phaser.io');
     }
     width(){
@@ -25,19 +26,13 @@ export default class Game extends Phaser.Scene {
         let ecs=parsed[2];
         console.log(ecs);
         let myplayer=ecs[me].player;
-        console.log(myplayer);
         let hand=myplayer["hand"];
         console.log(hand);
         for (let i=0;i<hand.length;i++){
             let ent=ecs[hand[i]];
             if (ent==null){ continue;}
-            let url=ent.image_url;
-            if (url==null){ continue;}
-            if (!("name" in ent)){continue;}
-            let hand_card = new HandCard(this);
-            hand_card.render(100 + (i * 150), 200, ent.name,url);
-            console.log(this.width());
-            console.log(this.height());
+            let hand_card = new HandCard(this,100 + (i * 150), 200, ent);
+            this.add.existing(hand_card);
         }
     }
     create() {

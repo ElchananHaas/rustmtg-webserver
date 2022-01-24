@@ -1,0 +1,9366 @@
+
+<html>
+<head>
+  <title>Cargo Build Timings — mtg_webserver 0.1.0</title>
+  <meta charset="utf-8">
+<style type="text/css">
+html {
+  font-family: sans-serif;
+}
+
+.canvas-container {
+  position: relative;
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+h1 {
+  border-bottom: 1px solid #c0c0c0;
+}
+
+.graph {
+  display: block;
+}
+
+.my-table {
+  margin-top: 20px;
+  margin-bottom: 20px;
+  border-collapse: collapse;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+}
+
+.my-table th {
+  color: #d5dde5;
+  background: #1b1e24;
+  border-bottom: 4px solid #9ea7af;
+  border-right: 1px solid #343a45;
+  font-size: 18px;
+  font-weight: 100;
+  padding: 12px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.my-table th:first-child {
+  border-top-left-radius: 3px;
+}
+
+.my-table th:last-child {
+  border-top-right-radius: 3px;
+  border-right:none;
+}
+
+.my-table tr {
+  border-top: 1px solid #c1c3d1;
+  border-bottom: 1px solid #c1c3d1;
+  font-size: 16px;
+  font-weight: normal;
+}
+
+.my-table tr:first-child {
+  border-top:none;
+}
+
+.my-table tr:last-child {
+  border-bottom:none;
+}
+
+.my-table tr:nth-child(odd) td {
+  background: #ebebeb;
+}
+
+.my-table tr:last-child td:first-child {
+  border-bottom-left-radius:3px;
+}
+
+.my-table tr:last-child td:last-child {
+  border-bottom-right-radius:3px;
+}
+
+.my-table td {
+  background: #ffffff;
+  padding: 10px;
+  text-align: left;
+  vertical-align: middle;
+  font-weight: 300;
+  font-size: 14px;
+  border-right: 1px solid #C1C3D1;
+}
+
+.my-table td:last-child {
+  border-right: 0px;
+}
+
+.summary-table td:first-child {
+  vertical-align: top;
+  text-align: right;
+}
+
+.input-table td {
+  text-align: center;
+}
+
+.error-text {
+  color: #e80000;
+}
+
+</style>
+</head>
+<body>
+
+<h1>Cargo Build Timings</h1>
+
+<table class="my-table summary-table">
+  <tr>
+    <td>Targets:</td><td>mtg_webserver 0.1.0 (bin "mtg_webserver")</td>
+  </tr>
+  <tr>
+    <td>Profile:</td><td>dev</td>
+  </tr>
+  <tr>
+    <td>Fresh units:</td><td>0</td>
+  </tr>
+  <tr>
+    <td>Dirty units:</td><td>160</td>
+  </tr>
+  <tr>
+    <td>Total units:</td><td>160</td>
+  </tr>
+  <tr>
+    <td>Max concurrency:</td><td>8 (jobs=8 ncpu=8)</td>
+  </tr>
+  <tr>
+    <td>Build start:</td><td>2022-01-23T19:49:32Z</td>
+  </tr>
+  <tr>
+    <td>Total time:</td><td>62.1s (1m 2.1s)</td>
+  </tr>
+  <tr>
+    <td>rustc:</td><td>rustc 1.60.0-nightly (bfe156467 2022-01-22)<br>Host: x86_64-unknown-linux-gnu<br>Target: x86_64-unknown-linux-gnu</td>
+  </tr>
+  <tr>
+    <td>Max (global) rustc threads concurrency:</td><td>0</td>
+  </tr>
+
+</table>
+
+<table class="input-table">
+  <tr>
+    <td><label for="min-unit-time">Min unit time:</label></td>
+    <td><label for="scale">Scale:</label></td>
+  </tr>
+  <tr>
+    <td><input type="range" min="0" max="30" step="0.1" value="0" id="min-unit-time"></td>
+    <td><input type="range" min="1" max="50" value="20" id="scale"></td>
+  </tr>
+  <tr>
+    <td><output for="min-unit-time" id="min-unit-time-output"></output></td>
+    <td><output for="scale" id="scale-output"></output></td>
+  </tr>
+</table>
+
+<div id="pipeline-container" class="canvas-container">
+ <canvas id="pipeline-graph" class="graph" style="position: absolute; left: 0; top: 0; z-index: 0;"></canvas>
+ <canvas id="pipeline-graph-lines" style="position: absolute; left: 0; top: 0; z-index: 1; pointer-events:none;"></canvas>
+</div>
+<div class="canvas-container">
+  <canvas id="timing-graph" class="graph"></canvas>
+</div>
+
+<table class="my-table">
+  <thead>
+    <tr>
+      <th></th>
+      <th>Unit</th>
+      <th>Total</th>
+      <th>Codegen</th>
+      <th>Features</th>
+    </tr>
+  </thead>
+  <tbody>
+
+<tr>
+  <td>1.</td>
+  <td>mtg_webserver v0.1.0 bin "mtg_webserver"</td>
+  <td>11.4s</td>
+  <td></td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>2.</td>
+  <td>serde_derive v1.0.133</td>
+  <td>10.4s</td>
+  <td></td>
+  <td>default</td>
+</tr>
+
+<tr>
+  <td>3.</td>
+  <td>syn v1.0.75</td>
+  <td>10.2s</td>
+  <td>2.2s (21%)</td>
+  <td>clone-impls, default, derive, extra-traits, full, parsing, printing, proc-macro, quote, visit, visit-mut</td>
+</tr>
+
+<tr>
+  <td>4.</td>
+  <td>tokio v1.15.0</td>
+  <td>9.9s</td>
+  <td>2.6s (26%)</td>
+  <td>bytes, default, fs, full, io-std, io-util, libc, macros, memchr, mio, net, num_cpus, once_cell, parking_lot, process, rt, rt-multi-thread, signal, signal-hook-registry, sync, time, tokio-macros</td>
+</tr>
+
+<tr>
+  <td>5.</td>
+  <td>derivative v2.2.0</td>
+  <td>9.4s</td>
+  <td></td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>6.</td>
+  <td>serde v1.0.133</td>
+  <td>8.8s</td>
+  <td>0.6s (7%)</td>
+  <td>default, std</td>
+</tr>
+
+<tr>
+  <td>7.</td>
+  <td>pin-project-internal v1.0.8</td>
+  <td>7.0s</td>
+  <td></td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>8.</td>
+  <td>http v0.2.4</td>
+  <td>7.0s</td>
+  <td>2.0s (29%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>9.</td>
+  <td>strum_macros v0.23.1</td>
+  <td>6.9s</td>
+  <td></td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>10.</td>
+  <td>thiserror-impl v1.0.26</td>
+  <td>5.9s</td>
+  <td></td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>11.</td>
+  <td>futures-util v0.3.19</td>
+  <td>5.4s</td>
+  <td>0.2s (3%)</td>
+  <td>alloc, async-await, async-await-macro, channel, default, futures-channel, futures-io, futures-macro, futures-sink, io, memchr, sink, slab, std</td>
+</tr>
+
+<tr>
+  <td>12.</td>
+  <td>hyper v0.14.16</td>
+  <td>5.3s</td>
+  <td></td>
+  <td>client, default, h2, http1, http2, server, socket2, stream, tcp</td>
+</tr>
+
+<tr>
+  <td>13.</td>
+  <td>futures-macro v0.3.19</td>
+  <td>5.3s</td>
+  <td></td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>14.</td>
+  <td>h2 v0.3.9</td>
+  <td>5.3s</td>
+  <td>0.9s (17%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>15.</td>
+  <td>tokio-macros v1.7.0</td>
+  <td>3.9s</td>
+  <td></td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>16.</td>
+  <td>async-recursion v1.0.0</td>
+  <td>3.7s</td>
+  <td></td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>17.</td>
+  <td>proc-macro2 v1.0.28</td>
+  <td>3.5s</td>
+  <td>2.0s (57%)</td>
+  <td>default, proc-macro</td>
+</tr>
+
+<tr>
+  <td>18.</td>
+  <td>hecs v0.7.1</td>
+  <td>3.5s</td>
+  <td>0.6s (16%)</td>
+  <td>default, row-serialize, serde, std</td>
+</tr>
+
+<tr>
+  <td>19.</td>
+  <td>warp v0.3.2</td>
+  <td>3.4s</td>
+  <td>0.6s (19%)</td>
+  <td>default, multipart, tokio-tungstenite, websocket</td>
+</tr>
+
+<tr>
+  <td>20.</td>
+  <td>headers v0.3.5</td>
+  <td>3.1s</td>
+  <td>1.3s (42%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>21.</td>
+  <td>rustversion v1.0.6</td>
+  <td>2.9s</td>
+  <td></td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>22.</td>
+  <td>mime_guess v2.0.3 build script</td>
+  <td>2.7s</td>
+  <td></td>
+  <td>default, rev-mappings</td>
+</tr>
+
+<tr>
+  <td>23.</td>
+  <td>idna v0.2.3</td>
+  <td>2.7s</td>
+  <td>1.5s (56%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>24.</td>
+  <td>tungstenite v0.14.0</td>
+  <td>2.7s</td>
+  <td>1.1s (41%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>25.</td>
+  <td>serde_json v1.0.66</td>
+  <td>2.6s</td>
+  <td>0.5s (20%)</td>
+  <td>default, std</td>
+</tr>
+
+<tr>
+  <td>26.</td>
+  <td>memchr v2.4.1</td>
+  <td>2.6s</td>
+  <td>1.5s (58%)</td>
+  <td>default, std, use_std</td>
+</tr>
+
+<tr>
+  <td>27.</td>
+  <td>unicode-normalization v0.1.19</td>
+  <td>2.5s</td>
+  <td>0.5s (21%)</td>
+  <td>default, std</td>
+</tr>
+
+<tr>
+  <td>28.</td>
+  <td>mio v0.7.14</td>
+  <td>2.5s</td>
+  <td>1.4s (56%)</td>
+  <td>default, net, os-ext, os-poll, os-util, tcp, udp, uds</td>
+</tr>
+
+<tr>
+  <td>29.</td>
+  <td>rand v0.8.4</td>
+  <td>2.5s</td>
+  <td>0.7s (27%)</td>
+  <td>alloc, default, getrandom, libc, rand_chacha, rand_hc, std, std_rng</td>
+</tr>
+
+<tr>
+  <td>30.</td>
+  <td>url v2.2.2</td>
+  <td>2.4s</td>
+  <td>1.1s (43%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>31.</td>
+  <td>typenum v1.13.0 build script</td>
+  <td>2.4s</td>
+  <td></td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>32.</td>
+  <td>tinyvec v1.3.1</td>
+  <td>2.3s</td>
+  <td>0.1s (5%)</td>
+  <td>alloc, default, tinyvec_macros</td>
+</tr>
+
+<tr>
+  <td>33.</td>
+  <td>rand_chacha v0.3.1</td>
+  <td>2.3s</td>
+  <td>1.6s (72%)</td>
+  <td>std</td>
+</tr>
+
+<tr>
+  <td>34.</td>
+  <td>unicode-bidi v0.3.6</td>
+  <td>2.2s</td>
+  <td>1.4s (65%)</td>
+  <td>default, std</td>
+</tr>
+
+<tr>
+  <td>35.</td>
+  <td>tracing-core v0.1.19</td>
+  <td>2.1s</td>
+  <td>1.1s (52%)</td>
+  <td>lazy_static, std</td>
+</tr>
+
+<tr>
+  <td>36.</td>
+  <td>bytes v1.1.0</td>
+  <td>2.1s</td>
+  <td>1.0s (48%)</td>
+  <td>default, std</td>
+</tr>
+
+<tr>
+  <td>37.</td>
+  <td>libc v0.2.112</td>
+  <td>2.0s</td>
+  <td>0.2s (13%)</td>
+  <td>default, std</td>
+</tr>
+
+<tr>
+  <td>38.</td>
+  <td>signal-hook-registry v1.4.0</td>
+  <td>1.9s</td>
+  <td>1.4s (73%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>39.</td>
+  <td>libc v0.2.112 build script</td>
+  <td>1.7s</td>
+  <td></td>
+  <td>default, std</td>
+</tr>
+
+<tr>
+  <td>40.</td>
+  <td>typenum v1.13.0</td>
+  <td>1.7s</td>
+  <td>0.1s (7%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>41.</td>
+  <td>version_check v0.9.3</td>
+  <td>1.7s</td>
+  <td>1.2s (71%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>42.</td>
+  <td>mime_guess v2.0.3</td>
+  <td>1.7s</td>
+  <td>0.5s (30%)</td>
+  <td>default, rev-mappings</td>
+</tr>
+
+<tr>
+  <td>43.</td>
+  <td>autocfg v1.0.1</td>
+  <td>1.7s</td>
+  <td>1.1s (69%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>44.</td>
+  <td>syn v1.0.75 build script</td>
+  <td>1.6s</td>
+  <td></td>
+  <td>clone-impls, default, derive, extra-traits, full, parsing, printing, proc-macro, quote, visit, visit-mut</td>
+</tr>
+
+<tr>
+  <td>45.</td>
+  <td>parking_lot v0.11.1</td>
+  <td>1.6s</td>
+  <td>1.0s (64%)</td>
+  <td>default</td>
+</tr>
+
+<tr>
+  <td>46.</td>
+  <td>unicode-segmentation v1.8.0</td>
+  <td>1.6s</td>
+  <td>0.5s (32%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>47.</td>
+  <td>httparse v1.5.1</td>
+  <td>1.5s</td>
+  <td>0.7s (44%)</td>
+  <td>default, std</td>
+</tr>
+
+<tr>
+  <td>48.</td>
+  <td>proc-macro2 v1.0.28 build script</td>
+  <td>1.5s</td>
+  <td></td>
+  <td>default, proc-macro</td>
+</tr>
+
+<tr>
+  <td>49.</td>
+  <td>anyhow v1.0.51</td>
+  <td>1.5s</td>
+  <td>0.9s (60%)</td>
+  <td>default, std</td>
+</tr>
+
+<tr>
+  <td>50.</td>
+  <td>socket2 v0.4.2</td>
+  <td>1.4s</td>
+  <td>0.9s (59%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>51.</td>
+  <td>num_cpus v1.13.0</td>
+  <td>1.4s</td>
+  <td>1.0s (69%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>52.</td>
+  <td>ryu v1.0.5 build script</td>
+  <td>1.4s</td>
+  <td></td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>53.</td>
+  <td>rustversion v1.0.6 build script</td>
+  <td>1.3s</td>
+  <td></td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>54.</td>
+  <td>indexmap v1.7.0</td>
+  <td>1.3s</td>
+  <td>0.3s (21%)</td>
+  <td>std</td>
+</tr>
+
+<tr>
+  <td>55.</td>
+  <td>anyhow v1.0.51 build script</td>
+  <td>1.3s</td>
+  <td></td>
+  <td>default, std</td>
+</tr>
+
+<tr>
+  <td>56.</td>
+  <td>serde_json v1.0.66 build script</td>
+  <td>1.2s</td>
+  <td></td>
+  <td>default, std</td>
+</tr>
+
+<tr>
+  <td>57.</td>
+  <td>hashbrown v0.11.2</td>
+  <td>1.2s</td>
+  <td>0.1s (8%)</td>
+  <td>ahash, inline-more, raw</td>
+</tr>
+
+<tr>
+  <td>58.</td>
+  <td>serde_derive v1.0.133 build script</td>
+  <td>1.2s</td>
+  <td></td>
+  <td>default</td>
+</tr>
+
+<tr>
+  <td>59.</td>
+  <td>multipart v0.18.0</td>
+  <td>1.2s</td>
+  <td>0.4s (30%)</td>
+  <td>buf_redux, httparse, quick-error, safemem, server, twoway</td>
+</tr>
+
+<tr>
+  <td>60.</td>
+  <td>serde v1.0.133 build script</td>
+  <td>1.2s</td>
+  <td></td>
+  <td>default, std</td>
+</tr>
+
+<tr>
+  <td>61.</td>
+  <td>tempfile v3.2.0</td>
+  <td>1.2s</td>
+  <td>0.6s (48%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>62.</td>
+  <td>tracing v0.1.26</td>
+  <td>1.2s</td>
+  <td>0.3s (30%)</td>
+  <td>log, std</td>
+</tr>
+
+<tr>
+  <td>63.</td>
+  <td>tokio-util v0.6.9</td>
+  <td>1.2s</td>
+  <td>0.3s (27%)</td>
+  <td>codec, default, io</td>
+</tr>
+
+<tr>
+  <td>64.</td>
+  <td>mime v0.3.16</td>
+  <td>1.1s</td>
+  <td>0.6s (56%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>65.</td>
+  <td>once_cell v1.9.0</td>
+  <td>1.1s</td>
+  <td>0.5s (41%)</td>
+  <td>alloc, default, race, std</td>
+</tr>
+
+<tr>
+  <td>66.</td>
+  <td>generic-array v0.14.4</td>
+  <td>1.1s</td>
+  <td>0.1s (8%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>67.</td>
+  <td>base64 v0.13.0</td>
+  <td>1.1s</td>
+  <td>0.4s (37%)</td>
+  <td>default, std</td>
+</tr>
+
+<tr>
+  <td>68.</td>
+  <td>quote v1.0.9</td>
+  <td>1.1s</td>
+  <td>0.5s (52%)</td>
+  <td>default, proc-macro</td>
+</tr>
+
+<tr>
+  <td>69.</td>
+  <td>unicase v2.6.0 build script (run)</td>
+  <td>1.0s</td>
+  <td></td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>70.</td>
+  <td>futures-core v0.3.19 build script</td>
+  <td>1.0s</td>
+  <td></td>
+  <td>alloc, default, std</td>
+</tr>
+
+<tr>
+  <td>71.</td>
+  <td>ppv-lite86 v0.2.10</td>
+  <td>1.0s</td>
+  <td>0.0s (3%)</td>
+  <td>simd, std</td>
+</tr>
+
+<tr>
+  <td>72.</td>
+  <td>httparse v1.5.1 build script</td>
+  <td>1.0s</td>
+  <td></td>
+  <td>default, std</td>
+</tr>
+
+<tr>
+  <td>73.</td>
+  <td>parking_lot_core v0.8.3</td>
+  <td>1.0s</td>
+  <td>0.5s (50%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>74.</td>
+  <td>sha-1 v0.9.7</td>
+  <td>1.0s</td>
+  <td>0.6s (57%)</td>
+  <td>default, std</td>
+</tr>
+
+<tr>
+  <td>75.</td>
+  <td>futures-channel v0.3.19 build script</td>
+  <td>1.0s</td>
+  <td></td>
+  <td>alloc, default, futures-sink, sink, std</td>
+</tr>
+
+<tr>
+  <td>76.</td>
+  <td>ahash v0.7.6 build script</td>
+  <td>1.0s</td>
+  <td></td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>77.</td>
+  <td>log v0.4.14 build script</td>
+  <td>1.0s</td>
+  <td></td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>78.</td>
+  <td>heck v0.3.3</td>
+  <td>1.0s</td>
+  <td>0.7s (72%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>79.</td>
+  <td>memchr v2.4.1 build script</td>
+  <td>1.0s</td>
+  <td></td>
+  <td>default, std, use_std</td>
+</tr>
+
+<tr>
+  <td>80.</td>
+  <td>futures-task v0.3.19</td>
+  <td>1.0s</td>
+  <td>0.4s (46%)</td>
+  <td>alloc, std</td>
+</tr>
+
+<tr>
+  <td>81.</td>
+  <td>httpdate v1.0.2</td>
+  <td>0.9s</td>
+  <td>0.5s (52%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>82.</td>
+  <td>serde_urlencoded v0.7.0</td>
+  <td>0.9s</td>
+  <td>0.3s (28%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>83.</td>
+  <td>unicase v2.6.0 build script</td>
+  <td>0.9s</td>
+  <td></td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>84.</td>
+  <td>buf_redux v0.8.4</td>
+  <td>0.9s</td>
+  <td>0.4s (44%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>85.</td>
+  <td>byteorder v1.4.3</td>
+  <td>0.9s</td>
+  <td>0.2s (23%)</td>
+  <td>default, std</td>
+</tr>
+
+<tr>
+  <td>86.</td>
+  <td>futures-task v0.3.19 build script</td>
+  <td>0.9s</td>
+  <td></td>
+  <td>alloc, std</td>
+</tr>
+
+<tr>
+  <td>87.</td>
+  <td>indexmap v1.7.0 build script</td>
+  <td>0.9s</td>
+  <td></td>
+  <td>std</td>
+</tr>
+
+<tr>
+  <td>88.</td>
+  <td>futures-util v0.3.19 build script</td>
+  <td>0.8s</td>
+  <td></td>
+  <td>alloc, async-await, async-await-macro, channel, default, futures-channel, futures-io, futures-macro, futures-sink, io, memchr, sink, slab, std</td>
+</tr>
+
+<tr>
+  <td>89.</td>
+  <td>rand_core v0.6.3</td>
+  <td>0.8s</td>
+  <td>0.3s (36%)</td>
+  <td>alloc, getrandom, std</td>
+</tr>
+
+<tr>
+  <td>90.</td>
+  <td>generic-array v0.14.4 build script</td>
+  <td>0.8s</td>
+  <td></td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>91.</td>
+  <td>log v0.4.14</td>
+  <td>0.8s</td>
+  <td>0.3s (40%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>92.</td>
+  <td>futures-channel v0.3.19</td>
+  <td>0.8s</td>
+  <td>0.1s (14%)</td>
+  <td>alloc, default, futures-sink, sink, std</td>
+</tr>
+
+<tr>
+  <td>93.</td>
+  <td>futures-io v0.3.19</td>
+  <td>0.8s</td>
+  <td>0.4s (57%)</td>
+  <td>std</td>
+</tr>
+
+<tr>
+  <td>94.</td>
+  <td>getrandom v0.2.3</td>
+  <td>0.8s</td>
+  <td>0.4s (48%)</td>
+  <td>std</td>
+</tr>
+
+<tr>
+  <td>95.</td>
+  <td>tokio-stream v0.1.8</td>
+  <td>0.8s</td>
+  <td>0.1s (17%)</td>
+  <td>default, time</td>
+</tr>
+
+<tr>
+  <td>96.</td>
+  <td>lock_api v0.4.4</td>
+  <td>0.7s</td>
+  <td>0.0s (4%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>97.</td>
+  <td>want v0.3.0</td>
+  <td>0.7s</td>
+  <td>0.3s (36%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>98.</td>
+  <td>percent-encoding v2.1.0</td>
+  <td>0.7s</td>
+  <td>0.4s (54%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>99.</td>
+  <td>ahash v0.7.6</td>
+  <td>0.7s</td>
+  <td>0.2s (25%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>100.</td>
+  <td>utf-8 v0.7.6</td>
+  <td>0.7s</td>
+  <td>0.4s (51%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>101.</td>
+  <td>ryu v1.0.5</td>
+  <td>0.7s</td>
+  <td>0.3s (46%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>102.</td>
+  <td>itoa v0.4.8</td>
+  <td>0.7s</td>
+  <td>0.1s (11%)</td>
+  <td>default, std</td>
+</tr>
+
+<tr>
+  <td>103.</td>
+  <td>unicase v2.6.0</td>
+  <td>0.7s</td>
+  <td>0.2s (31%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>104.</td>
+  <td>smallvec v1.6.1</td>
+  <td>0.7s</td>
+  <td>0.1s (10%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>105.</td>
+  <td>anyhow v1.0.51 build script (run)</td>
+  <td>0.6s</td>
+  <td></td>
+  <td>default, std</td>
+</tr>
+
+<tr>
+  <td>106.</td>
+  <td>form_urlencoded v1.0.1</td>
+  <td>0.6s</td>
+  <td>0.2s (38%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>107.</td>
+  <td>twoway v0.1.8</td>
+  <td>0.6s</td>
+  <td>0.3s (41%)</td>
+  <td>default, use_std</td>
+</tr>
+
+<tr>
+  <td>108.</td>
+  <td>http-body v0.4.4</td>
+  <td>0.6s</td>
+  <td>0.1s (15%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>109.</td>
+  <td>tokio-tungstenite v0.15.0</td>
+  <td>0.6s</td>
+  <td>0.1s (12%)</td>
+  <td>connect, default, stream</td>
+</tr>
+
+<tr>
+  <td>110.</td>
+  <td>futures-core v0.3.19</td>
+  <td>0.5s</td>
+  <td>0.2s (36%)</td>
+  <td>alloc, default, std</td>
+</tr>
+
+<tr>
+  <td>111.</td>
+  <td>thiserror v1.0.26</td>
+  <td>0.5s</td>
+  <td>0.2s (41%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>112.</td>
+  <td>slab v0.4.4</td>
+  <td>0.4s</td>
+  <td>0.0s (5%)</td>
+  <td>default, std</td>
+</tr>
+
+<tr>
+  <td>113.</td>
+  <td>scoped-tls v1.0.0</td>
+  <td>0.4s</td>
+  <td>0.1s (21%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>114.</td>
+  <td>digest v0.9.0</td>
+  <td>0.4s</td>
+  <td>0.1s (12%)</td>
+  <td>alloc, std</td>
+</tr>
+
+<tr>
+  <td>115.</td>
+  <td>futures-sink v0.3.19</td>
+  <td>0.4s</td>
+  <td>0.0s (11%)</td>
+  <td>alloc, default, std</td>
+</tr>
+
+<tr>
+  <td>116.</td>
+  <td>if_chain v1.0.2</td>
+  <td>0.4s</td>
+  <td>0.0s (4%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>117.</td>
+  <td>safemem v0.3.3</td>
+  <td>0.4s</td>
+  <td>0.1s (17%)</td>
+  <td>default, std</td>
+</tr>
+
+<tr>
+  <td>118.</td>
+  <td>headers-core v0.2.0</td>
+  <td>0.4s</td>
+  <td>0.1s (15%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>119.</td>
+  <td>spin v0.9.2</td>
+  <td>0.4s</td>
+  <td>0.0s (13%)</td>
+  <td>mutex, spin_mutex</td>
+</tr>
+
+<tr>
+  <td>120.</td>
+  <td>futures-executor v0.3.19</td>
+  <td>0.4s</td>
+  <td>0.1s (38%)</td>
+  <td>std</td>
+</tr>
+
+<tr>
+  <td>121.</td>
+  <td>block-buffer v0.9.0</td>
+  <td>0.4s</td>
+  <td>0.0s (6%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>122.</td>
+  <td>fnv v1.0.7</td>
+  <td>0.3s</td>
+  <td>0.0s (12%)</td>
+  <td>default, std</td>
+</tr>
+
+<tr>
+  <td>123.</td>
+  <td>unicode-xid v0.2.2</td>
+  <td>0.3s</td>
+  <td>0.1s (28%)</td>
+  <td>default</td>
+</tr>
+
+<tr>
+  <td>124.</td>
+  <td>ahash v0.7.6 build script (run)</td>
+  <td>0.3s</td>
+  <td></td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>125.</td>
+  <td>serde_derive v1.0.133 build script (run)</td>
+  <td>0.3s</td>
+  <td></td>
+  <td>default</td>
+</tr>
+
+<tr>
+  <td>126.</td>
+  <td>bitflags v1.3.2</td>
+  <td>0.3s</td>
+  <td>0.0s (12%)</td>
+  <td>default</td>
+</tr>
+
+<tr>
+  <td>127.</td>
+  <td>pin-project v1.0.8</td>
+  <td>0.3s</td>
+  <td>0.0s (4%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>128.</td>
+  <td>ryu v1.0.5 build script (run)</td>
+  <td>0.3s</td>
+  <td></td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>129.</td>
+  <td>instant v0.1.10</td>
+  <td>0.3s</td>
+  <td>0.0s (9%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>130.</td>
+  <td>pin-utils v0.1.0</td>
+  <td>0.3s</td>
+  <td>0.0s (11%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>131.</td>
+  <td>remove_dir_all v0.5.3</td>
+  <td>0.3s</td>
+  <td>0.0s (10%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>132.</td>
+  <td>scopeguard v1.1.0</td>
+  <td>0.3s</td>
+  <td>0.0s (10%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>133.</td>
+  <td>matches v0.1.9</td>
+  <td>0.3s</td>
+  <td>0.0s (7%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>134.</td>
+  <td>cpufeatures v0.1.5</td>
+  <td>0.3s</td>
+  <td>0.0s (6%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>135.</td>
+  <td>generic-array v0.14.4 build script (run)</td>
+  <td>0.3s</td>
+  <td></td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>136.</td>
+  <td>pin-project-lite v0.2.7</td>
+  <td>0.3s</td>
+  <td>0.0s (4%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>137.</td>
+  <td>tinyvec_macros v0.1.0</td>
+  <td>0.3s</td>
+  <td>0.0s (4%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>138.</td>
+  <td>proc-macro2 v1.0.28 build script (run)</td>
+  <td>0.2s</td>
+  <td></td>
+  <td>default, proc-macro</td>
+</tr>
+
+<tr>
+  <td>139.</td>
+  <td>cfg-if v1.0.0</td>
+  <td>0.2s</td>
+  <td>0.0s (9%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>140.</td>
+  <td>libc v0.2.112 build script (run)</td>
+  <td>0.2s</td>
+  <td></td>
+  <td>default, std</td>
+</tr>
+
+<tr>
+  <td>141.</td>
+  <td>lazy_static v1.4.0</td>
+  <td>0.2s</td>
+  <td>0.0s (16%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>142.</td>
+  <td>tower-service v0.3.1</td>
+  <td>0.2s</td>
+  <td>0.0s (10%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>143.</td>
+  <td>quick-error v1.2.3</td>
+  <td>0.2s</td>
+  <td>0.0s (7%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>144.</td>
+  <td>try-lock v0.2.3</td>
+  <td>0.2s</td>
+  <td>0.0s (13%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>145.</td>
+  <td>serde v1.0.133 build script (run)</td>
+  <td>0.2s</td>
+  <td></td>
+  <td>default, std</td>
+</tr>
+
+<tr>
+  <td>146.</td>
+  <td>opaque-debug v0.3.0</td>
+  <td>0.2s</td>
+  <td>0.0s (10%)</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>147.</td>
+  <td>syn v1.0.75 build script (run)</td>
+  <td>0.2s</td>
+  <td></td>
+  <td>clone-impls, default, derive, extra-traits, full, parsing, printing, proc-macro, quote, visit, visit-mut</td>
+</tr>
+
+<tr>
+  <td>148.</td>
+  <td>rustversion v1.0.6 build script (run)</td>
+  <td>0.2s</td>
+  <td></td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>149.</td>
+  <td>serde_json v1.0.66 build script (run)</td>
+  <td>0.2s</td>
+  <td></td>
+  <td>default, std</td>
+</tr>
+
+<tr>
+  <td>150.</td>
+  <td>futures v0.3.19</td>
+  <td>0.2s</td>
+  <td>0.0s (7%)</td>
+  <td>alloc, async-await, default, executor, futures-executor, std</td>
+</tr>
+
+<tr>
+  <td>151.</td>
+  <td>typenum v1.13.0 build script (run)</td>
+  <td>0.1s</td>
+  <td></td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>152.</td>
+  <td>mime_guess v2.0.3 build script (run)</td>
+  <td>0.1s</td>
+  <td></td>
+  <td>default, rev-mappings</td>
+</tr>
+
+<tr>
+  <td>153.</td>
+  <td>indexmap v1.7.0 build script (run)</td>
+  <td>0.0s</td>
+  <td></td>
+  <td>std</td>
+</tr>
+
+<tr>
+  <td>154.</td>
+  <td>log v0.4.14 build script (run)</td>
+  <td>0.0s</td>
+  <td></td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>155.</td>
+  <td>httparse v1.5.1 build script (run)</td>
+  <td>0.0s</td>
+  <td></td>
+  <td>default, std</td>
+</tr>
+
+<tr>
+  <td>156.</td>
+  <td>futures-core v0.3.19 build script (run)</td>
+  <td>0.0s</td>
+  <td></td>
+  <td>alloc, default, std</td>
+</tr>
+
+<tr>
+  <td>157.</td>
+  <td>futures-util v0.3.19 build script (run)</td>
+  <td>0.0s</td>
+  <td></td>
+  <td>alloc, async-await, async-await-macro, channel, default, futures-channel, futures-io, futures-macro, futures-sink, io, memchr, sink, slab, std</td>
+</tr>
+
+<tr>
+  <td>158.</td>
+  <td>memchr v2.4.1 build script (run)</td>
+  <td>0.0s</td>
+  <td></td>
+  <td>default, std, use_std</td>
+</tr>
+
+<tr>
+  <td>159.</td>
+  <td>futures-task v0.3.19 build script (run)</td>
+  <td>0.0s</td>
+  <td></td>
+  <td>alloc, std</td>
+</tr>
+
+<tr>
+  <td>160.</td>
+  <td>futures-channel v0.3.19 build script (run)</td>
+  <td>0.0s</td>
+  <td></td>
+  <td>alloc, default, futures-sink, sink, std</td>
+</tr>
+</tbody>
+</table>
+<script>
+DURATION = 63;
+const UNIT_DATA = [
+  {
+    "i": 0,
+    "name": "cfg-if",
+    "version": "1.0.0",
+    "mode": "todo",
+    "target": "",
+    "start": 0.65,
+    "duration": 0.24,
+    "rmeta_time": 0.22,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      55
+    ]
+  },
+  {
+    "i": 1,
+    "name": "version_check",
+    "version": "0.9.3",
+    "mode": "todo",
+    "target": "",
+    "start": 0.65,
+    "duration": 1.7,
+    "rmeta_time": 0.5,
+    "unlocked_units": [
+      63,
+      61,
+      62
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 2,
+    "name": "proc-macro2",
+    "version": "1.0.28",
+    "mode": "todo",
+    "target": " build script",
+    "start": 0.65,
+    "duration": 1.47,
+    "rmeta_time": null,
+    "unlocked_units": [
+      58
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 3,
+    "name": "unicode-xid",
+    "version": "0.2.2",
+    "mode": "todo",
+    "target": "",
+    "start": 0.65,
+    "duration": 0.31,
+    "rmeta_time": 0.22,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 4,
+    "name": "libc",
+    "version": "0.2.112",
+    "mode": "todo",
+    "target": " build script",
+    "start": 0.65,
+    "duration": 1.71,
+    "rmeta_time": null,
+    "unlocked_units": [
+      64
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 5,
+    "name": "syn",
+    "version": "1.0.75",
+    "mode": "todo",
+    "target": " build script",
+    "start": 0.65,
+    "duration": 1.61,
+    "rmeta_time": null,
+    "unlocked_units": [
+      60
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 6,
+    "name": "memchr",
+    "version": "2.4.1",
+    "mode": "todo",
+    "target": " build script",
+    "start": 0.65,
+    "duration": 0.96,
+    "rmeta_time": null,
+    "unlocked_units": [
+      56
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 7,
+    "name": "log",
+    "version": "0.4.14",
+    "mode": "todo",
+    "target": " build script",
+    "start": 0.65,
+    "duration": 0.99,
+    "rmeta_time": null,
+    "unlocked_units": [
+      57
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 8,
+    "name": "pin-project-lite",
+    "version": "0.2.7",
+    "mode": "todo",
+    "target": "",
+    "start": 0.89,
+    "duration": 0.26,
+    "rmeta_time": 0.25,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 9,
+    "name": "bytes",
+    "version": "1.1.0",
+    "mode": "todo",
+    "target": "",
+    "start": 0.96,
+    "duration": 2.13,
+    "rmeta_time": 1.11,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 10,
+    "name": "futures-core",
+    "version": "0.3.19",
+    "mode": "todo",
+    "target": " build script",
+    "start": 1.15,
+    "duration": 1.04,
+    "rmeta_time": null,
+    "unlocked_units": [
+      59
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 11,
+    "name": "once_cell",
+    "version": "1.9.0",
+    "mode": "todo",
+    "target": "",
+    "start": 1.61,
+    "duration": 1.11,
+    "rmeta_time": 0.66,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 12,
+    "name": "itoa",
+    "version": "0.4.8",
+    "mode": "todo",
+    "target": "",
+    "start": 1.63,
+    "duration": 0.66,
+    "rmeta_time": 0.59,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 13,
+    "name": "typenum",
+    "version": "1.13.0",
+    "mode": "todo",
+    "target": " build script",
+    "start": 2.13,
+    "duration": 2.39,
+    "rmeta_time": null,
+    "unlocked_units": [
+      74
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 14,
+    "name": "futures-sink",
+    "version": "0.3.19",
+    "mode": "todo",
+    "target": "",
+    "start": 2.22,
+    "duration": 0.41,
+    "rmeta_time": 0.37,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 15,
+    "name": "futures-channel",
+    "version": "0.3.19",
+    "mode": "todo",
+    "target": " build script",
+    "start": 2.28,
+    "duration": 1.0,
+    "rmeta_time": null,
+    "unlocked_units": [
+      68
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 16,
+    "name": "fnv",
+    "version": "1.0.7",
+    "mode": "todo",
+    "target": "",
+    "start": 2.32,
+    "duration": 0.32,
+    "rmeta_time": 0.28,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      65
+    ]
+  },
+  {
+    "i": 17,
+    "name": "futures-task",
+    "version": "0.3.19",
+    "mode": "todo",
+    "target": " build script",
+    "start": 2.35,
+    "duration": 0.88,
+    "rmeta_time": null,
+    "unlocked_units": [
+      67
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 18,
+    "name": "smallvec",
+    "version": "1.6.1",
+    "mode": "todo",
+    "target": "",
+    "start": 2.38,
+    "duration": 0.66,
+    "rmeta_time": 0.59,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 19,
+    "name": "scopeguard",
+    "version": "1.1.0",
+    "mode": "todo",
+    "target": "",
+    "start": 2.63,
+    "duration": 0.27,
+    "rmeta_time": 0.24,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      66
+    ]
+  },
+  {
+    "i": 20,
+    "name": "futures-util",
+    "version": "0.3.19",
+    "mode": "todo",
+    "target": " build script",
+    "start": 2.64,
+    "duration": 0.84,
+    "rmeta_time": null,
+    "unlocked_units": [
+      70
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 21,
+    "name": "ppv-lite86",
+    "version": "0.2.10",
+    "mode": "todo",
+    "target": "",
+    "start": 2.73,
+    "duration": 1.04,
+    "rmeta_time": 1.0,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 22,
+    "name": "matches",
+    "version": "0.1.9",
+    "mode": "todo",
+    "target": "",
+    "start": 2.9,
+    "duration": 0.26,
+    "rmeta_time": 0.24,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 23,
+    "name": "futures-io",
+    "version": "0.3.19",
+    "mode": "todo",
+    "target": "",
+    "start": 3.03,
+    "duration": 0.77,
+    "rmeta_time": 0.33,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 24,
+    "name": "pin-utils",
+    "version": "0.1.0",
+    "mode": "todo",
+    "target": "",
+    "start": 3.09,
+    "duration": 0.27,
+    "rmeta_time": 0.24,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 25,
+    "name": "tinyvec_macros",
+    "version": "0.1.0",
+    "mode": "todo",
+    "target": "",
+    "start": 3.18,
+    "duration": 0.25,
+    "rmeta_time": 0.24,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      69
+    ]
+  },
+  {
+    "i": 26,
+    "name": "slab",
+    "version": "0.4.4",
+    "mode": "todo",
+    "target": "",
+    "start": 3.25,
+    "duration": 0.42,
+    "rmeta_time": 0.4,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 27,
+    "name": "httparse",
+    "version": "1.5.1",
+    "mode": "todo",
+    "target": " build script",
+    "start": 3.29,
+    "duration": 1.02,
+    "rmeta_time": null,
+    "unlocked_units": [
+      73
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 28,
+    "name": "autocfg",
+    "version": "1.0.1",
+    "mode": "todo",
+    "target": "",
+    "start": 3.37,
+    "duration": 1.66,
+    "rmeta_time": 0.52,
+    "unlocked_units": [
+      77
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 29,
+    "name": "percent-encoding",
+    "version": "2.1.0",
+    "mode": "todo",
+    "target": "",
+    "start": 3.44,
+    "duration": 0.73,
+    "rmeta_time": 0.33,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      71
+    ]
+  },
+  {
+    "i": 30,
+    "name": "serde",
+    "version": "1.0.133",
+    "mode": "todo",
+    "target": " build script",
+    "start": 3.48,
+    "duration": 1.19,
+    "rmeta_time": null,
+    "unlocked_units": [
+      75
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 31,
+    "name": "unicode-bidi",
+    "version": "0.3.6",
+    "mode": "todo",
+    "target": "",
+    "start": 3.67,
+    "duration": 2.21,
+    "rmeta_time": 0.77,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 32,
+    "name": "ryu",
+    "version": "1.0.5",
+    "mode": "todo",
+    "target": " build script",
+    "start": 3.77,
+    "duration": 1.38,
+    "rmeta_time": null,
+    "unlocked_units": [
+      76
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 33,
+    "name": "lazy_static",
+    "version": "1.4.0",
+    "mode": "todo",
+    "target": "",
+    "start": 3.82,
+    "duration": 0.24,
+    "rmeta_time": 0.2,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      72
+    ]
+  },
+  {
+    "i": 34,
+    "name": "cpufeatures",
+    "version": "0.1.5",
+    "mode": "todo",
+    "target": "",
+    "start": 4.06,
+    "duration": 0.26,
+    "rmeta_time": 0.25,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 35,
+    "name": "opaque-debug",
+    "version": "0.3.0",
+    "mode": "todo",
+    "target": "",
+    "start": 4.18,
+    "duration": 0.22,
+    "rmeta_time": 0.2,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 36,
+    "name": "mime",
+    "version": "0.3.16",
+    "mode": "todo",
+    "target": "",
+    "start": 4.32,
+    "duration": 1.12,
+    "rmeta_time": 0.49,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 37,
+    "name": "base64",
+    "version": "0.13.0",
+    "mode": "todo",
+    "target": "",
+    "start": 4.33,
+    "duration": 1.06,
+    "rmeta_time": 0.66,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 38,
+    "name": "rustversion",
+    "version": "1.0.6",
+    "mode": "todo",
+    "target": " build script",
+    "start": 4.41,
+    "duration": 1.33,
+    "rmeta_time": null,
+    "unlocked_units": [
+      78
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 39,
+    "name": "byteorder",
+    "version": "1.4.3",
+    "mode": "todo",
+    "target": "",
+    "start": 4.53,
+    "duration": 0.89,
+    "rmeta_time": 0.69,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 40,
+    "name": "safemem",
+    "version": "0.3.3",
+    "mode": "todo",
+    "target": "",
+    "start": 4.67,
+    "duration": 0.39,
+    "rmeta_time": 0.33,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 41,
+    "name": "try-lock",
+    "version": "0.2.3",
+    "mode": "todo",
+    "target": "",
+    "start": 5.04,
+    "duration": 0.23,
+    "rmeta_time": 0.2,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 42,
+    "name": "utf-8",
+    "version": "0.7.6",
+    "mode": "todo",
+    "target": "",
+    "start": 5.06,
+    "duration": 0.72,
+    "rmeta_time": 0.35,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 43,
+    "name": "httpdate",
+    "version": "1.0.2",
+    "mode": "todo",
+    "target": "",
+    "start": 5.17,
+    "duration": 0.93,
+    "rmeta_time": 0.45,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 44,
+    "name": "serde_json",
+    "version": "1.0.66",
+    "mode": "todo",
+    "target": " build script",
+    "start": 5.27,
+    "duration": 1.22,
+    "rmeta_time": null,
+    "unlocked_units": [
+      82
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 45,
+    "name": "remove_dir_all",
+    "version": "0.5.3",
+    "mode": "todo",
+    "target": "",
+    "start": 5.4,
+    "duration": 0.27,
+    "rmeta_time": 0.24,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 46,
+    "name": "unicode-segmentation",
+    "version": "1.8.0",
+    "mode": "todo",
+    "target": "",
+    "start": 5.43,
+    "duration": 1.58,
+    "rmeta_time": 1.08,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      83
+    ]
+  },
+  {
+    "i": 47,
+    "name": "quick-error",
+    "version": "1.2.3",
+    "mode": "todo",
+    "target": "",
+    "start": 5.44,
+    "duration": 0.24,
+    "rmeta_time": 0.22,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 48,
+    "name": "serde_derive",
+    "version": "1.0.133",
+    "mode": "todo",
+    "target": " build script",
+    "start": 5.67,
+    "duration": 1.19,
+    "rmeta_time": null,
+    "unlocked_units": [
+      86
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 49,
+    "name": "anyhow",
+    "version": "1.0.51",
+    "mode": "todo",
+    "target": " build script",
+    "start": 5.69,
+    "duration": 1.28,
+    "rmeta_time": null,
+    "unlocked_units": [
+      88
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 50,
+    "name": "bitflags",
+    "version": "1.3.2",
+    "mode": "todo",
+    "target": "",
+    "start": 5.76,
+    "duration": 0.29,
+    "rmeta_time": 0.26,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 51,
+    "name": "tower-service",
+    "version": "0.3.1",
+    "mode": "todo",
+    "target": "",
+    "start": 5.8,
+    "duration": 0.24,
+    "rmeta_time": 0.21,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 52,
+    "name": "spin",
+    "version": "0.9.2",
+    "mode": "todo",
+    "target": "",
+    "start": 5.89,
+    "duration": 0.37,
+    "rmeta_time": 0.32,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 53,
+    "name": "scoped-tls",
+    "version": "1.0.0",
+    "mode": "todo",
+    "target": "",
+    "start": 6.04,
+    "duration": 0.42,
+    "rmeta_time": 0.33,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 54,
+    "name": "if_chain",
+    "version": "1.0.2",
+    "mode": "todo",
+    "target": "",
+    "start": 6.06,
+    "duration": 0.4,
+    "rmeta_time": 0.39,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 55,
+    "name": "instant",
+    "version": "0.1.10",
+    "mode": "todo",
+    "target": "",
+    "start": 6.12,
+    "duration": 0.29,
+    "rmeta_time": 0.26,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 56,
+    "name": "memchr",
+    "version": "2.4.1",
+    "mode": "run-custom-build",
+    "target": " build script (run)",
+    "start": 6.27,
+    "duration": 0.01,
+    "rmeta_time": null,
+    "unlocked_units": [
+      79
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 57,
+    "name": "log",
+    "version": "0.4.14",
+    "mode": "run-custom-build",
+    "target": " build script (run)",
+    "start": 6.29,
+    "duration": 0.02,
+    "rmeta_time": null,
+    "unlocked_units": [
+      80
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 58,
+    "name": "proc-macro2",
+    "version": "1.0.28",
+    "mode": "run-custom-build",
+    "target": " build script (run)",
+    "start": 6.32,
+    "duration": 0.25,
+    "rmeta_time": null,
+    "unlocked_units": [
+      84
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 59,
+    "name": "futures-core",
+    "version": "0.3.19",
+    "mode": "run-custom-build",
+    "target": " build script (run)",
+    "start": 6.4,
+    "duration": 0.01,
+    "rmeta_time": null,
+    "unlocked_units": [
+      81
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 60,
+    "name": "syn",
+    "version": "1.0.75",
+    "mode": "run-custom-build",
+    "target": " build script (run)",
+    "start": 6.43,
+    "duration": 0.22,
+    "rmeta_time": null,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 61,
+    "name": "ahash",
+    "version": "0.7.6",
+    "mode": "todo",
+    "target": " build script",
+    "start": 6.46,
+    "duration": 0.99,
+    "rmeta_time": null,
+    "unlocked_units": [
+      92
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 62,
+    "name": "generic-array",
+    "version": "0.14.4",
+    "mode": "todo",
+    "target": " build script",
+    "start": 6.47,
+    "duration": 0.8,
+    "rmeta_time": null,
+    "unlocked_units": [
+      89
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 63,
+    "name": "unicase",
+    "version": "2.6.0",
+    "mode": "todo",
+    "target": " build script",
+    "start": 6.49,
+    "duration": 0.92,
+    "rmeta_time": null,
+    "unlocked_units": [
+      91
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 64,
+    "name": "libc",
+    "version": "0.2.112",
+    "mode": "run-custom-build",
+    "target": " build script (run)",
+    "start": 6.57,
+    "duration": 0.24,
+    "rmeta_time": null,
+    "unlocked_units": [
+      85
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 65,
+    "name": "http",
+    "version": "0.2.4",
+    "mode": "todo",
+    "target": "",
+    "start": 6.64,
+    "duration": 6.96,
+    "rmeta_time": 4.94,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      115,
+      114
+    ]
+  },
+  {
+    "i": 66,
+    "name": "lock_api",
+    "version": "0.4.4",
+    "mode": "todo",
+    "target": "",
+    "start": 6.82,
+    "duration": 0.75,
+    "rmeta_time": 0.72,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 67,
+    "name": "futures-task",
+    "version": "0.3.19",
+    "mode": "run-custom-build",
+    "target": " build script (run)",
+    "start": 6.86,
+    "duration": 0.01,
+    "rmeta_time": null,
+    "unlocked_units": [
+      87
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 68,
+    "name": "futures-channel",
+    "version": "0.3.19",
+    "mode": "run-custom-build",
+    "target": " build script (run)",
+    "start": 6.88,
+    "duration": 0.01,
+    "rmeta_time": null,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 69,
+    "name": "tinyvec",
+    "version": "1.3.1",
+    "mode": "todo",
+    "target": "",
+    "start": 6.88,
+    "duration": 2.33,
+    "rmeta_time": 2.2,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      103
+    ]
+  },
+  {
+    "i": 70,
+    "name": "futures-util",
+    "version": "0.3.19",
+    "mode": "run-custom-build",
+    "target": " build script (run)",
+    "start": 6.97,
+    "duration": 0.01,
+    "rmeta_time": null,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 71,
+    "name": "form_urlencoded",
+    "version": "1.0.1",
+    "mode": "todo",
+    "target": "",
+    "start": 6.99,
+    "duration": 0.64,
+    "rmeta_time": 0.39,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 72,
+    "name": "tracing-core",
+    "version": "0.1.19",
+    "mode": "todo",
+    "target": "",
+    "start": 7.02,
+    "duration": 2.13,
+    "rmeta_time": 1.01,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 73,
+    "name": "httparse",
+    "version": "1.5.1",
+    "mode": "run-custom-build",
+    "target": " build script (run)",
+    "start": 7.28,
+    "duration": 0.02,
+    "rmeta_time": null,
+    "unlocked_units": [
+      90
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 74,
+    "name": "typenum",
+    "version": "1.13.0",
+    "mode": "run-custom-build",
+    "target": " build script (run)",
+    "start": 7.3,
+    "duration": 0.15,
+    "rmeta_time": null,
+    "unlocked_units": [
+      93
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 75,
+    "name": "serde",
+    "version": "1.0.133",
+    "mode": "run-custom-build",
+    "target": " build script (run)",
+    "start": 7.42,
+    "duration": 0.22,
+    "rmeta_time": null,
+    "unlocked_units": [
+      94
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 76,
+    "name": "ryu",
+    "version": "1.0.5",
+    "mode": "run-custom-build",
+    "target": " build script (run)",
+    "start": 7.46,
+    "duration": 0.29,
+    "rmeta_time": null,
+    "unlocked_units": [
+      95
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 77,
+    "name": "indexmap",
+    "version": "1.7.0",
+    "mode": "todo",
+    "target": " build script",
+    "start": 7.46,
+    "duration": 0.87,
+    "rmeta_time": null,
+    "unlocked_units": [
+      100
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 78,
+    "name": "rustversion",
+    "version": "1.0.6",
+    "mode": "run-custom-build",
+    "target": " build script (run)",
+    "start": 7.57,
+    "duration": 0.21,
+    "rmeta_time": null,
+    "unlocked_units": [
+      96
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 79,
+    "name": "memchr",
+    "version": "2.4.1",
+    "mode": "todo",
+    "target": "",
+    "start": 7.63,
+    "duration": 2.64,
+    "rmeta_time": 1.12,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      101,
+      102
+    ]
+  },
+  {
+    "i": 80,
+    "name": "log",
+    "version": "0.4.14",
+    "mode": "todo",
+    "target": "",
+    "start": 7.64,
+    "duration": 0.78,
+    "rmeta_time": 0.47,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      99,
+      98
+    ]
+  },
+  {
+    "i": 81,
+    "name": "futures-core",
+    "version": "0.3.19",
+    "mode": "todo",
+    "target": "",
+    "start": 7.74,
+    "duration": 0.54,
+    "rmeta_time": 0.35,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      97
+    ]
+  },
+  {
+    "i": 82,
+    "name": "serde_json",
+    "version": "1.0.66",
+    "mode": "run-custom-build",
+    "target": " build script (run)",
+    "start": 7.77,
+    "duration": 0.2,
+    "rmeta_time": null,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 83,
+    "name": "heck",
+    "version": "0.3.3",
+    "mode": "todo",
+    "target": "",
+    "start": 7.99,
+    "duration": 0.96,
+    "rmeta_time": 0.27,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 84,
+    "name": "proc-macro2",
+    "version": "1.0.28",
+    "mode": "todo",
+    "target": "",
+    "start": 8.29,
+    "duration": 3.54,
+    "rmeta_time": 1.52,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      105
+    ]
+  },
+  {
+    "i": 85,
+    "name": "libc",
+    "version": "0.2.112",
+    "mode": "todo",
+    "target": "",
+    "start": 8.34,
+    "duration": 1.99,
+    "rmeta_time": 1.74,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      108,
+      107,
+      109,
+      106,
+      111,
+      110
+    ]
+  },
+  {
+    "i": 86,
+    "name": "serde_derive",
+    "version": "1.0.133",
+    "mode": "run-custom-build",
+    "target": " build script (run)",
+    "start": 8.43,
+    "duration": 0.29,
+    "rmeta_time": null,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 87,
+    "name": "futures-task",
+    "version": "0.3.19",
+    "mode": "todo",
+    "target": "",
+    "start": 8.73,
+    "duration": 0.96,
+    "rmeta_time": 0.52,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 88,
+    "name": "anyhow",
+    "version": "1.0.51",
+    "mode": "run-custom-build",
+    "target": " build script (run)",
+    "start": 8.99,
+    "duration": 0.64,
+    "rmeta_time": null,
+    "unlocked_units": [
+      104
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 89,
+    "name": "generic-array",
+    "version": "0.14.4",
+    "mode": "run-custom-build",
+    "target": " build script (run)",
+    "start": 9.15,
+    "duration": 0.26,
+    "rmeta_time": null,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 90,
+    "name": "httparse",
+    "version": "1.5.1",
+    "mode": "todo",
+    "target": "",
+    "start": 9.21,
+    "duration": 1.49,
+    "rmeta_time": 0.83,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 91,
+    "name": "unicase",
+    "version": "2.6.0",
+    "mode": "run-custom-build",
+    "target": " build script (run)",
+    "start": 9.42,
+    "duration": 1.05,
+    "rmeta_time": null,
+    "unlocked_units": [
+      112
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 92,
+    "name": "ahash",
+    "version": "0.7.6",
+    "mode": "run-custom-build",
+    "target": " build script (run)",
+    "start": 9.64,
+    "duration": 0.3,
+    "rmeta_time": null,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 93,
+    "name": "typenum",
+    "version": "1.13.0",
+    "mode": "todo",
+    "target": "",
+    "start": 9.71,
+    "duration": 1.71,
+    "rmeta_time": 1.59,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      113
+    ]
+  },
+  {
+    "i": 94,
+    "name": "serde",
+    "version": "1.0.133",
+    "mode": "todo",
+    "target": "",
+    "start": 9.95,
+    "duration": 8.78,
+    "rmeta_time": 8.2,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      133,
+      134,
+      135
+    ]
+  },
+  {
+    "i": 95,
+    "name": "ryu",
+    "version": "1.0.5",
+    "mode": "todo",
+    "target": "",
+    "start": 10.27,
+    "duration": 0.72,
+    "rmeta_time": 0.39,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 96,
+    "name": "rustversion",
+    "version": "1.0.6",
+    "mode": "todo",
+    "target": "",
+    "start": 10.33,
+    "duration": 2.89,
+    "rmeta_time": null,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 97,
+    "name": "futures-channel",
+    "version": "0.3.19",
+    "mode": "todo",
+    "target": "",
+    "start": 10.47,
+    "duration": 0.77,
+    "rmeta_time": 0.66,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 98,
+    "name": "tracing",
+    "version": "0.1.26",
+    "mode": "todo",
+    "target": "",
+    "start": 10.71,
+    "duration": 1.16,
+    "rmeta_time": 0.81,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 99,
+    "name": "want",
+    "version": "0.3.0",
+    "mode": "todo",
+    "target": "",
+    "start": 11.01,
+    "duration": 0.73,
+    "rmeta_time": 0.47,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 100,
+    "name": "indexmap",
+    "version": "1.7.0",
+    "mode": "run-custom-build",
+    "target": " build script (run)",
+    "start": 11.26,
+    "duration": 0.03,
+    "rmeta_time": null,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 101,
+    "name": "buf_redux",
+    "version": "0.8.4",
+    "mode": "todo",
+    "target": "",
+    "start": 11.3,
+    "duration": 0.92,
+    "rmeta_time": 0.51,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 102,
+    "name": "twoway",
+    "version": "0.1.8",
+    "mode": "todo",
+    "target": "",
+    "start": 11.42,
+    "duration": 0.63,
+    "rmeta_time": 0.37,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 103,
+    "name": "unicode-normalization",
+    "version": "0.1.19",
+    "mode": "todo",
+    "target": "",
+    "start": 11.74,
+    "duration": 2.53,
+    "rmeta_time": 1.99,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      120
+    ]
+  },
+  {
+    "i": 104,
+    "name": "anyhow",
+    "version": "1.0.51",
+    "mode": "todo",
+    "target": "",
+    "start": 11.82,
+    "duration": 1.47,
+    "rmeta_time": 0.59,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 105,
+    "name": "quote",
+    "version": "1.0.9",
+    "mode": "todo",
+    "target": "",
+    "start": 11.88,
+    "duration": 1.06,
+    "rmeta_time": 0.51,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      116
+    ]
+  },
+  {
+    "i": 106,
+    "name": "getrandom",
+    "version": "0.2.3",
+    "mode": "todo",
+    "target": "",
+    "start": 12.05,
+    "duration": 0.76,
+    "rmeta_time": 0.4,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      117,
+      118
+    ]
+  },
+  {
+    "i": 107,
+    "name": "parking_lot_core",
+    "version": "0.8.3",
+    "mode": "todo",
+    "target": "",
+    "start": 12.23,
+    "duration": 1.02,
+    "rmeta_time": 0.51,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      119
+    ]
+  },
+  {
+    "i": 108,
+    "name": "num_cpus",
+    "version": "1.13.0",
+    "mode": "todo",
+    "target": "",
+    "start": 12.82,
+    "duration": 1.4,
+    "rmeta_time": 0.43,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 109,
+    "name": "mio",
+    "version": "0.7.14",
+    "mode": "todo",
+    "target": "",
+    "start": 12.95,
+    "duration": 2.53,
+    "rmeta_time": 1.12,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 110,
+    "name": "signal-hook-registry",
+    "version": "1.4.0",
+    "mode": "todo",
+    "target": "",
+    "start": 13.22,
+    "duration": 1.93,
+    "rmeta_time": 0.53,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 111,
+    "name": "socket2",
+    "version": "0.4.2",
+    "mode": "todo",
+    "target": "",
+    "start": 13.26,
+    "duration": 1.45,
+    "rmeta_time": 0.59,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 112,
+    "name": "unicase",
+    "version": "2.6.0",
+    "mode": "todo",
+    "target": "",
+    "start": 13.29,
+    "duration": 0.66,
+    "rmeta_time": 0.45,
+    "unlocked_units": [
+      121
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 113,
+    "name": "generic-array",
+    "version": "0.14.4",
+    "mode": "todo",
+    "target": "",
+    "start": 13.63,
+    "duration": 1.07,
+    "rmeta_time": 0.99,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      122,
+      123
+    ]
+  },
+  {
+    "i": 114,
+    "name": "headers-core",
+    "version": "0.2.0",
+    "mode": "todo",
+    "target": "",
+    "start": 13.96,
+    "duration": 0.38,
+    "rmeta_time": 0.32,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 115,
+    "name": "http-body",
+    "version": "0.4.4",
+    "mode": "todo",
+    "target": "",
+    "start": 14.23,
+    "duration": 0.6,
+    "rmeta_time": 0.51,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 116,
+    "name": "syn",
+    "version": "1.0.75",
+    "mode": "todo",
+    "target": "",
+    "start": 14.28,
+    "duration": 10.16,
+    "rmeta_time": 8.0,
+    "unlocked_units": [
+      139,
+      145,
+      138,
+      142,
+      141,
+      143,
+      140,
+      144
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 117,
+    "name": "rand_core",
+    "version": "0.6.3",
+    "mode": "todo",
+    "target": "",
+    "start": 14.34,
+    "duration": 0.8,
+    "rmeta_time": 0.52,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      124
+    ]
+  },
+  {
+    "i": 118,
+    "name": "ahash",
+    "version": "0.7.6",
+    "mode": "todo",
+    "target": "",
+    "start": 14.7,
+    "duration": 0.73,
+    "rmeta_time": 0.55,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      125
+    ]
+  },
+  {
+    "i": 119,
+    "name": "parking_lot",
+    "version": "0.11.1",
+    "mode": "todo",
+    "target": "",
+    "start": 14.71,
+    "duration": 1.6,
+    "rmeta_time": 0.57,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 120,
+    "name": "idna",
+    "version": "0.2.3",
+    "mode": "todo",
+    "target": "",
+    "start": 14.83,
+    "duration": 2.71,
+    "rmeta_time": 1.19,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      127
+    ]
+  },
+  {
+    "i": 121,
+    "name": "mime_guess",
+    "version": "2.0.3",
+    "mode": "todo",
+    "target": " build script",
+    "start": 15.14,
+    "duration": 2.73,
+    "rmeta_time": null,
+    "unlocked_units": [
+      131
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 122,
+    "name": "block-buffer",
+    "version": "0.9.0",
+    "mode": "todo",
+    "target": "",
+    "start": 15.16,
+    "duration": 0.35,
+    "rmeta_time": 0.33,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 123,
+    "name": "digest",
+    "version": "0.9.0",
+    "mode": "todo",
+    "target": "",
+    "start": 15.43,
+    "duration": 0.41,
+    "rmeta_time": 0.36,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      126
+    ]
+  },
+  {
+    "i": 124,
+    "name": "rand_chacha",
+    "version": "0.3.1",
+    "mode": "todo",
+    "target": "",
+    "start": 15.49,
+    "duration": 2.28,
+    "rmeta_time": 0.65,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      128
+    ]
+  },
+  {
+    "i": 125,
+    "name": "hashbrown",
+    "version": "0.11.2",
+    "mode": "todo",
+    "target": "",
+    "start": 15.52,
+    "duration": 1.21,
+    "rmeta_time": 1.11,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      130
+    ]
+  },
+  {
+    "i": 126,
+    "name": "sha-1",
+    "version": "0.9.7",
+    "mode": "todo",
+    "target": "",
+    "start": 15.84,
+    "duration": 1.01,
+    "rmeta_time": 0.43,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      129
+    ]
+  },
+  {
+    "i": 127,
+    "name": "url",
+    "version": "2.2.2",
+    "mode": "todo",
+    "target": "",
+    "start": 16.31,
+    "duration": 2.42,
+    "rmeta_time": 1.37,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 128,
+    "name": "rand",
+    "version": "0.8.4",
+    "mode": "todo",
+    "target": "",
+    "start": 16.73,
+    "duration": 2.51,
+    "rmeta_time": 1.84,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      136
+    ]
+  },
+  {
+    "i": 129,
+    "name": "headers",
+    "version": "0.3.5",
+    "mode": "todo",
+    "target": "",
+    "start": 16.88,
+    "duration": 3.06,
+    "rmeta_time": 1.76,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 130,
+    "name": "indexmap",
+    "version": "1.7.0",
+    "mode": "todo",
+    "target": "",
+    "start": 17.54,
+    "duration": 1.33,
+    "rmeta_time": 1.06,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 131,
+    "name": "mime_guess",
+    "version": "2.0.3",
+    "mode": "run-custom-build",
+    "target": " build script (run)",
+    "start": 17.88,
+    "duration": 0.06,
+    "rmeta_time": null,
+    "unlocked_units": [
+      132
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 132,
+    "name": "mime_guess",
+    "version": "2.0.3",
+    "mode": "todo",
+    "target": "",
+    "start": 17.96,
+    "duration": 1.66,
+    "rmeta_time": 1.16,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 133,
+    "name": "serde_urlencoded",
+    "version": "0.7.0",
+    "mode": "todo",
+    "target": "",
+    "start": 18.41,
+    "duration": 0.92,
+    "rmeta_time": 0.66,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 134,
+    "name": "serde_json",
+    "version": "1.0.66",
+    "mode": "todo",
+    "target": "",
+    "start": 18.73,
+    "duration": 2.64,
+    "rmeta_time": 2.12,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 135,
+    "name": "hecs",
+    "version": "0.7.1",
+    "mode": "todo",
+    "target": "",
+    "start": 18.74,
+    "duration": 3.5,
+    "rmeta_time": 2.95,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 136,
+    "name": "tempfile",
+    "version": "3.2.0",
+    "mode": "todo",
+    "target": "",
+    "start": 18.88,
+    "duration": 1.17,
+    "rmeta_time": 0.61,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      137
+    ]
+  },
+  {
+    "i": 137,
+    "name": "multipart",
+    "version": "0.18.0",
+    "mode": "todo",
+    "target": "",
+    "start": 19.54,
+    "duration": 1.19,
+    "rmeta_time": 0.84,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 138,
+    "name": "tokio-macros",
+    "version": "1.7.0",
+    "mode": "todo",
+    "target": "",
+    "start": 24.45,
+    "duration": 3.95,
+    "rmeta_time": null,
+    "unlocked_units": [
+      146
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 139,
+    "name": "futures-macro",
+    "version": "0.3.19",
+    "mode": "todo",
+    "target": "",
+    "start": 24.45,
+    "duration": 5.31,
+    "rmeta_time": null,
+    "unlocked_units": [
+      147
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 140,
+    "name": "thiserror-impl",
+    "version": "1.0.26",
+    "mode": "todo",
+    "target": "",
+    "start": 24.45,
+    "duration": 5.9,
+    "rmeta_time": null,
+    "unlocked_units": [
+      148
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 141,
+    "name": "pin-project-internal",
+    "version": "1.0.8",
+    "mode": "todo",
+    "target": "",
+    "start": 24.45,
+    "duration": 6.99,
+    "rmeta_time": null,
+    "unlocked_units": [
+      150
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 142,
+    "name": "derivative",
+    "version": "2.2.0",
+    "mode": "todo",
+    "target": "",
+    "start": 24.45,
+    "duration": 9.44,
+    "rmeta_time": null,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 143,
+    "name": "async-recursion",
+    "version": "1.0.0",
+    "mode": "todo",
+    "target": "",
+    "start": 24.45,
+    "duration": 3.66,
+    "rmeta_time": null,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 144,
+    "name": "serde_derive",
+    "version": "1.0.133",
+    "mode": "todo",
+    "target": "",
+    "start": 24.45,
+    "duration": 10.45,
+    "rmeta_time": null,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 145,
+    "name": "strum_macros",
+    "version": "0.23.1",
+    "mode": "todo",
+    "target": "",
+    "start": 24.45,
+    "duration": 6.92,
+    "rmeta_time": null,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 146,
+    "name": "tokio",
+    "version": "1.15.0",
+    "mode": "todo",
+    "target": "",
+    "start": 28.4,
+    "duration": 9.95,
+    "rmeta_time": 7.39,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      154,
+      155,
+      153
+    ]
+  },
+  {
+    "i": 147,
+    "name": "futures-util",
+    "version": "0.3.19",
+    "mode": "todo",
+    "target": "",
+    "start": 29.76,
+    "duration": 5.44,
+    "rmeta_time": 5.27,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      151
+    ]
+  },
+  {
+    "i": 148,
+    "name": "thiserror",
+    "version": "1.0.26",
+    "mode": "todo",
+    "target": "",
+    "start": 30.35,
+    "duration": 0.51,
+    "rmeta_time": 0.31,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      149
+    ]
+  },
+  {
+    "i": 149,
+    "name": "tungstenite",
+    "version": "0.14.0",
+    "mode": "todo",
+    "target": "",
+    "start": 30.87,
+    "duration": 2.66,
+    "rmeta_time": 1.58,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 150,
+    "name": "pin-project",
+    "version": "1.0.8",
+    "mode": "todo",
+    "target": "",
+    "start": 31.46,
+    "duration": 0.29,
+    "rmeta_time": 0.28,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 151,
+    "name": "futures-executor",
+    "version": "0.3.19",
+    "mode": "todo",
+    "target": "",
+    "start": 35.03,
+    "duration": 0.36,
+    "rmeta_time": 0.22,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      152
+    ]
+  },
+  {
+    "i": 152,
+    "name": "futures",
+    "version": "0.3.19",
+    "mode": "todo",
+    "target": "",
+    "start": 35.26,
+    "duration": 0.16,
+    "rmeta_time": 0.15,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 153,
+    "name": "tokio-util",
+    "version": "0.6.9",
+    "mode": "todo",
+    "target": "",
+    "start": 35.79,
+    "duration": 1.16,
+    "rmeta_time": 0.85,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": [
+      156
+    ]
+  },
+  {
+    "i": 154,
+    "name": "tokio-tungstenite",
+    "version": "0.15.0",
+    "mode": "todo",
+    "target": "",
+    "start": 35.79,
+    "duration": 0.57,
+    "rmeta_time": 0.5,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 155,
+    "name": "tokio-stream",
+    "version": "0.1.8",
+    "mode": "todo",
+    "target": "",
+    "start": 35.79,
+    "duration": 0.75,
+    "rmeta_time": 0.62,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 156,
+    "name": "h2",
+    "version": "0.3.9",
+    "mode": "todo",
+    "target": "",
+    "start": 36.64,
+    "duration": 5.27,
+    "rmeta_time": 4.35,
+    "unlocked_units": [
+      157
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 157,
+    "name": "hyper",
+    "version": "0.14.16",
+    "mode": "todo",
+    "target": "",
+    "start": 41.91,
+    "duration": 5.35,
+    "rmeta_time": null,
+    "unlocked_units": [
+      158
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 158,
+    "name": "warp",
+    "version": "0.3.2",
+    "mode": "todo",
+    "target": "",
+    "start": 47.25,
+    "duration": 3.44,
+    "rmeta_time": 2.8,
+    "unlocked_units": [
+      159
+    ],
+    "unlocked_rmeta_units": []
+  },
+  {
+    "i": 159,
+    "name": "mtg_webserver",
+    "version": "0.1.0",
+    "mode": "todo",
+    "target": " bin \"mtg_webserver\"",
+    "start": 50.69,
+    "duration": 11.37,
+    "rmeta_time": null,
+    "unlocked_units": [],
+    "unlocked_rmeta_units": []
+  }
+];
+const CONCURRENCY_DATA = [
+  {
+    "t": 0.645419197,
+    "active": 8,
+    "waiting": 47,
+    "inactive": 105,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 0.645587974,
+    "active": 8,
+    "waiting": 47,
+    "inactive": 105,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 0.867676934,
+    "active": 8,
+    "waiting": 48,
+    "inactive": 104,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 0.870074679,
+    "active": 8,
+    "waiting": 48,
+    "inactive": 104,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 0.889687398,
+    "active": 8,
+    "waiting": 47,
+    "inactive": 104,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 0.889938256,
+    "active": 8,
+    "waiting": 47,
+    "inactive": 104,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 0.959644138,
+    "active": 8,
+    "waiting": 46,
+    "inactive": 104,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 0.962982067,
+    "active": 8,
+    "waiting": 46,
+    "inactive": 104,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 1.135837117,
+    "active": 8,
+    "waiting": 46,
+    "inactive": 104,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 1.146114759,
+    "active": 8,
+    "waiting": 46,
+    "inactive": 104,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 1.147185158,
+    "active": 8,
+    "waiting": 45,
+    "inactive": 104,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 1.15382904,
+    "active": 8,
+    "waiting": 45,
+    "inactive": 104,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 1.6030231449999999,
+    "active": 8,
+    "waiting": 45,
+    "inactive": 103,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 1.60913544,
+    "active": 8,
+    "waiting": 45,
+    "inactive": 103,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 1.6312436909999999,
+    "active": 8,
+    "waiting": 45,
+    "inactive": 102,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 1.6346438129999998,
+    "active": 8,
+    "waiting": 45,
+    "inactive": 102,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 2.077708687,
+    "active": 8,
+    "waiting": 45,
+    "inactive": 102,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 2.116555932,
+    "active": 8,
+    "waiting": 45,
+    "inactive": 101,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 2.126900968,
+    "active": 8,
+    "waiting": 45,
+    "inactive": 101,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 2.193008048,
+    "active": 8,
+    "waiting": 45,
+    "inactive": 100,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 2.216113817,
+    "active": 8,
+    "waiting": 45,
+    "inactive": 100,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 2.225808787,
+    "active": 8,
+    "waiting": 45,
+    "inactive": 100,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 2.259080455,
+    "active": 8,
+    "waiting": 45,
+    "inactive": 99,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 2.2653489589999998,
+    "active": 8,
+    "waiting": 45,
+    "inactive": 99,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 2.283925336,
+    "active": 8,
+    "waiting": 45,
+    "inactive": 99,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 2.298694555,
+    "active": 8,
+    "waiting": 44,
+    "inactive": 99,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 2.31563101,
+    "active": 8,
+    "waiting": 44,
+    "inactive": 99,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 2.347049986,
+    "active": 8,
+    "waiting": 46,
+    "inactive": 96,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 2.347282698,
+    "active": 8,
+    "waiting": 46,
+    "inactive": 96,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 2.359059921,
+    "active": 8,
+    "waiting": 46,
+    "inactive": 95,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 2.376815636,
+    "active": 8,
+    "waiting": 46,
+    "inactive": 95,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 2.581137189,
+    "active": 8,
+    "waiting": 46,
+    "inactive": 95,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 2.598712629,
+    "active": 8,
+    "waiting": 47,
+    "inactive": 94,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 2.628240419,
+    "active": 8,
+    "waiting": 46,
+    "inactive": 94,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 2.6374659449999998,
+    "active": 8,
+    "waiting": 46,
+    "inactive": 94,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 2.638618749,
+    "active": 8,
+    "waiting": 45,
+    "inactive": 94,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 2.6389681080000003,
+    "active": 8,
+    "waiting": 45,
+    "inactive": 94,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 2.719837633,
+    "active": 8,
+    "waiting": 44,
+    "inactive": 94,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 2.732737293,
+    "active": 8,
+    "waiting": 44,
+    "inactive": 94,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 2.8744640009999998,
+    "active": 8,
+    "waiting": 45,
+    "inactive": 93,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 2.903043639,
+    "active": 8,
+    "waiting": 44,
+    "inactive": 93,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 2.903139241,
+    "active": 8,
+    "waiting": 44,
+    "inactive": 93,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 2.970056902,
+    "active": 8,
+    "waiting": 44,
+    "inactive": 93,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.033665031,
+    "active": 8,
+    "waiting": 43,
+    "inactive": 93,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.033826649,
+    "active": 8,
+    "waiting": 43,
+    "inactive": 93,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.093145758,
+    "active": 8,
+    "waiting": 42,
+    "inactive": 93,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.094907628,
+    "active": 8,
+    "waiting": 42,
+    "inactive": 93,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.1480714069999998,
+    "active": 8,
+    "waiting": 42,
+    "inactive": 93,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.168173257,
+    "active": 8,
+    "waiting": 41,
+    "inactive": 93,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.177244276,
+    "active": 8,
+    "waiting": 41,
+    "inactive": 93,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.231445089,
+    "active": 8,
+    "waiting": 41,
+    "inactive": 92,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.249546511,
+    "active": 8,
+    "waiting": 41,
+    "inactive": 92,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.283877468,
+    "active": 8,
+    "waiting": 41,
+    "inactive": 91,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.2908206460000002,
+    "active": 8,
+    "waiting": 41,
+    "inactive": 91,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.339082992,
+    "active": 8,
+    "waiting": 41,
+    "inactive": 91,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.365116707,
+    "active": 8,
+    "waiting": 41,
+    "inactive": 91,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.369221493,
+    "active": 8,
+    "waiting": 40,
+    "inactive": 91,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.369293529,
+    "active": 8,
+    "waiting": 40,
+    "inactive": 91,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.420818066,
+    "active": 8,
+    "waiting": 41,
+    "inactive": 90,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.4344857810000002,
+    "active": 8,
+    "waiting": 40,
+    "inactive": 90,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.44397176,
+    "active": 8,
+    "waiting": 40,
+    "inactive": 90,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.477423386,
+    "active": 8,
+    "waiting": 40,
+    "inactive": 89,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.477602992,
+    "active": 8,
+    "waiting": 40,
+    "inactive": 89,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.653828261,
+    "active": 8,
+    "waiting": 40,
+    "inactive": 89,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.673758661,
+    "active": 8,
+    "waiting": 39,
+    "inactive": 89,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.673882291,
+    "active": 8,
+    "waiting": 39,
+    "inactive": 89,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.734992395,
+    "active": 8,
+    "waiting": 39,
+    "inactive": 89,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.769276832,
+    "active": 8,
+    "waiting": 38,
+    "inactive": 89,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.769694842,
+    "active": 8,
+    "waiting": 38,
+    "inactive": 89,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.776799368,
+    "active": 8,
+    "waiting": 39,
+    "inactive": 88,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.802253453,
+    "active": 8,
+    "waiting": 38,
+    "inactive": 88,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.818637601,
+    "active": 8,
+    "waiting": 38,
+    "inactive": 88,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 3.889395817,
+    "active": 8,
+    "waiting": 38,
+    "inactive": 88,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 4.018428751,
+    "active": 8,
+    "waiting": 39,
+    "inactive": 87,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 4.058361383,
+    "active": 8,
+    "waiting": 38,
+    "inactive": 87,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 4.05893608,
+    "active": 8,
+    "waiting": 38,
+    "inactive": 87,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 4.174952915,
+    "active": 8,
+    "waiting": 37,
+    "inactive": 87,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 4.1841187,
+    "active": 8,
+    "waiting": 37,
+    "inactive": 87,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 4.306083146,
+    "active": 8,
+    "waiting": 37,
+    "inactive": 87,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 4.316125163,
+    "active": 8,
+    "waiting": 37,
+    "inactive": 86,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 4.318506239,
+    "active": 8,
+    "waiting": 37,
+    "inactive": 86,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 4.322121303,
+    "active": 8,
+    "waiting": 36,
+    "inactive": 86,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 4.326207082,
+    "active": 8,
+    "waiting": 36,
+    "inactive": 86,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 4.38387164,
+    "active": 8,
+    "waiting": 36,
+    "inactive": 86,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 4.407424204,
+    "active": 8,
+    "waiting": 35,
+    "inactive": 86,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 4.40760223,
+    "active": 8,
+    "waiting": 35,
+    "inactive": 86,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 4.448093607,
+    "active": 8,
+    "waiting": 35,
+    "inactive": 86,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 4.516541773,
+    "active": 8,
+    "waiting": 35,
+    "inactive": 85,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 4.526342476,
+    "active": 8,
+    "waiting": 35,
+    "inactive": 85,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 4.66562631,
+    "active": 8,
+    "waiting": 35,
+    "inactive": 84,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 4.667548587,
+    "active": 8,
+    "waiting": 35,
+    "inactive": 84,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 4.8063634539999995,
+    "active": 8,
+    "waiting": 35,
+    "inactive": 84,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 4.989157294,
+    "active": 8,
+    "waiting": 35,
+    "inactive": 84,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 4.992570419,
+    "active": 8,
+    "waiting": 35,
+    "inactive": 84,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.029182883,
+    "active": 8,
+    "waiting": 35,
+    "inactive": 83,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.040283467,
+    "active": 8,
+    "waiting": 35,
+    "inactive": 83,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.057029344,
+    "active": 8,
+    "waiting": 34,
+    "inactive": 83,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.060590961,
+    "active": 8,
+    "waiting": 34,
+    "inactive": 83,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.153692289,
+    "active": 8,
+    "waiting": 34,
+    "inactive": 82,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.174267749,
+    "active": 8,
+    "waiting": 34,
+    "inactive": 82,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.215873206,
+    "active": 8,
+    "waiting": 34,
+    "inactive": 82,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.241995427,
+    "active": 8,
+    "waiting": 34,
+    "inactive": 82,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.271599077,
+    "active": 8,
+    "waiting": 33,
+    "inactive": 82,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.271778847,
+    "active": 8,
+    "waiting": 33,
+    "inactive": 82,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.386882716,
+    "active": 8,
+    "waiting": 32,
+    "inactive": 82,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.399974022,
+    "active": 8,
+    "waiting": 32,
+    "inactive": 82,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.413727352,
+    "active": 8,
+    "waiting": 32,
+    "inactive": 82,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.420951787,
+    "active": 8,
+    "waiting": 31,
+    "inactive": 82,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.429881434,
+    "active": 8,
+    "waiting": 31,
+    "inactive": 82,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.437166492,
+    "active": 8,
+    "waiting": 30,
+    "inactive": 82,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.440370966,
+    "active": 8,
+    "waiting": 30,
+    "inactive": 82,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.625135664,
+    "active": 8,
+    "waiting": 30,
+    "inactive": 82,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.644063532,
+    "active": 8,
+    "waiting": 30,
+    "inactive": 82,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.659703356,
+    "active": 8,
+    "waiting": 30,
+    "inactive": 82,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.670607826,
+    "active": 8,
+    "waiting": 29,
+    "inactive": 82,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.670748828,
+    "active": 8,
+    "waiting": 29,
+    "inactive": 82,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.67675657,
+    "active": 8,
+    "waiting": 28,
+    "inactive": 82,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.689325085,
+    "active": 8,
+    "waiting": 28,
+    "inactive": 82,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.746733475,
+    "active": 8,
+    "waiting": 28,
+    "inactive": 81,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.759559086,
+    "active": 8,
+    "waiting": 28,
+    "inactive": 81,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.785063272,
+    "active": 8,
+    "waiting": 27,
+    "inactive": 81,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.796103935,
+    "active": 8,
+    "waiting": 27,
+    "inactive": 81,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.888334469,
+    "active": 8,
+    "waiting": 26,
+    "inactive": 81,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 5.890852633,
+    "active": 8,
+    "waiting": 26,
+    "inactive": 81,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.011055003,
+    "active": 8,
+    "waiting": 26,
+    "inactive": 81,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.016199783,
+    "active": 8,
+    "waiting": 26,
+    "inactive": 81,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.035360099,
+    "active": 8,
+    "waiting": 25,
+    "inactive": 81,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.039486392,
+    "active": 8,
+    "waiting": 25,
+    "inactive": 81,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.053470889,
+    "active": 8,
+    "waiting": 24,
+    "inactive": 81,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.057565181,
+    "active": 8,
+    "waiting": 24,
+    "inactive": 81,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.108963619,
+    "active": 8,
+    "waiting": 23,
+    "inactive": 81,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.11592656,
+    "active": 8,
+    "waiting": 23,
+    "inactive": 81,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.209564955,
+    "active": 8,
+    "waiting": 23,
+    "inactive": 81,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.256672135,
+    "active": 8,
+    "waiting": 22,
+    "inactive": 81,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.267874078,
+    "active": 8,
+    "waiting": 22,
+    "inactive": 81,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.281285823,
+    "active": 8,
+    "waiting": 22,
+    "inactive": 80,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.291360887,
+    "active": 8,
+    "waiting": 22,
+    "inactive": 80,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.313638811,
+    "active": 8,
+    "waiting": 22,
+    "inactive": 79,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.320247589,
+    "active": 8,
+    "waiting": 22,
+    "inactive": 79,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.370695827,
+    "active": 8,
+    "waiting": 22,
+    "inactive": 79,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.376773436,
+    "active": 8,
+    "waiting": 22,
+    "inactive": 79,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.402309515,
+    "active": 8,
+    "waiting": 21,
+    "inactive": 79,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.403677517,
+    "active": 8,
+    "waiting": 21,
+    "inactive": 79,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.418133278,
+    "active": 8,
+    "waiting": 21,
+    "inactive": 78,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.426243816,
+    "active": 8,
+    "waiting": 21,
+    "inactive": 78,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.44468002,
+    "active": 8,
+    "waiting": 21,
+    "inactive": 78,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.457963934,
+    "active": 8,
+    "waiting": 20,
+    "inactive": 78,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.462671392,
+    "active": 8,
+    "waiting": 19,
+    "inactive": 78,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.462856456,
+    "active": 8,
+    "waiting": 19,
+    "inactive": 78,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.474368425,
+    "active": 8,
+    "waiting": 19,
+    "inactive": 78,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.49236444,
+    "active": 8,
+    "waiting": 19,
+    "inactive": 77,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.492591991,
+    "active": 8,
+    "waiting": 19,
+    "inactive": 77,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.505413977,
+    "active": 8,
+    "waiting": 20,
+    "inactive": 76,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.568430522,
+    "active": 8,
+    "waiting": 20,
+    "inactive": 75,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.568902361,
+    "active": 8,
+    "waiting": 20,
+    "inactive": 75,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.642588599,
+    "active": 8,
+    "waiting": 19,
+    "inactive": 75,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.6433441989999995,
+    "active": 8,
+    "waiting": 19,
+    "inactive": 75,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.812374185,
+    "active": 8,
+    "waiting": 19,
+    "inactive": 74,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.815332007,
+    "active": 8,
+    "waiting": 19,
+    "inactive": 74,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.858260857,
+    "active": 8,
+    "waiting": 19,
+    "inactive": 73,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.864476262,
+    "active": 8,
+    "waiting": 19,
+    "inactive": 73,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.873822443,
+    "active": 8,
+    "waiting": 19,
+    "inactive": 72,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.877597106,
+    "active": 8,
+    "waiting": 19,
+    "inactive": 72,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.883574277,
+    "active": 8,
+    "waiting": 18,
+    "inactive": 72,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.883729784,
+    "active": 8,
+    "waiting": 18,
+    "inactive": 72,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.965680606,
+    "active": 8,
+    "waiting": 18,
+    "inactive": 71,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.966900722,
+    "active": 8,
+    "waiting": 18,
+    "inactive": 71,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.981562675,
+    "active": 8,
+    "waiting": 17,
+    "inactive": 71,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 6.990732247,
+    "active": 8,
+    "waiting": 17,
+    "inactive": 71,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 7.010009991,
+    "active": 8,
+    "waiting": 16,
+    "inactive": 71,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 7.018670116,
+    "active": 8,
+    "waiting": 16,
+    "inactive": 71,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 7.274875226,
+    "active": 8,
+    "waiting": 16,
+    "inactive": 70,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 7.279208161,
+    "active": 8,
+    "waiting": 16,
+    "inactive": 70,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 7.297568057,
+    "active": 8,
+    "waiting": 16,
+    "inactive": 69,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 7.304526659,
+    "active": 8,
+    "waiting": 16,
+    "inactive": 69,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 7.38277901,
+    "active": 8,
+    "waiting": 16,
+    "inactive": 69,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 7.409640665,
+    "active": 8,
+    "waiting": 16,
+    "inactive": 68,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 7.416720667,
+    "active": 8,
+    "waiting": 16,
+    "inactive": 68,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 7.451525534,
+    "active": 8,
+    "waiting": 16,
+    "inactive": 67,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 7.453907845,
+    "active": 8,
+    "waiting": 16,
+    "inactive": 66,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 7.455094916,
+    "active": 8,
+    "waiting": 16,
+    "inactive": 66,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 7.456772635,
+    "active": 8,
+    "waiting": 16,
+    "inactive": 66,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 7.53812546,
+    "active": 8,
+    "waiting": 16,
+    "inactive": 66,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 7.565856571,
+    "active": 8,
+    "waiting": 15,
+    "inactive": 66,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 7.566449887,
+    "active": 8,
+    "waiting": 15,
+    "inactive": 66,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 7.628346789,
+    "active": 8,
+    "waiting": 14,
+    "inactive": 66,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 7.631449019,
+    "active": 8,
+    "waiting": 14,
+    "inactive": 66,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 7.641596858,
+    "active": 8,
+    "waiting": 14,
+    "inactive": 65,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 7.643878117,
+    "active": 8,
+    "waiting": 14,
+    "inactive": 65,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 7.742466885,
+    "active": 8,
+    "waiting": 14,
+    "inactive": 64,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 7.744338295,
+    "active": 8,
+    "waiting": 14,
+    "inactive": 64,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 7.773278835,
+    "active": 8,
+    "waiting": 14,
+    "inactive": 63,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 7.774884929,
+    "active": 8,
+    "waiting": 14,
+    "inactive": 63,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 7.972590617,
+    "active": 8,
+    "waiting": 13,
+    "inactive": 63,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 7.985798832,
+    "active": 8,
+    "waiting": 13,
+    "inactive": 63,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 8.032203428,
+    "active": 8,
+    "waiting": 13,
+    "inactive": 63,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 8.092284184,
+    "active": 8,
+    "waiting": 14,
+    "inactive": 62,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 8.111707923,
+    "active": 8,
+    "waiting": 16,
+    "inactive": 60,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 8.258399833,
+    "active": 8,
+    "waiting": 16,
+    "inactive": 60,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 8.285329232,
+    "active": 8,
+    "waiting": 15,
+    "inactive": 60,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 8.285658913,
+    "active": 8,
+    "waiting": 15,
+    "inactive": 60,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 8.332170496,
+    "active": 8,
+    "waiting": 15,
+    "inactive": 59,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 8.336922714,
+    "active": 8,
+    "waiting": 15,
+    "inactive": 59,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 8.423778003,
+    "active": 8,
+    "waiting": 14,
+    "inactive": 59,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 8.43427823,
+    "active": 8,
+    "waiting": 14,
+    "inactive": 59,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 8.732609812,
+    "active": 8,
+    "waiting": 13,
+    "inactive": 59,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 8.734676886,
+    "active": 8,
+    "waiting": 13,
+    "inactive": 59,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 8.749308197,
+    "active": 8,
+    "waiting": 15,
+    "inactive": 57,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 8.950173387,
+    "active": 8,
+    "waiting": 14,
+    "inactive": 57,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 8.987256469,
+    "active": 8,
+    "waiting": 14,
+    "inactive": 57,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 9.082902636,
+    "active": 8,
+    "waiting": 15,
+    "inactive": 56,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 9.152809292,
+    "active": 8,
+    "waiting": 14,
+    "inactive": 56,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 9.155008603,
+    "active": 8,
+    "waiting": 14,
+    "inactive": 56,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 9.210986152,
+    "active": 8,
+    "waiting": 13,
+    "inactive": 56,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 9.214056341,
+    "active": 8,
+    "waiting": 13,
+    "inactive": 56,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 9.251091531,
+    "active": 8,
+    "waiting": 13,
+    "inactive": 56,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 9.415749975,
+    "active": 8,
+    "waiting": 12,
+    "inactive": 56,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 9.420390368,
+    "active": 8,
+    "waiting": 12,
+    "inactive": 56,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 9.631742026,
+    "active": 8,
+    "waiting": 12,
+    "inactive": 55,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 9.640085699,
+    "active": 8,
+    "waiting": 12,
+    "inactive": 55,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 9.692727563,
+    "active": 8,
+    "waiting": 11,
+    "inactive": 55,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 9.707671315,
+    "active": 8,
+    "waiting": 11,
+    "inactive": 55,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 9.804037779,
+    "active": 8,
+    "waiting": 12,
+    "inactive": 54,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 9.939790664,
+    "active": 8,
+    "waiting": 11,
+    "inactive": 54,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 9.950186787,
+    "active": 8,
+    "waiting": 11,
+    "inactive": 54,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 10.044241571,
+    "active": 8,
+    "waiting": 11,
+    "inactive": 54,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 10.073265987,
+    "active": 8,
+    "waiting": 17,
+    "inactive": 48,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 10.273622733,
+    "active": 8,
+    "waiting": 16,
+    "inactive": 48,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 10.273802654,
+    "active": 8,
+    "waiting": 16,
+    "inactive": 48,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 10.32277272,
+    "active": 8,
+    "waiting": 15,
+    "inactive": 48,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 10.329898698,
+    "active": 8,
+    "waiting": 15,
+    "inactive": 48,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 10.468056354,
+    "active": 8,
+    "waiting": 15,
+    "inactive": 47,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 10.469769848,
+    "active": 8,
+    "waiting": 15,
+    "inactive": 47,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 10.659369041,
+    "active": 8,
+    "waiting": 15,
+    "inactive": 47,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 10.707268334,
+    "active": 8,
+    "waiting": 14,
+    "inactive": 47,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 10.714299768,
+    "active": 8,
+    "waiting": 14,
+    "inactive": 47,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 10.993448937,
+    "active": 8,
+    "waiting": 13,
+    "inactive": 47,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 11.008221053,
+    "active": 8,
+    "waiting": 13,
+    "inactive": 47,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 11.132692015,
+    "active": 8,
+    "waiting": 13,
+    "inactive": 47,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 11.239981586,
+    "active": 8,
+    "waiting": 12,
+    "inactive": 47,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 11.256767555,
+    "active": 8,
+    "waiting": 12,
+    "inactive": 47,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 11.288755641,
+    "active": 8,
+    "waiting": 11,
+    "inactive": 47,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 11.296112167,
+    "active": 8,
+    "waiting": 11,
+    "inactive": 47,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 11.301633179,
+    "active": 8,
+    "waiting": 12,
+    "inactive": 46,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 11.420308767,
+    "active": 8,
+    "waiting": 11,
+    "inactive": 46,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 11.424084824,
+    "active": 8,
+    "waiting": 11,
+    "inactive": 46,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 11.477639688,
+    "active": 8,
+    "waiting": 11,
+    "inactive": 46,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 11.527684304,
+    "active": 8,
+    "waiting": 11,
+    "inactive": 46,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 11.586079931,
+    "active": 8,
+    "waiting": 13,
+    "inactive": 44,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 11.740860254,
+    "active": 8,
+    "waiting": 12,
+    "inactive": 44,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 11.74220942,
+    "active": 8,
+    "waiting": 12,
+    "inactive": 44,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 11.798092414,
+    "active": 8,
+    "waiting": 12,
+    "inactive": 44,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 11.808680844,
+    "active": 8,
+    "waiting": 12,
+    "inactive": 44,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 11.823113194,
+    "active": 8,
+    "waiting": 11,
+    "inactive": 44,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 11.823934408,
+    "active": 8,
+    "waiting": 11,
+    "inactive": 44,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 11.875757663,
+    "active": 8,
+    "waiting": 10,
+    "inactive": 44,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 11.880186129,
+    "active": 8,
+    "waiting": 10,
+    "inactive": 44,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 12.05330576,
+    "active": 8,
+    "waiting": 9,
+    "inactive": 44,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 12.053735206,
+    "active": 8,
+    "waiting": 9,
+    "inactive": 44,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 12.212528547,
+    "active": 8,
+    "waiting": 8,
+    "inactive": 44,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 12.22530852,
+    "active": 8,
+    "waiting": 8,
+    "inactive": 44,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 12.392030408,
+    "active": 8,
+    "waiting": 9,
+    "inactive": 43,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 12.414147729,
+    "active": 8,
+    "waiting": 9,
+    "inactive": 43,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 12.452267395,
+    "active": 8,
+    "waiting": 11,
+    "inactive": 41,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 12.73742213,
+    "active": 8,
+    "waiting": 12,
+    "inactive": 40,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 12.814031909,
+    "active": 8,
+    "waiting": 11,
+    "inactive": 40,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 12.824249123,
+    "active": 8,
+    "waiting": 11,
+    "inactive": 40,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 12.940145135,
+    "active": 8,
+    "waiting": 10,
+    "inactive": 40,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 12.947736779,
+    "active": 8,
+    "waiting": 10,
+    "inactive": 40,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 13.219722862,
+    "active": 8,
+    "waiting": 9,
+    "inactive": 40,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 13.219963069,
+    "active": 8,
+    "waiting": 9,
+    "inactive": 40,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 13.24280779,
+    "active": 8,
+    "waiting": 8,
+    "inactive": 40,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 13.256607386,
+    "active": 8,
+    "waiting": 8,
+    "inactive": 40,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 13.257521993,
+    "active": 8,
+    "waiting": 8,
+    "inactive": 40,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 13.290511176,
+    "active": 8,
+    "waiting": 7,
+    "inactive": 40,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 13.291325736,
+    "active": 8,
+    "waiting": 7,
+    "inactive": 40,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 13.604992523,
+    "active": 8,
+    "waiting": 6,
+    "inactive": 40,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 13.62605447,
+    "active": 8,
+    "waiting": 6,
+    "inactive": 40,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 13.731473442,
+    "active": 8,
+    "waiting": 7,
+    "inactive": 39,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 13.746305696,
+    "active": 8,
+    "waiting": 7,
+    "inactive": 39,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 13.749441765,
+    "active": 8,
+    "waiting": 7,
+    "inactive": 39,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 13.852507536,
+    "active": 8,
+    "waiting": 7,
+    "inactive": 39,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 13.954693866,
+    "active": 8,
+    "waiting": 7,
+    "inactive": 38,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 13.960655277,
+    "active": 8,
+    "waiting": 7,
+    "inactive": 38,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 14.069772805,
+    "active": 8,
+    "waiting": 7,
+    "inactive": 38,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 14.224794388,
+    "active": 8,
+    "waiting": 6,
+    "inactive": 38,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 14.232440863,
+    "active": 8,
+    "waiting": 6,
+    "inactive": 38,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 14.276867243,
+    "active": 8,
+    "waiting": 5,
+    "inactive": 38,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 14.277689715,
+    "active": 8,
+    "waiting": 5,
+    "inactive": 38,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 14.281142633,
+    "active": 8,
+    "waiting": 5,
+    "inactive": 38,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 14.339345728,
+    "active": 8,
+    "waiting": 4,
+    "inactive": 38,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 14.339941263,
+    "active": 8,
+    "waiting": 4,
+    "inactive": 38,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 14.613004293,
+    "active": 8,
+    "waiting": 6,
+    "inactive": 36,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 14.696156994999999,
+    "active": 8,
+    "waiting": 5,
+    "inactive": 36,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 14.697372835,
+    "active": 8,
+    "waiting": 5,
+    "inactive": 36,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 14.705114292,
+    "active": 8,
+    "waiting": 4,
+    "inactive": 36,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 14.709857227,
+    "active": 8,
+    "waiting": 4,
+    "inactive": 36,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 14.744806638,
+    "active": 8,
+    "waiting": 4,
+    "inactive": 36,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 14.832965344,
+    "active": 8,
+    "waiting": 3,
+    "inactive": 36,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 14.833992566,
+    "active": 8,
+    "waiting": 3,
+    "inactive": 36,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 14.855103548,
+    "active": 8,
+    "waiting": 4,
+    "inactive": 35,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 15.140225223,
+    "active": 8,
+    "waiting": 3,
+    "inactive": 35,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 15.140873023,
+    "active": 8,
+    "waiting": 3,
+    "inactive": 35,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 15.150167639,
+    "active": 8,
+    "waiting": 2,
+    "inactive": 35,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 15.160347096,
+    "active": 8,
+    "waiting": 2,
+    "inactive": 35,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 15.244308429,
+    "active": 8,
+    "waiting": 3,
+    "inactive": 34,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 15.281417315,
+    "active": 8,
+    "waiting": 3,
+    "inactive": 34,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 15.427572427,
+    "active": 8,
+    "waiting": 2,
+    "inactive": 34,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 15.428291367,
+    "active": 8,
+    "waiting": 2,
+    "inactive": 34,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 15.47996034,
+    "active": 8,
+    "waiting": 1,
+    "inactive": 34,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 15.489710207,
+    "active": 8,
+    "waiting": 1,
+    "inactive": 34,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 15.493686259,
+    "active": 8,
+    "waiting": 1,
+    "inactive": 34,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 15.514638549,
+    "active": 8,
+    "waiting": 0,
+    "inactive": 34,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 15.518056023,
+    "active": 8,
+    "waiting": 0,
+    "inactive": 34,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 15.791621419,
+    "active": 8,
+    "waiting": 1,
+    "inactive": 33,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 15.842977185,
+    "active": 8,
+    "waiting": 0,
+    "inactive": 33,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 15.843054949999999,
+    "active": 8,
+    "waiting": 0,
+    "inactive": 33,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 16.026221855,
+    "active": 8,
+    "waiting": 1,
+    "inactive": 32,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 16.137593371,
+    "active": 8,
+    "waiting": 2,
+    "inactive": 31,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 16.274389958,
+    "active": 8,
+    "waiting": 3,
+    "inactive": 30,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 16.311407988,
+    "active": 8,
+    "waiting": 2,
+    "inactive": 30,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 16.312193621,
+    "active": 8,
+    "waiting": 2,
+    "inactive": 30,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 16.630826689,
+    "active": 8,
+    "waiting": 3,
+    "inactive": 29,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 16.724211155,
+    "active": 8,
+    "waiting": 2,
+    "inactive": 29,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 16.731702012,
+    "active": 8,
+    "waiting": 2,
+    "inactive": 29,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 16.853107369,
+    "active": 8,
+    "waiting": 1,
+    "inactive": 29,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 16.875979191,
+    "active": 8,
+    "waiting": 1,
+    "inactive": 29,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 17.376255851,
+    "active": 8,
+    "waiting": 1,
+    "inactive": 29,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 17.54240804,
+    "active": 8,
+    "waiting": 0,
+    "inactive": 29,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 17.542726365,
+    "active": 8,
+    "waiting": 0,
+    "inactive": 29,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 17.68057291,
+    "active": 8,
+    "waiting": 0,
+    "inactive": 29,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 17.770523565,
+    "active": 7,
+    "waiting": 0,
+    "inactive": 29,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 17.77074661,
+    "active": 7,
+    "waiting": 0,
+    "inactive": 29,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 17.875840314,
+    "active": 7,
+    "waiting": 0,
+    "inactive": 28,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 17.883959013,
+    "active": 7,
+    "waiting": 0,
+    "inactive": 28,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 17.944660457,
+    "active": 7,
+    "waiting": 0,
+    "inactive": 27,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 17.955585098,
+    "active": 7,
+    "waiting": 0,
+    "inactive": 27,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 18.151097274,
+    "active": 7,
+    "waiting": 3,
+    "inactive": 24,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 18.40933692,
+    "active": 8,
+    "waiting": 2,
+    "inactive": 24,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 18.410496215,
+    "active": 8,
+    "waiting": 2,
+    "inactive": 24,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 18.568630673,
+    "active": 8,
+    "waiting": 3,
+    "inactive": 23,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 18.601462194,
+    "active": 8,
+    "waiting": 3,
+    "inactive": 23,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 18.640694213,
+    "active": 8,
+    "waiting": 3,
+    "inactive": 23,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 18.72678996,
+    "active": 8,
+    "waiting": 2,
+    "inactive": 23,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 18.727858565,
+    "active": 8,
+    "waiting": 2,
+    "inactive": 23,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 18.73428264,
+    "active": 8,
+    "waiting": 1,
+    "inactive": 23,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 18.737225794,
+    "active": 8,
+    "waiting": 1,
+    "inactive": 23,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 18.877332034,
+    "active": 8,
+    "waiting": 0,
+    "inactive": 23,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 18.883979029,
+    "active": 8,
+    "waiting": 0,
+    "inactive": 23,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.074608969,
+    "active": 8,
+    "waiting": 0,
+    "inactive": 23,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.117557265,
+    "active": 8,
+    "waiting": 0,
+    "inactive": 23,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.240785792,
+    "active": 7,
+    "waiting": 0,
+    "inactive": 23,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.241868124,
+    "active": 7,
+    "waiting": 0,
+    "inactive": 23,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.329445136,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 23,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.493995135,
+    "active": 6,
+    "waiting": 1,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.537324286,
+    "active": 7,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.5376117,
+    "active": 7,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.61866545,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.649881987,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.844245025,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.874973673,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875055917,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875091476,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875121305,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875149791,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875181061,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875203869,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875225128,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875288091,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875314871,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875340881,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875360749,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875379911,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875391648,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875401962,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875412453,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875423767,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.87543369,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875443548,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875453337,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875463449,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875473629,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875483355,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875493013,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875502906,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875513276,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875523214,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875532744,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875542747,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875554965,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.87556471,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875574616,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875584509,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875594545,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875604889999998,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875614628,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875624423,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875633981,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875643995,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875654207,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875664664,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875675145,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875685148,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.87569498,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.87570467,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875714626,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.87572428,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875734537,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875744408,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875754312,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875764657,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875775121,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875785119,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875805513,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875821584,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.87583137,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875840919,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875850122,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875859195,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875867414,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875876335,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875885738,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875895178,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875904656,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875913829,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875922509,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875931172,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875940829,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875950478,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875959913,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875969641,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.875985018,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876261337,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876281508,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876292962,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876302985,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876313094,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876322498,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876332503,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876342524000002,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876352531,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876362519,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876372315,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876382,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876392459,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876402244,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876413318,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876423278,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876433315,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876443192,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.87645255,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876463082,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876472835,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876482709,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876493273,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.87650366,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876513363,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876523502,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876533112,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876543638,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876554582,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876564913,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.87657488,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876584538,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876595228,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876604992,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876614726,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876624898,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876635019,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876644581,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.87665533,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876665895,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876676145,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876686732,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876696751,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876706048,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876716518,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876726261,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876735841,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.87674585,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876756069,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876767105,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876776658,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.876787057,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 19.93300331,
+    "active": 5,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 20.050715159,
+    "active": 4,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 20.373725355,
+    "active": 4,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 20.724946316,
+    "active": 3,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 20.851689918,
+    "active": 3,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 21.351846147,
+    "active": 3,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 21.372800129,
+    "active": 2,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 21.682299497,
+    "active": 2,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 22.182467412,
+    "active": 2,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 22.239201409,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 22.274770923,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 22.774844925,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 23.274979311,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 23.775126984,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 24.275257296,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 22,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 24.450158754,
+    "active": 8,
+    "waiting": 0,
+    "inactive": 14,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 24.450618555,
+    "active": 8,
+    "waiting": 0,
+    "inactive": 14,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 24.454738207,
+    "active": 8,
+    "waiting": 0,
+    "inactive": 14,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 24.95494565,
+    "active": 8,
+    "waiting": 0,
+    "inactive": 14,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 25.455183512,
+    "active": 8,
+    "waiting": 0,
+    "inactive": 14,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 25.955395164,
+    "active": 8,
+    "waiting": 0,
+    "inactive": 14,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 26.455618031,
+    "active": 8,
+    "waiting": 0,
+    "inactive": 14,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 26.955990533,
+    "active": 8,
+    "waiting": 0,
+    "inactive": 14,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 27.456207678,
+    "active": 8,
+    "waiting": 0,
+    "inactive": 14,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 27.956407592,
+    "active": 8,
+    "waiting": 0,
+    "inactive": 14,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 28.110207649,
+    "active": 7,
+    "waiting": 0,
+    "inactive": 14,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 28.394085615,
+    "active": 7,
+    "waiting": 0,
+    "inactive": 13,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 28.402116538,
+    "active": 7,
+    "waiting": 0,
+    "inactive": 13,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 28.513349212,
+    "active": 7,
+    "waiting": 0,
+    "inactive": 13,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 29.013611212,
+    "active": 7,
+    "waiting": 0,
+    "inactive": 13,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 29.513833873,
+    "active": 7,
+    "waiting": 0,
+    "inactive": 13,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 29.75478643,
+    "active": 7,
+    "waiting": 0,
+    "inactive": 12,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 29.762114321,
+    "active": 7,
+    "waiting": 0,
+    "inactive": 12,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 30.115497994,
+    "active": 7,
+    "waiting": 0,
+    "inactive": 12,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 30.348437637,
+    "active": 7,
+    "waiting": 0,
+    "inactive": 11,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 30.349273553,
+    "active": 7,
+    "waiting": 0,
+    "inactive": 11,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 30.654650309,
+    "active": 7,
+    "waiting": 1,
+    "inactive": 10,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 30.863221052,
+    "active": 7,
+    "waiting": 0,
+    "inactive": 10,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 30.872006667,
+    "active": 7,
+    "waiting": 0,
+    "inactive": 10,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 31.372170745,
+    "active": 7,
+    "waiting": 0,
+    "inactive": 10,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 31.37724523,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 10,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 31.440069465,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 9,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 31.45973167,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 9,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 31.60587949,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 9,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 31.664015704,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 9,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 31.664085758,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 9,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 31.73569478,
+    "active": 6,
+    "waiting": 0,
+    "inactive": 9,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 31.748426159,
+    "active": 5,
+    "waiting": 0,
+    "inactive": 9,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 32.248567653,
+    "active": 5,
+    "waiting": 0,
+    "inactive": 9,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 32.450185854,
+    "active": 5,
+    "waiting": 0,
+    "inactive": 9,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 32.952219868,
+    "active": 5,
+    "waiting": 0,
+    "inactive": 9,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 33.452425868,
+    "active": 5,
+    "waiting": 0,
+    "inactive": 9,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 33.534752868,
+    "active": 4,
+    "waiting": 0,
+    "inactive": 9,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 33.893666841,
+    "active": 3,
+    "waiting": 0,
+    "inactive": 9,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 34.393890658,
+    "active": 3,
+    "waiting": 0,
+    "inactive": 9,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 34.894033158,
+    "active": 3,
+    "waiting": 0,
+    "inactive": 9,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 34.898883925,
+    "active": 2,
+    "waiting": 0,
+    "inactive": 9,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 35.033331261,
+    "active": 2,
+    "waiting": 1,
+    "inactive": 8,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 35.03390907,
+    "active": 3,
+    "waiting": 0,
+    "inactive": 8,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 35.034094233,
+    "active": 3,
+    "waiting": 0,
+    "inactive": 8,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 35.203931168,
+    "active": 2,
+    "waiting": 0,
+    "inactive": 8,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 35.25669212,
+    "active": 2,
+    "waiting": 1,
+    "inactive": 7,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 35.256922435999996,
+    "active": 3,
+    "waiting": 0,
+    "inactive": 7,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 35.257043953,
+    "active": 3,
+    "waiting": 0,
+    "inactive": 7,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 35.395232325,
+    "active": 2,
+    "waiting": 0,
+    "inactive": 7,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 35.408421105,
+    "active": 2,
+    "waiting": 0,
+    "inactive": 7,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 35.419141671,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 7,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 35.791616365,
+    "active": 1,
+    "waiting": 3,
+    "inactive": 4,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 35.792017842999996,
+    "active": 4,
+    "waiting": 0,
+    "inactive": 4,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 35.793437723,
+    "active": 4,
+    "waiting": 0,
+    "inactive": 4,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 36.288859427,
+    "active": 4,
+    "waiting": 0,
+    "inactive": 4,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 36.357457489,
+    "active": 3,
+    "waiting": 0,
+    "inactive": 4,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 36.415388058,
+    "active": 3,
+    "waiting": 0,
+    "inactive": 4,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 36.5447345,
+    "active": 2,
+    "waiting": 0,
+    "inactive": 4,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 36.638794918,
+    "active": 2,
+    "waiting": 1,
+    "inactive": 3,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 36.639046513,
+    "active": 3,
+    "waiting": 0,
+    "inactive": 3,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 36.639159282,
+    "active": 3,
+    "waiting": 0,
+    "inactive": 3,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 36.948900955,
+    "active": 2,
+    "waiting": 0,
+    "inactive": 3,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 37.449208857,
+    "active": 2,
+    "waiting": 0,
+    "inactive": 3,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 37.949416417,
+    "active": 2,
+    "waiting": 0,
+    "inactive": 3,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 38.349863441,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 3,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 38.850077531,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 3,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 39.350201414,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 3,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 39.850351314,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 3,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 40.350598052,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 3,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 40.850716572,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 3,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 40.989787633,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 3,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 41.48993555,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 3,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 41.90507216,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 2,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 41.905179611,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 2,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 42.405257109,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 2,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 42.905515701,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 2,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 43.405682176,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 2,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 43.905880927,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 2,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 44.406127956,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 2,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 44.906268841,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 2,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 45.406403956,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 2,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 45.906540729,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 2,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 46.406710612,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 2,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 46.906860746,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 2,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 47.252481521,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 1,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 47.25261062,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 1,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 47.752679023,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 1,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 48.25283955,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 1,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 48.752965342,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 1,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 49.253086581,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 1,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 49.753204254,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 1,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 50.053575923,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 1,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 50.553759137,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 1,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 50.691680169,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 50.691783693,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 50.978540379,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 50.978689618,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 50.980506329,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 50.981208782,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 51.461587163,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 51.461713878,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 51.612233861,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 51.612489987000004,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 51.612531034,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 51.612585232,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 51.612615019,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 51.612643354,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 51.612683597,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 51.612759757,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 51.612789925,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 51.61322098,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 51.613266136,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 51.61341051,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 51.613506724,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 51.613658554,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 51.613751373,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 51.613888382,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 51.613969389,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 51.614203531,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 51.614309358,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 52.114418017,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 52.614533144,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 53.114658001,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 53.614849614,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 54.114996321,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 54.615130786,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 55.115419992,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 55.615619444000004,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 56.11576052,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 56.615924779,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 57.116084231,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 57.616252888,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 58.116482148,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 58.616633981,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 59.116760526,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 59.616912286,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 60.117303597,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 60.617416371,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 61.117641323,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 61.617820723,
+    "active": 1,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  },
+  {
+    "t": 62.060517251,
+    "active": 0,
+    "waiting": 0,
+    "inactive": 0,
+    "rustc_parallelism": 0
+  }
+];
+const CPU_USAGE = [
+  [
+    0.86767865,
+    90.3225806451613
+  ],
+  [
+    1.135842236,
+    94.9074074074074
+  ],
+  [
+    1.60302404,
+    95.1219512195122
+  ],
+  [
+    2.077773672,
+    97.64397905759162
+  ],
+  [
+    2.193008938,
+    96.66666666666667
+  ],
+  [
+    2.298695201,
+    95.18072289156626
+  ],
+  [
+    2.581138663,
+    96.91629955947137
+  ],
+  [
+    2.719838111,
+    93.80530973451327
+  ],
+  [
+    2.874466185,
+    96.69421487603306
+  ],
+  [
+    3.033665368,
+    93.75
+  ],
+  [
+    3.148072136,
+    97.82608695652173
+  ],
+  [
+    3.249550118,
+    97.5
+  ],
+  [
+    3.3651173930000002,
+    96.7032967032967
+  ],
+  [
+    3.477425614,
+    94.31818181818181
+  ],
+  [
+    3.653829413,
+    92.19858156028369
+  ],
+  [
+    3.769277436,
+    95.6043956043956
+  ],
+  [
+    3.88939693,
+    93.75
+  ],
+  [
+    4.018429114,
+    92.23300970873787
+  ],
+  [
+    4.174954176,
+    94.26229508196721
+  ],
+  [
+    4.306084118,
+    97.14285714285714
+  ],
+  [
+    4.4074248019999995,
+    95.0
+  ],
+  [
+    4.516542207,
+    95.45454545454545
+  ],
+  [
+    4.665627119,
+    94.01709401709402
+  ],
+  [
+    4.806364786,
+    93.69369369369369
+  ],
+  [
+    4.989157826,
+    97.93103448275862
+  ],
+  [
+    5.153694485,
+    94.65648854961832
+  ],
+  [
+    5.271599966,
+    94.6236559139785
+  ],
+  [
+    5.386883989,
+    93.47826086956522
+  ],
+  [
+    5.625137349,
+    95.3125
+  ],
+  [
+    5.746734467,
+    95.6989247311828
+  ],
+  [
+    5.888346909,
+    96.55172413793103
+  ],
+  [
+    6.011055897,
+    94.79166666666667
+  ],
+  [
+    6.11592706,
+    92.94117647058823
+  ],
+  [
+    6.256672587,
+    97.27272727272727
+  ],
+  [
+    6.370697277,
+    92.22222222222223
+  ],
+  [
+    6.474369824,
+    93.82716049382717
+  ],
+  [
+    6.64259029,
+    94.02985074626866
+  ],
+  [
+    6.812377991,
+    94.20289855072464
+  ],
+  [
+    6.965682009,
+    95.83333333333333
+  ],
+  [
+    7.274876557,
+    99.19028340080972
+  ],
+  [
+    7.382780193,
+    98.85057471264368
+  ],
+  [
+    7.538127005,
+    97.5609756097561
+  ],
+  [
+    7.641597909,
+    98.79518072289157
+  ],
+  [
+    7.742468142,
+    97.46835443037975
+  ],
+  [
+    7.972591849,
+    97.86096256684492
+  ],
+  [
+    8.092284546,
+    100.0
+  ],
+  [
+    8.258400571,
+    96.99248120300751
+  ],
+  [
+    8.423779695,
+    97.76119402985074
+  ],
+  [
+    8.732611484,
+    98.36734693877551
+  ],
+  [
+    8.95017545,
+    98.84393063583815
+  ],
+  [
+    9.082903538,
+    99.02912621359224
+  ],
+  [
+    9.210987484,
+    99.02912621359224
+  ],
+  [
+    9.415751597,
+    100.0
+  ],
+  [
+    9.631744038,
+    97.61904761904762
+  ],
+  [
+    9.804039495,
+    99.29078014184397
+  ],
+  [
+    9.939791661,
+    97.22222222222223
+  ],
+  [
+    10.044242346,
+    98.79518072289157
+  ],
+  [
+    10.273623183,
+    97.22222222222223
+  ],
+  [
+    10.468057935,
+    99.36305732484077
+  ],
+  [
+    10.659370647,
+    99.32885906040268
+  ],
+  [
+    10.993450241,
+    98.14814814814815
+  ],
+  [
+    11.132694489,
+    99.0909090909091
+  ],
+  [
+    11.239981892,
+    96.51162790697674
+  ],
+  [
+    11.420312244,
+    96.5034965034965
+  ],
+  [
+    11.52768529,
+    96.3855421686747
+  ],
+  [
+    11.740860662,
+    92.94117647058823
+  ],
+  [
+    11.875759077,
+    97.19626168224299
+  ],
+  [
+    12.053307241,
+    94.32624113475177
+  ],
+  [
+    12.212529721,
+    97.65625
+  ],
+  [
+    12.392032061,
+    96.47887323943662
+  ],
+  [
+    12.737422523,
+    97.45454545454545
+  ],
+  [
+    12.940147577,
+    96.29629629629629
+  ],
+  [
+    13.219724364,
+    96.38009049773756
+  ],
+  [
+    13.604994206,
+    97.73462783171522
+  ],
+  [
+    13.731474666,
+    97.0
+  ],
+  [
+    13.852508275,
+    97.97979797979798
+  ],
+  [
+    13.954694632,
+    97.43589743589743
+  ],
+  [
+    14.069773162,
+    96.80851063829788
+  ],
+  [
+    14.224795961,
+    96.72131147540983
+  ],
+  [
+    14.339346149,
+    96.66666666666667
+  ],
+  [
+    14.613005542,
+    96.78899082568807
+  ],
+  [
+    14.744808359,
+    98.0952380952381
+  ],
+  [
+    14.855106829,
+    96.55172413793103
+  ],
+  [
+    15.140225704,
+    96.08695652173913
+  ],
+  [
+    15.244309679,
+    100.0
+  ],
+  [
+    15.427572829,
+    96.5034965034965
+  ],
+  [
+    15.791623595,
+    97.93103448275862
+  ],
+  [
+    16.026223561,
+    95.74468085106383
+  ],
+  [
+    16.137594643,
+    95.50561797752809
+  ],
+  [
+    16.274390315,
+    99.08256880733946
+  ],
+  [
+    16.630828915,
+    95.40636042402826
+  ],
+  [
+    16.731702624,
+    94.8051948051948
+  ],
+  [
+    16.853108595,
+    96.0
+  ],
+  [
+    17.376257719,
+    96.88995215311004
+  ],
+  [
+    17.542408513,
+    98.47328244274809
+  ],
+  [
+    17.680574514,
+    98.18181818181819
+  ],
+  [
+    17.875840944,
+    98.73417721518987
+  ],
+  [
+    18.151098383,
+    99.06976744186046
+  ],
+  [
+    18.409337849,
+    97.5609756097561
+  ],
+  [
+    18.568631738,
+    99.21875
+  ],
+  [
+    18.726790322,
+    98.3739837398374
+  ],
+  [
+    18.877333399,
+    97.5609756097561
+  ],
+  [
+    19.07460996,
+    96.7741935483871
+  ],
+  [
+    19.240786886,
+    97.76119402985074
+  ],
+  [
+    19.493995785,
+    98.50746268656717
+  ],
+  [
+    19.618668545,
+    99.0
+  ],
+  [
+    19.844246437,
+    98.89502762430939
+  ],
+  [
+    20.050715645,
+    96.93251533742331
+  ],
+  [
+    20.373725874,
+    82.35294117647058
+  ],
+  [
+    20.724947445,
+    91.42857142857143
+  ],
+  [
+    20.851690738,
+    66.32653061224491
+  ],
+  [
+    21.351846708,
+    88.58560794044665
+  ],
+  [
+    21.682300303,
+    35.797665369649806
+  ],
+  [
+    22.182467973,
+    72.72727272727273
+  ],
+  [
+    22.774845437,
+    44.0347071583514
+  ],
+  [
+    23.274979793,
+    68.11224489795919
+  ],
+  [
+    23.775127644,
+    65.9090909090909
+  ],
+  [
+    24.275257752,
+    67.58104738154614
+  ],
+  [
+    24.450161314,
+    23.88059701492537
+  ],
+  [
+    24.95494697,
+    96.52605459057072
+  ],
+  [
+    25.45518393,
+    98.49624060150376
+  ],
+  [
+    25.955396186,
+    97.99498746867168
+  ],
+  [
+    26.455618848,
+    96.98492462311557
+  ],
+  [
+    26.955991377,
+    98.50746268656717
+  ],
+  [
+    27.456208223,
+    97.73869346733669
+  ],
+  [
+    27.956408311,
+    98.49624060150376
+  ],
+  [
+    28.110208785,
+    97.54098360655738
+  ],
+  [
+    28.394086254,
+    97.79735682819383
+  ],
+  [
+    28.513389552,
+    98.94736842105263
+  ],
+  [
+    29.013612386,
+    96.75
+  ],
+  [
+    29.513834966,
+    98.49624060150376
+  ],
+  [
+    29.754787464,
+    98.42931937172774
+  ],
+  [
+    30.115500324,
+    97.9020979020979
+  ],
+  [
+    30.348438213,
+    98.42105263157895
+  ],
+  [
+    30.654652111,
+    98.34710743801652
+  ],
+  [
+    30.863221449,
+    96.98795180722891
+  ],
+  [
+    31.372173596,
+    97.5669099756691
+  ],
+  [
+    31.605881868,
+    98.37837837837837
+  ],
+  [
+    31.735695503,
+    99.01960784313725
+  ],
+  [
+    32.248570457,
+    98.54014598540147
+  ],
+  [
+    32.4501881,
+    96.875
+  ],
+  [
+    32.952221155,
+    97.77227722772277
+  ],
+  [
+    33.452427085,
+    97.75561097256858
+  ],
+  [
+    33.893667305,
+    81.19658119658119
+  ],
+  [
+    34.393891103,
+    51.5
+  ],
+  [
+    34.894033768,
+    53.452685421994886
+  ],
+  [
+    35.033334125,
+    42.72727272727273
+  ],
+  [
+    35.203932085,
+    70.58823529411765
+  ],
+  [
+    35.395233241,
+    67.53246753246754
+  ],
+  [
+    35.791616926,
+    24.679487179487182
+  ],
+  [
+    36.288860876,
+    77.46835443037975
+  ],
+  [
+    36.415388556,
+    94.89795918367346
+  ],
+  [
+    36.544734903,
+    94.28571428571429
+  ],
+  [
+    36.948902902,
+    94.0625
+  ],
+  [
+    37.449209707,
+    87.34177215189874
+  ],
+  [
+    37.949418009,
+    81.54613466334165
+  ],
+  [
+    38.349863989,
+    50.63694267515923
+  ],
+  [
+    38.850077986,
+    24.11167512690355
+  ],
+  [
+    39.350201817,
+    22.474747474747474
+  ],
+  [
+    39.85035282,
+    24.18136020151134
+  ],
+  [
+    40.350598529,
+    26.433915211970074
+  ],
+  [
+    40.850717114,
+    23.929471032745596
+  ],
+  [
+    40.989788288,
+    24.77876106194691
+  ],
+  [
+    41.489936199,
+    59.84848484848485
+  ],
+  [
+    41.905072417,
+    54.7112462006079
+  ],
+  [
+    42.405259028,
+    26.73267326732673
+  ],
+  [
+    42.905516147,
+    35.101010101010104
+  ],
+  [
+    43.405682614,
+    24.069478908188586
+  ],
+  [
+    43.905881385,
+    23.5
+  ],
+  [
+    44.406128306,
+    23.308270676691734
+  ],
+  [
+    44.906269101,
+    22.646310432569976
+  ],
+  [
+    45.406404263,
+    26.419753086419746
+  ],
+  [
+    45.906541452,
+    56.45569620253165
+  ],
+  [
+    46.406711111999996,
+    39.8989898989899
+  ],
+  [
+    46.906861222,
+    24.565756823821346
+  ],
+  [
+    47.252481745,
+    24.0
+  ],
+  [
+    47.752680073,
+    30.272952853598014
+  ],
+  [
+    48.252840024,
+    30.71065989847716
+  ],
+  [
+    48.752965797,
+    22.97979797979798
+  ],
+  [
+    49.253087074,
+    23.929471032745596
+  ],
+  [
+    49.753204847,
+    22.081218274111677
+  ],
+  [
+    50.053576493,
+    25.925925925925924
+  ],
+  [
+    50.553763352,
+    51.88916876574307
+  ],
+  [
+    50.691680357,
+    42.85714285714286
+  ],
+  [
+    50.978542476,
+    26.200873362445407
+  ],
+  [
+    51.461587823,
+    25.129533678756474
+  ],
+  [
+    51.612235976,
+    25.21008403361344
+  ],
+  [
+    52.114418526,
+    25.125628140703512
+  ],
+  [
+    52.614533678,
+    26.184538653366587
+  ],
+  [
+    53.114659148,
+    24.494949494949495
+  ],
+  [
+    53.614850183,
+    23.573200992555826
+  ],
+  [
+    54.114997087,
+    22.250639386189263
+  ],
+  [
+    54.615132779,
+    24.0506329113924
+  ],
+  [
+    55.115421688,
+    37.27959697732997
+  ],
+  [
+    55.615620104,
+    45.84382871536524
+  ],
+  [
+    56.11576123,
+    63.45177664974619
+  ],
+  [
+    56.615925584,
+    52.151898734177216
+  ],
+  [
+    57.116085019,
+    56.88775510204081
+  ],
+  [
+    57.616255155,
+    58.040201005025125
+  ],
+  [
+    58.116483345,
+    53.101736972704714
+  ],
+  [
+    58.616634551,
+    43.939393939393945
+  ],
+  [
+    59.116761081,
+    48.13895781637717
+  ],
+  [
+    59.616913025,
+    34.67336683417085
+  ],
+  [
+    60.117304147,
+    24.61928934010153
+  ],
+  [
+    60.617417006,
+    25.0
+  ],
+  [
+    61.117642378,
+    29.545454545454547
+  ],
+  [
+    61.617821254,
+    33.91959798994975
+  ]
+];
+// Position of the vertical axis.
+const X_LINE = 50;
+// General-use margin size.
+const MARGIN = 5;
+// Position of the horizontal axis, relative to the bottom.
+const Y_LINE = 35;
+// Minimum distance between time tick labels.
+const MIN_TICK_DIST = 50;
+// Radius for rounded rectangle corners.
+const RADIUS = 3;
+// Height of unit boxes.
+const BOX_HEIGHT = 25;
+// Distance between Y tick marks on the unit graph.
+const Y_TICK_DIST = BOX_HEIGHT + 2;
+// Rects used for mouseover detection.
+// Objects of {x, y, x2, y2, i} where `i` is the index into UNIT_DATA.
+let HIT_BOXES = [];
+// Index into UNIT_DATA of the last unit hovered over by mouse.
+let LAST_HOVER = null;
+// Key is unit index, value is {x, y, width, rmeta_x} of the box.
+let UNIT_COORDS = {};
+// Map of unit index to the index it was unlocked by.
+let REVERSE_UNIT_DEPS = {};
+let REVERSE_UNIT_RMETA_DEPS = {};
+for (let n=0; n<UNIT_DATA.length; n++) {
+  let unit = UNIT_DATA[n];
+  for (let unlocked of unit.unlocked_units) {
+    REVERSE_UNIT_DEPS[unlocked] = n;
+  }
+  for (let unlocked of unit.unlocked_rmeta_units) {
+    REVERSE_UNIT_RMETA_DEPS[unlocked] = n;
+  }
+}
+
+function render_pipeline_graph() {
+  if (UNIT_DATA.length == 0) {
+    return;
+  }
+  let g = document.getElementById('pipeline-graph');
+  HIT_BOXES.length = 0;
+  g.onmousemove = pipeline_mousemove;
+  const min_time = document.getElementById('min-unit-time').valueAsNumber;
+
+  const units = UNIT_DATA.filter(unit => unit.duration >= min_time);
+
+  const graph_height = Y_TICK_DIST * units.length;
+  const {ctx, graph_width, canvas_width, canvas_height, px_per_sec} = draw_graph_axes('pipeline-graph', graph_height);
+  const container = document.getElementById('pipeline-container');
+  container.style.width = canvas_width;
+  container.style.height = canvas_height;
+
+  // Canvas for hover highlights. This is a separate layer to improve performance.
+  const linectx = setup_canvas('pipeline-graph-lines', canvas_width, canvas_height);
+  linectx.clearRect(0, 0, canvas_width, canvas_height);
+
+  // Draw Y tick marks.
+  for (let n=1; n<units.length; n++) {
+    const y = MARGIN + Y_TICK_DIST * n;
+    ctx.beginPath();
+    ctx.moveTo(X_LINE, y);
+    ctx.lineTo(X_LINE-5, y);
+    ctx.stroke();
+  }
+
+  // Draw Y labels.
+  ctx.textAlign = 'end';
+  ctx.textBaseline = 'middle';
+  for (let n=0; n<units.length; n++) {
+    let y = MARGIN + Y_TICK_DIST * n + Y_TICK_DIST / 2;
+    ctx.fillText(n+1, X_LINE-4, y);
+  }
+
+  // Draw the graph.
+  ctx.save();
+  ctx.translate(X_LINE, MARGIN);
+
+  // Compute x,y coordinate of each block.
+  UNIT_COORDS = {};
+  for (i=0; i<units.length; i++) {
+    let unit = units[i];
+    let y = i * Y_TICK_DIST + 1;
+    let x = px_per_sec * unit.start;
+    let rmeta_x = null;
+    if (unit.rmeta_time != null) {
+      rmeta_x = x + px_per_sec * unit.rmeta_time;
+    }
+    let width = Math.max(px_per_sec * unit.duration, 1.0);
+    UNIT_COORDS[unit.i] = {x, y, width, rmeta_x};
+  }
+
+  // Draw the blocks.
+  for (i=0; i<units.length; i++) {
+    let unit = units[i];
+    let {x, y, width, rmeta_x} = UNIT_COORDS[unit.i];
+
+    HIT_BOXES.push({x: X_LINE+x, y:MARGIN+y, x2: X_LINE+x+width, y2: MARGIN+y+BOX_HEIGHT, i: unit.i});
+
+    ctx.beginPath();
+    ctx.fillStyle = unit.mode == 'run-custom-build' ? '#f0b165' : '#95cce8';
+    roundedRect(ctx, x, y, width, BOX_HEIGHT, RADIUS);
+    ctx.fill();
+
+    if (unit.rmeta_time != null) {
+      ctx.beginPath();
+      ctx.fillStyle = '#aa95e8';
+      let ctime = unit.duration - unit.rmeta_time;
+      roundedRect(ctx, rmeta_x, y, px_per_sec * ctime, BOX_HEIGHT, RADIUS);
+      ctx.fill();
+    }
+    ctx.fillStyle = "#000";
+    ctx.textAlign = 'start';
+    ctx.textBaseline = 'middle';
+    ctx.font = '14px sans-serif';
+    const label = `${unit.name}${unit.target} ${unit.duration}s`;
+    const text_info = ctx.measureText(label);
+    const label_x = Math.min(x + 5.0, canvas_width - text_info.width - X_LINE);
+    ctx.fillText(label, label_x, y + BOX_HEIGHT / 2);
+    draw_dep_lines(ctx, unit.i, false);
+  }
+  ctx.restore();
+}
+
+// Draws lines from the given unit to the units it unlocks.
+function draw_dep_lines(ctx, unit_idx, highlighted) {
+  const unit = UNIT_DATA[unit_idx];
+  const {x, y, rmeta_x} = UNIT_COORDS[unit_idx];
+  ctx.save();
+  for (const unlocked of unit.unlocked_units) {
+    draw_one_dep_line(ctx, x, y, unlocked, highlighted);
+  }
+  for (const unlocked of unit.unlocked_rmeta_units) {
+    draw_one_dep_line(ctx, rmeta_x, y, unlocked, highlighted);
+  }
+  ctx.restore();
+}
+
+function draw_one_dep_line(ctx, from_x, from_y, to_unit, highlighted) {
+  if (to_unit in UNIT_COORDS) {
+    let {x: u_x, y: u_y} = UNIT_COORDS[to_unit];
+    ctx.strokeStyle = highlighted ? '#000' : '#ddd';
+    ctx.setLineDash([2]);
+    ctx.beginPath();
+    ctx.moveTo(from_x, from_y+BOX_HEIGHT/2);
+    ctx.lineTo(from_x-5, from_y+BOX_HEIGHT/2);
+    ctx.lineTo(from_x-5, u_y+BOX_HEIGHT/2);
+    ctx.lineTo(u_x, u_y+BOX_HEIGHT/2);
+    ctx.stroke();
+  }
+}
+
+function render_timing_graph() {
+  if (CONCURRENCY_DATA.length == 0) {
+    return;
+  }
+  const HEIGHT = 400;
+  const AXIS_HEIGHT = HEIGHT - MARGIN - Y_LINE;
+  const TOP_MARGIN = 10;
+  const GRAPH_HEIGHT = AXIS_HEIGHT - TOP_MARGIN;
+
+  const {canvas_width, graph_width, ctx} = draw_graph_axes('timing-graph', AXIS_HEIGHT);
+
+  // Draw Y tick marks and labels.
+  let max_v = 0;
+  for (c of CONCURRENCY_DATA) {
+    max_v = Math.max(max_v, c.active, c.waiting, c.inactive);
+  }
+  const px_per_v = GRAPH_HEIGHT / max_v;
+  const {step, tick_dist, num_ticks} = split_ticks(max_v, px_per_v, GRAPH_HEIGHT);
+  ctx.textAlign = 'end';
+  for (n=0; n<num_ticks; n++) {
+    let y = HEIGHT - Y_LINE - ((n + 1) * tick_dist);
+    ctx.beginPath();
+    ctx.moveTo(X_LINE, y);
+    ctx.lineTo(X_LINE-5, y);
+    ctx.stroke();
+    ctx.fillText((n+1) * step, X_LINE-10, y+5);
+  }
+
+  // Label the Y axis.
+  let label_y = (HEIGHT - Y_LINE) / 2;
+  ctx.save();
+  ctx.translate(15, label_y);
+  ctx.rotate(3*Math.PI/2);
+  ctx.textAlign = 'center';
+  ctx.fillText('# Units', 0, 0);
+  ctx.restore();
+
+  // Draw the graph.
+  ctx.save();
+  ctx.translate(X_LINE, MARGIN);
+
+  function coord(t, v) {
+    return {
+      x: graph_width * (t/DURATION),
+      y: TOP_MARGIN + GRAPH_HEIGHT * (1.0 - (v / max_v))
+    };
+  }
+
+  const cpuFillStyle = 'rgba(250, 119, 0, 0.2)';
+  if (CPU_USAGE.length > 1) {
+    ctx.beginPath();
+    ctx.fillStyle = cpuFillStyle;
+    let bottomLeft = coord(CPU_USAGE[0][0], 0);
+    ctx.moveTo(bottomLeft.x, bottomLeft.y);
+    for (let i=0; i < CPU_USAGE.length; i++) {
+      let [time, usage] = CPU_USAGE[i];
+      let {x, y} = coord(time, usage / 100.0 * max_v);
+      ctx.lineTo(x, y);
+    }
+    let bottomRight = coord(CPU_USAGE[CPU_USAGE.length - 1][0], 0);
+    ctx.lineTo(bottomRight.x, bottomRight.y);
+    ctx.fill();
+  }
+
+  function draw_line(style, key) {
+    let first = CONCURRENCY_DATA[0];
+    let last = coord(first.t, key(first));
+    ctx.strokeStyle = style;
+    ctx.beginPath();
+    ctx.moveTo(last.x, last.y);
+    for (let i=1; i<CONCURRENCY_DATA.length; i++) {
+      let c = CONCURRENCY_DATA[i];
+      let {x, y} = coord(c.t, key(c));
+      ctx.lineTo(x, last.y);
+      ctx.lineTo(x, y);
+      last = {x, y};
+    }
+    ctx.stroke();
+  }
+
+  draw_line('blue', function(c) {return c.inactive;});
+  draw_line('red', function(c) {return c.waiting;});
+  draw_line('green', function(c) {return c.active;});
+
+  // Draw a legend.
+  ctx.restore();
+  ctx.save();
+  ctx.translate(canvas_width-200, MARGIN);
+  // background
+  ctx.fillStyle = '#fff';
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 1;
+  ctx.textBaseline = 'middle'
+  ctx.textAlign = 'start';
+  ctx.beginPath();
+  ctx.rect(0, 0, 150, 82);
+  ctx.stroke();
+  ctx.fill();
+
+  ctx.fillStyle = '#000'
+  ctx.beginPath();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'red';
+  ctx.moveTo(5, 10);
+  ctx.lineTo(50, 10);
+  ctx.stroke();
+  ctx.fillText('Waiting', 54, 11);
+
+  ctx.beginPath();
+  ctx.strokeStyle = 'blue';
+  ctx.moveTo(5, 30);
+  ctx.lineTo(50, 30);
+  ctx.stroke();
+  ctx.fillText('Inactive', 54, 31);
+
+  ctx.beginPath();
+  ctx.strokeStyle = 'green';
+  ctx.moveTo(5, 50);
+  ctx.lineTo(50, 50);
+  ctx.stroke();
+  ctx.fillText('Active', 54, 51);
+
+  ctx.beginPath();
+  ctx.fillStyle = cpuFillStyle
+  ctx.fillRect(15, 60, 30, 15);
+  ctx.fill();
+  ctx.fillStyle = 'black';
+  ctx.fillText('CPU Usage', 54, 71);
+
+  ctx.restore();
+}
+
+function setup_canvas(id, width, height) {
+  let g = document.getElementById(id);
+  let dpr = window.devicePixelRatio || 1;
+  g.width = width * dpr;
+  g.height = height * dpr;
+  g.style.width = width;
+  g.style.height = height;
+  let ctx = g.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return ctx;
+}
+
+function draw_graph_axes(id, graph_height) {
+  const scale = document.getElementById('scale').valueAsNumber;
+  // Cap the size of the graph. It is hard to view if it is too large, and
+  // browsers may not render a large graph because it takes too much memory.
+  // 4096 is still ridiculously large, and probably won't render on mobile
+  // browsers, but should be ok for many desktop environments.
+  const graph_width = Math.min(scale * DURATION, 4096);
+  const px_per_sec = graph_width / DURATION;
+  const canvas_width = Math.max(graph_width + X_LINE + 30, X_LINE + 250);
+  const canvas_height = graph_height + MARGIN + Y_LINE;
+  let ctx = setup_canvas(id, canvas_width, canvas_height);
+  ctx.fillStyle = '#f7f7f7';
+  ctx.fillRect(0, 0, canvas_width, canvas_height);
+
+  ctx.lineWidth = 2;
+  ctx.font = '16px sans-serif';
+  ctx.textAlign = 'center';
+
+  // Draw main axes.
+  ctx.beginPath();
+  ctx.moveTo(X_LINE, MARGIN);
+  ctx.lineTo(X_LINE, graph_height + MARGIN);
+  ctx.lineTo(X_LINE+graph_width+20, graph_height + MARGIN);
+  ctx.stroke();
+
+  // Draw X tick marks.
+  const {step, tick_dist, num_ticks} = split_ticks(DURATION, px_per_sec, graph_width);
+  ctx.fillStyle = '#303030';
+  for (let n=0; n<num_ticks; n++) {
+    const x = X_LINE + ((n + 1) * tick_dist);
+    ctx.beginPath();
+    ctx.moveTo(x, canvas_height-Y_LINE);
+    ctx.lineTo(x, canvas_height-Y_LINE+5);
+    ctx.stroke();
+
+    ctx.fillText(`${(n+1) * step}s`, x, canvas_height - Y_LINE + 20);
+  }
+
+  // Draw vertical lines.
+  ctx.strokeStyle = '#e6e6e6';
+  ctx.setLineDash([2, 4]);
+  for (n=0; n<num_ticks; n++) {
+    const x = X_LINE + ((n + 1) * tick_dist);
+    ctx.beginPath();
+    ctx.moveTo(x, MARGIN);
+    ctx.lineTo(x, MARGIN+graph_height);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = '#000';
+  ctx.setLineDash([]);
+  return {canvas_width, canvas_height, graph_width, graph_height, ctx, px_per_sec};
+}
+
+// Determine the spacing and number of ticks along an axis.
+function split_ticks(max_value, px_per_v, max_px) {
+  const max_ticks = Math.floor(max_px / MIN_TICK_DIST);
+  if (max_ticks <= 1) {
+    // Graph is too small for even 1 tick.
+    return {step: max_value, tick_dist: max_px, num_ticks: 1};
+  }
+  let step;
+  if (max_value <= max_ticks) {
+    step = 1;
+  } else if (max_value <= max_ticks * 2) {
+    step = 2;
+  } else if (max_value <= max_ticks * 4) {
+    step = 4;
+  } else if (max_value <= max_ticks * 5) {
+    step = 5;
+  } else {
+    step = 10;
+    let count = 0;
+    while (true) {
+      if (count > 100) {
+        throw Error("tick loop too long");
+      }
+      count += 1;
+      if (max_value <= max_ticks * step) {
+        break;
+      }
+      step += 10;
+    }
+  }
+  const tick_dist = px_per_v * step;
+  const num_ticks = Math.floor(max_value / step);
+  return {step, tick_dist, num_ticks};
+}
+
+function codegen_time(unit) {
+  if (unit.rmeta_time == null) {
+    return null;
+  }
+  let ctime = unit.duration - unit.rmeta_time;
+  return [unit.rmeta_time, ctime];
+}
+
+function roundedRect(ctx, x, y, width, height, r) {
+  r = Math.min(r, width, height);
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+width-r, y);
+  ctx.arc(x+width-r, y+r, r, 3*Math.PI/2, 0);
+  ctx.lineTo(x+width, y+height-r);
+  ctx.arc(x+width-r, y+height-r, r, 0, Math.PI/2);
+  ctx.lineTo(x+r, y+height);
+  ctx.arc(x+r, y+height-r, r, Math.PI/2, Math.PI);
+  ctx.lineTo(x, y-r);
+  ctx.arc(x+r, y+r, r, Math.PI, 3*Math.PI/2);
+  ctx.closePath();
+}
+
+function pipeline_mouse_hit(event) {
+  // This brute-force method can be optimized if needed.
+  for (let box of HIT_BOXES) {
+    if (event.offsetX >= box.x && event.offsetX <= box.x2 &&
+        event.offsetY >= box.y && event.offsetY <= box.y2) {
+      return box;
+    }
+  }
+}
+
+function pipeline_mousemove(event) {
+  // Highlight dependency lines on mouse hover.
+  let box = pipeline_mouse_hit(event);
+  if (box) {
+    if (box.i != LAST_HOVER) {
+      LAST_HOVER = box.i;
+      let g = document.getElementById('pipeline-graph-lines');
+      let ctx = g.getContext('2d');
+      ctx.clearRect(0, 0, g.width, g.height);
+      ctx.save();
+      ctx.translate(X_LINE, MARGIN);
+      ctx.lineWidth = 2;
+      draw_dep_lines(ctx, box.i, true);
+
+      if (box.i in REVERSE_UNIT_DEPS) {
+        const dep_unit = REVERSE_UNIT_DEPS[box.i];
+        if (dep_unit in UNIT_COORDS) {
+          const {x, y, rmeta_x} = UNIT_COORDS[dep_unit];
+          draw_one_dep_line(ctx, x, y, box.i, true);
+        }
+      }
+      if (box.i in REVERSE_UNIT_RMETA_DEPS) {
+        const dep_unit = REVERSE_UNIT_RMETA_DEPS[box.i];
+        if (dep_unit in UNIT_COORDS) {
+          const {x, y, rmeta_x} = UNIT_COORDS[dep_unit];
+          draw_one_dep_line(ctx, rmeta_x, y, box.i, true);
+        }
+      }
+      ctx.restore();
+    }
+  }
+}
+
+render_pipeline_graph();
+render_timing_graph();
+
+// Set up and handle controls.
+{
+  const range = document.getElementById('min-unit-time');
+  const time_output = document.getElementById('min-unit-time-output');
+  time_output.innerHTML = `${range.value}s`;
+  range.oninput = event => {
+    time_output.innerHTML = `${range.value}s`;
+    render_pipeline_graph();
+  };
+
+  const scale = document.getElementById('scale');
+  const scale_output = document.getElementById('scale-output');
+  scale_output.innerHTML = `${scale.value}`;
+  scale.oninput = event => {
+    scale_output.innerHTML = `${scale.value}`;
+    render_pipeline_graph();
+    render_timing_graph();
+  };
+}
+
+</script>
+</body>
+</html>

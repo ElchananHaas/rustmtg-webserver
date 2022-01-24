@@ -11,10 +11,10 @@ use serde::{Serialize, Serializer};
 use serde_derive::Serialize;
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
+use tokio::time::sleep;
 use warp::filters::ws::Message;
 use warp::ws::WebSocket;
-use tokio::time::sleep;
-use std::time::Duration;
 #[derive(Derivative, Clone)]
 #[derivative(Debug)]
 pub struct Player {
@@ -91,8 +91,7 @@ impl Player {
         };
         loop {
             let response = self.player_con.ask_user::<HashSet<Entity>>(&query).await;
-            if response.len() < min.try_into().unwrap()
-                || response.len() > max.try_into().unwrap()
+            if response.len() < min.try_into().unwrap() || response.len() > max.try_into().unwrap()
             {
                 continue;
             }
@@ -181,87 +180,95 @@ pub enum AskReason {
     Blockers,
     DiscardToHandSize,
 }
-#[derive( Clone)]
+#[derive(Clone)]
 pub struct PlayerCon {
     socket: Arc<Mutex<Option<WebSocket>>>,
 }
 
 impl PlayerCon {
     pub fn new(socket: WebSocket) -> Self {
-        PlayerCon { socket:Arc::new(Mutex::new(Some(socket))) }
+        PlayerCon {
+            socket: Arc::new(Mutex::new(Some(socket))),
+        }
     }
     //There should be no contention on this lock,
     //so jsut take the contents!
-    fn take_socket(&self)->WebSocket{
-        let mut guard=self.socket.lock().unwrap();
-        let mut temp=None;
-        std::mem::swap(&mut temp,&mut *guard);
+    fn take_socket(&self) -> WebSocket {
+        let mut guard = self.socket.lock().unwrap();
+        let mut temp = None;
+        std::mem::swap(&mut temp, &mut *guard);
         temp.unwrap()
     }
-    fn restore_socket(&self,socket:WebSocket){
-        let mut guard=self.socket.lock().unwrap();
-        let mut temp=Some(socket);
-        std::mem::swap(&mut temp,&mut *guard);
+    fn restore_socket(&self, socket: WebSocket) {
+        let mut guard = self.socket.lock().unwrap();
+        let mut temp = Some(socket);
+        std::mem::swap(&mut temp, &mut *guard);
     }
     //This function ensures the socket will be restored, even in the case of an error
-    pub async fn ask_user<T: DeserializeOwned>(&self, query: &AskUser) -> T{
-        let mut socket=self.take_socket();
-        let res=self.ask_user_socket(query, &mut socket).await;
+    pub async fn ask_user<T: DeserializeOwned>(&self, query: &AskUser) -> T {
+        let mut socket = self.take_socket();
+        let res = self.ask_user_socket(query, &mut socket).await;
         self.restore_socket(socket);
         res
     }
-    async fn ask_user_socket<T: DeserializeOwned>(&self, query: &AskUser,socket: &mut WebSocket) -> T {
+    async fn ask_user_socket<T: DeserializeOwned>(
+        &self,
+        query: &AskUser,
+        socket: &mut WebSocket,
+    ) -> T {
         let mut buffer = Vec::<u8>::new();
         {
             let cursor = std::io::Cursor::new(&mut buffer);
             let mut json_serial = serde_json::Serializer::new(cursor);
-            (&query.reason, &query.asktype).serialize(&mut json_serial).expect("State must be serializable");
+            (&query.reason, &query.asktype)
+                .serialize(&mut json_serial)
+                .expect("State must be serializable");
         }
-        let mut failures=0;
-        loop{
-            let sres=socket.send(Message::binary(buffer.clone())).await;
-            
-            if sres.is_err(){
+        let mut failures = 0;
+        loop {
+            let sres = socket.send(Message::binary(buffer.clone())).await;
+
+            if sres.is_err() {
                 PlayerCon::socket_error(&mut failures).await;
                 continue;
             };
-            let recieved= socket.next().await.expect("Socket is still open");
+            let recieved = socket.next().await.expect("Socket is still open");
             let message = if let Ok(msg) = recieved {
                 msg
-            }else{
+            } else {
                 PlayerCon::socket_error(&mut failures).await;
                 continue;
             };
-            let text=if let Ok(txt)=message.to_str(){
+            let text = if let Ok(txt) = message.to_str() {
                 txt
-            }else{
+            } else {
                 continue;
             };
-            if let Ok(parsed) = serde_json::from_str(text){
+            if let Ok(parsed) = serde_json::from_str(text) {
                 return parsed;
-            }else{
+            } else {
                 continue;
             }
         }
     }
     pub async fn send_state(&mut self, state: Vec<u8>) -> Result<()> {
-        let mut socket=self.take_socket();
-        let res=self.send_state_socket(state, &mut socket).await;
+        let mut socket = self.take_socket();
+        let res = self.send_state_socket(state, &mut socket).await;
         self.restore_socket(socket);
         res
     }
-    async fn send_state_socket(&mut self, state: Vec<u8>,socket:&mut WebSocket) -> Result<()> {
+    async fn send_state_socket(&mut self, state: Vec<u8>, socket: &mut WebSocket) -> Result<()> {
         socket.send(Message::binary(state)).await?;
         Ok(())
     }
-    async fn socket_error(failures: &mut u64){
-        let max_failures=15;
-        if *failures>max_failures{
-            panic!("Connection to client broken");//Give up after around 5 min
-        }else{
+    async fn socket_error(failures: &mut u64) {
+        let max_failures = 15;
+        if *failures > max_failures {
+            panic!("Connection to client broken"); //Give up after around 5 min
+        } else {
             //Use exponential backoff
-            sleep(Duration::from_millis(10* (*failures).pow(2))).await;
-            *failures+=1;
+            sleep(Duration::from_millis(10 * (*failures).pow(2))).await;
+            *failures += 1;
         }
     }
 }

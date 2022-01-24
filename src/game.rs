@@ -1,24 +1,22 @@
 use crate::ability::Ability;
 use crate::ability::KeywordAbility;
 use crate::carddb::CardDB;
-use crate::components::{
-    Attacking,Blocked,Blocking,Damage,ImageUrl
-};
+use crate::components::{Attacking, Blocked, Blocking, Damage, ImageUrl};
 use crate::components::{
     CardName, Controller, EntCore, Subtype, SummoningSickness, Tapped, Types, PT,
 };
-use crate::event::{Event, EventResult, TagEvent,DiscardCause};
+use crate::event::{DiscardCause, Event, EventResult, TagEvent};
 use crate::player::{Player, PlayerCon, PlayerSerialHelper};
 use anyhow::{bail, Result};
 use futures::future;
 use hecs::serialize::row::{try_serialize, SerializeContext};
 use hecs::Component;
 use hecs::{Entity, EntityBuilder, EntityRef, World};
-use serde::{Serialize,Serializer};
+use serde::{Serialize, Serializer};
 use serde_derive::Serialize;
 use serde_json;
 use std::cmp::max;
-use std::collections::{HashSet,VecDeque};
+use std::collections::{HashSet, VecDeque};
 use std::sync::Arc;
 use warp::ws::WebSocket;
 
@@ -196,7 +194,9 @@ impl<'a> SerializeContext for GameSerializer<'a> {
             try_serialize::<Attacking, _, _>(&entity, "attacking", map)?;
             try_serialize::<Blocking, _, _>(&entity, "blocking", map)?;
             try_serialize::<Blocked, _, _>(&entity, "blocked", map)?;
-            try_serialize::<ImageUrl, _, _>(&entity, "image_url", map)?;
+            //Save this until I can serialize just the cutout
+            //Because the rest is dynamic
+            //try_serialize::<ImageUrl, _, _>(&entity, "image_url", map)?;
         }
         if let Some(pl) = entity.get::<Player>() {
             let helper = PlayerSerialHelper {
