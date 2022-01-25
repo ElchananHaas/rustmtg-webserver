@@ -42,14 +42,14 @@ pub struct PT {
 pub struct Controller(pub Entity);
 
 #[derive(Clone, Copy, Debug, Default, Serialize)]
-pub struct Types {
-    pub land: bool,
-    pub creature: bool,
+pub struct Types { //order this way for nice display
     pub artifact: bool,
     pub enchantment: bool,
     pub planeswalker: bool,
     pub instant: bool,
     pub sorcery: bool,
+    pub land: bool,
+    pub creature: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize)]

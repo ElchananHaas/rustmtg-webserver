@@ -4,6 +4,8 @@ var config = {
     scale: {
         mode: Phaser.Scale.RESIZE,
     },
+    width: 1280,
+    height: 780,
     parent: 'phaser-game',
     antialias: true,
     antialiasGL:true,

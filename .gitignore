@@ -6,3 +6,4 @@ oracle-cards-*.json
 perf.data
 perf.data.old
 flamegraph.svg
+*.zip

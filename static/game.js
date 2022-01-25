@@ -12,7 +12,8 @@ export default class Game extends Phaser.Scene {
         this.canvas.imageSmoothingEnabled = true;
         this.load.image('game_background', './background.jpg');
         this.load.image('card_back',"https://c1.scryfall.com/file/scryfall-card-backs/large/59/597b79b3-7d77-4261-871a-60dd17403388.jpg?1561757061");
-        this.load.image('artifact_card',"./acard.jpg")
+        this.load.image('artifact_card',"./magic-m15-mse-style/acard.jpg")
+        this.load.image('artifact_pt',"./magic-m15-mse-style/apt.png")
         //this.load.setBaseURL('http://labs.phaser.io');
     }
     width(){
