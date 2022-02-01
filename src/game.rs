@@ -1,6 +1,7 @@
 use crate::ability::Ability;
 use crate::ability::KeywordAbility;
 use crate::carddb::CardDB;
+use crate::components::Supertypes;
 use crate::components::{Attacking, Blocked, Blocking, Damage, ImageUrl};
 use crate::components::{
     CardName, Controller, EntCore, Subtype, SummoningSickness, Tapped, Types, PT,
@@ -12,6 +13,8 @@ use futures::future;
 use hecs::serialize::row::{try_serialize, SerializeContext};
 use hecs::Component;
 use hecs::{Entity, EntityBuilder, EntityRef, World};
+use rand::seq::SliceRandom;
+use rand::SeedableRng;
 use serde::{Serialize, Serializer};
 use serde_derive::Serialize;
 use serde_json;
@@ -19,8 +22,8 @@ use std::cmp::max;
 use std::collections::{HashSet, VecDeque};
 use std::sync::Arc;
 use warp::ws::WebSocket;
-
 mod handle_event;
+mod layers;
 
 macro_rules! backuprestore {
     ( $( $x:ty ),* ) => {
@@ -81,6 +84,9 @@ pub struct Game {
     db: &'static CardDB,
     #[serde(skip_serializing)]
     backup: Option<BackupGame>,
+    #[serde(skip_serializing)]
+    rng: rand::rngs::StdRng, //Store the RNG to allow for deterministic replay
+                             //if I choose to implement it
 }
 
 pub struct BackupGame {
@@ -121,7 +127,7 @@ impl GameBuilder {
             graveyard: Vec::new(),
             lost: false,
             won: false,
-            deck: Vec::new(),
+            library: Vec::new(),
             max_handsize: 7,
             player_con: PlayerCon::new(player_con),
         };
@@ -131,7 +137,7 @@ impl GameBuilder {
             cards.push(card);
         }
         //Now that the deck has been constructed, set the players deck
-        self.ents.get_mut::<Player>(player).unwrap().deck = cards;
+        self.ents.get_mut::<Player>(player).unwrap().library = cards;
         self.turn_order.push(player);
         if self.active_player.is_none() {
             self.active_player = Some(player);
@@ -164,6 +170,7 @@ impl GameBuilder {
             subphase: None,
             outcome: GameOutcome::Ongoing,
             backup: None,
+            rng: rand::rngs::StdRng::from_entropy(),
         })
     }
 }
@@ -194,6 +201,8 @@ impl<'a> SerializeContext for GameSerializer<'a> {
             try_serialize::<Attacking, _, _>(&entity, "attacking", map)?;
             try_serialize::<Blocking, _, _>(&entity, "blocking", map)?;
             try_serialize::<Blocked, _, _>(&entity, "blocked", map)?;
+            try_serialize::<Supertypes, _, _>(&entity, "supertypes", map)?;
+            try_serialize::<Controller, _, _>(&entity, "controller", map)?;
             //Save this until I can serialize just the cutout
             //Because the rest is dynamic
             //try_serialize::<ImageUrl, _, _>(&entity, "image_url", map)?;
@@ -232,6 +241,7 @@ impl<'a> Serialize for GameSerialContext<'a> {
 impl Game {
     pub async fn run(&mut self) -> GameOutcome {
         for player in self.turn_order.clone() {
+            self.shuffle(player);
             for _i in 0..7 {
                 self.draw(player).await;
             }
@@ -335,6 +345,11 @@ impl Game {
         drawn
         //TODO figure out which cards were drawn!
     }
+    pub fn shuffle(&mut self, player: Entity) {
+        if let Ok(mut pl) = self.ents.get_mut::<Player>(player) {
+            pl.library.shuffle(&mut self.rng);
+        }
+    }
     //discard cards, returns discarded cards
     pub async fn discard(
         &mut self,
@@ -357,6 +372,25 @@ impl Game {
         self.all_creatures()
             .into_iter()
             .filter(move |&ent| self.get_controller(ent) == Some(player))
+    }
+    pub fn ents_and_zones<'b>(&'b self)-> impl Iterator<Item=(Entity,Zone)> + 'b {
+        let field_iter=self.battlefield.iter().cloned().map(|x| (x,Zone::Battlefield));
+        let stack_iter=self.stack.iter().cloned().map(|e|(e,Zone::Stack));
+        let exile_iter=self.exile.iter().cloned().map(|e|(e,Zone::Exile));
+        let command_iter=self.command.iter().cloned().map(|e|(e,Zone::Command));
+        let ret_iter:Box<dyn Iterator<Item=(Entity,Zone)>>=Box::new(field_iter.chain(stack_iter).chain(exile_iter).chain(command_iter));
+        let mut iters=vec![ret_iter];
+        for player_id in self.turn_order.clone(){
+            if let Ok(player)=self.ents.get::<Player>(player_id){
+                let hand_iter=player.hand.clone().into_iter().map(|e|(e,Zone::Hand));
+                let graveyard_iter=player.graveyard.clone().into_iter().map(|e|(e,Zone::Graveyard));
+                let library_iter=player.library.clone().into_iter().map(|e|(e,Zone::Library));
+                let player_iters:Box<dyn Iterator<Item=(Entity,Zone)>>=Box::new(hand_iter.chain(graveyard_iter).chain(library_iter));
+                iters.push(player_iters);
+            }
+        }
+        let it=iters.into_iter().flatten();
+        it
     }
     pub fn players_permanents<'b>(&'b self, player: Entity) -> impl Iterator<Item = Entity> + 'b {
         self.battlefield
@@ -417,8 +451,17 @@ impl Game {
     }
     //Cycles priority-This will need ALOT more work!
     pub async fn cycle_priority(&mut self) {
-        //TODO-place all triggered abilties onto the stack
-        return;
+        self.place_abilities().await;
+        for player in self.turn_order.clone(){
+            self.grant_priority(player).await;
+        }
+    }
+    pub async fn grant_priority(&mut self,player:Entity){
+        self.layers();
+    }
+    //Places abilities on the stack
+    pub async fn place_abilities(&mut self){
+        //TODO make this do something!
     }
     pub fn attack_targets(&self, player: Entity) -> Vec<Entity> {
         self.opponents(player)
@@ -459,6 +502,10 @@ impl Game {
         } else {
             false
         }
+    }
+    //Allow cards to use get, bu not get_mut
+    pub fn get<'a,T:Component>(&'a self,ent:Entity)->Result<hecs::Ref<'a,T>,hecs::ComponentError>{
+        self.ents.get::<T>(ent)
     }
 }
 

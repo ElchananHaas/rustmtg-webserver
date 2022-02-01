@@ -1,5 +1,5 @@
 use crate::ability::Ability;
-use crate::components::{CardName, EntCore, ImageUrl, Subtype, Types, PT};
+use crate::components::{CardName, EntCore, ImageUrl, Subtype, Supertypes, Types, PT};
 use crate::cost::Cost;
 use crate::game::Color;
 use anyhow::{bail, Result};
@@ -63,20 +63,22 @@ impl CardDB {
                 },
             );
         }
-        let cards: [(String, Cardbuildtype); 1] = [(
-            "Staunch Shieldmate".to_owned(),
-            |builder: &mut CardBuilder| {
+        let cards: [(&str, Cardbuildtype); 2] = [
+            ("Staunch Shieldmate", |builder: &mut CardBuilder| {
                 builder
                     .creature()
                     .pt(1, 3)
                     .subtype(Subtype::Dwarf)
                     .subtype(Subtype::Soldier)
                     .mana_string("W")
-            },
-        )];
+            }),
+            ("Plains", |builder: &mut CardBuilder| {
+                builder.land().basic().subtype(Subtype::Plains)
+            }),
+        ];
         let mut map = HashMap::<String, Cardbuildtype>::new();
         for (name, constructor) in cards {
-            map.insert(name, constructor);
+            map.insert(name.to_owned(), constructor);
         }
         CardDB {
             builders: map,
@@ -112,6 +114,7 @@ pub struct CardBuilder {
     builder: EntityBuilder,
     abilities: Vec<Ability>,
     types: Types,
+    supertypes: Supertypes,
     subtypes: HashSet<Subtype>,
     costs: Vec<Cost>,
     real_card: bool,
@@ -130,6 +133,7 @@ impl CardBuilder {
             real_card: true,
             name: (&name).clone(),
             owner: owner,
+            supertypes: Supertypes::default(),
         };
         builder.builder.add(CardName(name));
         builder
@@ -218,6 +222,18 @@ impl CardBuilder {
         self.subtypes.insert(subtype);
         self
     }
+    pub fn basic(&mut self) -> &mut Self {
+        self.supertypes.basic = true;
+        self
+    }
+    pub fn legendary(&mut self) -> &mut Self {
+        self.supertypes.legendary = true;
+        self
+    }
+    pub fn snow(&mut self) -> &mut Self {
+        self.supertypes.snow = true;
+        self
+    }
     pub fn build(mut self) -> EntityBuilder {
         self.builder.add(EntCore {
             name: self.name,
@@ -232,6 +248,7 @@ impl CardBuilder {
             self.builder.add(self.subtypes);
         };
         self.builder.add(self.types);
+        self.builder.add(self.supertypes);
         if !self.costs.is_empty() {
             self.builder.add(self.costs);
         };

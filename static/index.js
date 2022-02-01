@@ -1,11 +1,8 @@
 import Game from "./game.js";
 var config = {
     type: Phaser.AUTO,
-    scale: {
-        mode: Phaser.Scale.RESIZE,
-    },
     width: 1280,
-    height: 780,
+    height: 600,
     parent: 'phaser-game',
     antialias: true,
     antialiasGL:true,

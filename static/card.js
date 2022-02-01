@@ -7,6 +7,8 @@ export default class HandCard extends Phaser.GameObjects.Container{
         super(scene, x, y); 
         this.scene=scene;
         const card_scale=.5;
+        this.x_len=x_len;
+        this.y_len=y_len;
         this.card_scale=card_scale;
         let card_background = scene.add.image(0,0, "artifact_card").setScale(card_scale,card_scale).setInteractive();
         this.add(card_background);
@@ -14,6 +16,13 @@ export default class HandCard extends Phaser.GameObjects.Container{
             this.add_text(23,card.name);
         }
         let type_line="";
+        if ("supertypes" in card){
+            for (let t of Object.keys(card.supertypes)){
+                if (card.supertypes[t]){
+                    type_line+=t.charAt(0).toUpperCase()+t.slice(1)+" ";
+                }
+            }
+        }
         if ("types" in card){
             for (let t of Object.keys(card.types)){
                 if (card.types[t]){
@@ -35,14 +44,17 @@ export default class HandCard extends Phaser.GameObjects.Container{
             line.setColor('#000000');
             this.add(line);
         }
-        this.setSize(x_len, y_len);
-        this.setInteractive();
-        scene.input.setDraggable(this);
-        this.on('drag', function (pointer, gameObject, dragX, dragY) {
-            console.log("dragged!");   
-            this.x = dragX;
-            this.y = dragY;
+
+        card_background.setInteractive();
+        card_background.on('pointerover', function () {
+
         });
+        scene.input.setDraggable(card_background);
+        let t=this;
+        card_background.on('drag', function (pointer, gameObject, dragX, dragY) {
+            t.x = pointer.position.x;
+            t.y = pointer.position.y;
+        })
     }
     add_text(y,text){
         let card_scale=this.card_scale;

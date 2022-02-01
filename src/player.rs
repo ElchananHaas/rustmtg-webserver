@@ -20,7 +20,7 @@ use warp::ws::WebSocket;
 pub struct Player {
     pub name: String,
     pub life: i32,
-    pub deck: Vec<Entity>,
+    pub library: Vec<Entity>,
     pub hand: HashSet<Entity>,
     pub mana_pool: HashSet<Entity>,
     pub graveyard: Vec<Entity>,
@@ -43,7 +43,7 @@ impl Player {
     {
         let mut ser = serializer.serialize_struct("player", 8)?;
         let mut deckview = Vec::new();
-        for card in &self.deck {
+        for card in &self.library {
             let core = ents.get::<EntCore>(*card).expect("All cards need a core");
             if core.known.contains(&player) {
                 deckview.push(*card);

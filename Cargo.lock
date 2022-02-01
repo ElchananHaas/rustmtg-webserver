@@ -514,6 +514,7 @@ dependencies = [
  "hecs",
  "if_chain",
  "once_cell",
+ "rand",
  "serde",
  "serde_derive",
  "serde_json",

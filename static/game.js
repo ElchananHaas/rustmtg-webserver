@@ -38,7 +38,8 @@ export default class Game extends Phaser.Scene {
     }
     create() {
         let self=this;
-        this.add.image(0,0, 'game_background');
+        let back=this.add.image(0,0, 'game_background');
+        back.setDepth(-10000);
         const socket = new WebSocket('ws://localhost:3030/gamesetup');
         socket.addEventListener('message', function (event) {
             event.data.text().then(

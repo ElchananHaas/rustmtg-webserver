@@ -42,7 +42,8 @@ pub struct PT {
 pub struct Controller(pub Entity);
 
 #[derive(Clone, Copy, Debug, Default, Serialize)]
-pub struct Types { //order this way for nice display
+pub struct Types {
+    //order this way for nice display
     pub artifact: bool,
     pub enchantment: bool,
     pub planeswalker: bool,
@@ -51,7 +52,13 @@ pub struct Types { //order this way for nice display
     pub land: bool,
     pub creature: bool,
 }
-
+#[derive(Clone, Copy, Debug, Default, Serialize)]
+pub struct Supertypes {
+    //order this way for nice display
+    pub basic: bool,
+    pub legendary: bool,
+    pub snow: bool,
+}
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize)]
 #[allow(dead_code)] //allow dead code to reduce warnings noise on each variant
 pub enum Subtype {
@@ -317,4 +324,9 @@ pub enum Subtype {
     Zombie,
     Zubera,
     EndCreatureMarker,
+    Plains,
+    Island,
+    Swamp,
+    Mountain,
+    Forest,
 }

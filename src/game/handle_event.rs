@@ -152,7 +152,7 @@ impl Game {
                 }
                 Event::Draw { player } => {
                     if let Ok(pl) = self.ents.get::<Player>(player) {
-                        match pl.deck.last() {
+                        match pl.library.last() {
                             Some(card) => {
                                 Game::add_event(
                                     &mut events,
@@ -227,9 +227,9 @@ impl Game {
                     Zone::Command => self.command.remove(&ent),
                     Zone::Battlefield => self.battlefield.remove(&ent),
                     Zone::Hand => player.hand.remove(&ent),
-                    Zone::Library => match player.deck.iter().position(|x| *x == ent) {
+                    Zone::Library => match player.library.iter().position(|x| *x == ent) {
                         Some(i) => {
-                            player.deck.remove(i);
+                            player.library.remove(i);
                             true
                         }
                         None => false,
@@ -251,7 +251,7 @@ impl Game {
                 }
             } else {
                 false
-            } 
+            }
         }
         if let Some(core) = core.as_mut() {
             if removed && core.real_card {
@@ -297,7 +297,7 @@ impl Game {
                         player.hand.insert(newent);
                     }
                     //Handle inserting a distance from the top. Perhaps swap them afterwards?
-                    Zone::Library => player.deck.push(newent),
+                    Zone::Library => player.library.push(newent),
                     Zone::Graveyard => player.graveyard.push(newent),
                     Zone::Stack => self.stack.push(newent),
                 }
