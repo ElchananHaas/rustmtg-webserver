@@ -13,9 +13,9 @@ use std::fmt;
 use std::fs;
 use std::hash::Hash;
 //It returns mut cardbuilder due to method chaining
-pub type Cardbuildtype = fn(&mut CardBuilder) -> &mut CardBuilder;
+pub type CardBuildType = fn(&mut CardBuilder) -> &mut CardBuilder;
 pub struct CardDB {
-    builders: HashMap<String, Cardbuildtype>,
+    builders: HashMap<String, CardBuildType>,
     scryfall: HashMap<String, Scryfall>,
 }
 
@@ -63,7 +63,7 @@ impl CardDB {
                 },
             );
         }
-        let cards: [(&str, Cardbuildtype); 2] = [
+        let cards: [(&str, CardBuildType); 2] = [
             ("Staunch Shieldmate", |builder: &mut CardBuilder| {
                 builder
                     .creature()
@@ -76,7 +76,7 @@ impl CardDB {
                 builder.land().basic().subtype(Subtype::Plains)
             }),
         ];
-        let mut map = HashMap::<String, Cardbuildtype>::new();
+        let mut map = HashMap::<String, CardBuildType>::new();
         for (name, constructor) in cards {
             map.insert(name.to_owned(), constructor);
         }
@@ -85,7 +85,10 @@ impl CardDB {
             scryfall: byname,
         }
     }
-    pub fn spawn_card(&self, ents: &mut World, card_name: &str, owner: Entity) -> Result<Entity> {
+    pub fn layers_builder(&self, card_name: &str) -> EntityBuilder {
+        self.make_builder(card_name, None)
+    }
+    fn make_builder(&self, card_name: &str, owner: Option<Entity>) -> EntityBuilder {
         match self.builders.get(card_name) {
             Some(cardmaker) => {
                 let mut builder = CardBuilder::new(card_name.to_owned(), owner);
@@ -101,13 +104,16 @@ impl CardDB {
                     builder.add_url(url);
                 }
                 cardmaker(&mut builder);
-                let res = ents.spawn(builder.build().build()); //Two build calls
-                Ok(res)
-                //because builder returns an entitybuilder,
-                //and builtentity has lifetime issues
+                let res = builder.build();
+                res
             }
-            None => bail!("Card not found"),
+            None => panic!("Unknown card!"),
         }
+    }
+    pub fn spawn_card(&self, ents: &mut World, card_name: &str, owner: Entity) -> Entity {
+        let mut builder = self.make_builder(card_name, Some(owner));
+        let res = ents.spawn(builder.build());
+        res
     }
 }
 pub struct CardBuilder {
@@ -119,11 +125,11 @@ pub struct CardBuilder {
     costs: Vec<Cost>,
     real_card: bool,
     name: String,
-    owner: Entity,
+    owner: Option<Entity>, //Don't use for in pace building
 }
 
 impl CardBuilder {
-    pub fn new(name: String, owner: Entity) -> Self {
+    pub fn new(name: String, owner: Option<Entity>) -> Self {
         let mut builder = CardBuilder {
             builder: EntityBuilder::new(),
             abilities: Vec::new(),
@@ -132,7 +138,7 @@ impl CardBuilder {
             costs: Vec::new(),
             real_card: true,
             name: (&name).clone(),
-            owner: owner,
+            owner,
             supertypes: Supertypes::default(),
         };
         builder.builder.add(CardName(name));
@@ -235,12 +241,14 @@ impl CardBuilder {
         self
     }
     pub fn build(mut self) -> EntityBuilder {
-        self.builder.add(EntCore {
-            name: self.name,
-            real_card: self.real_card,
-            known: HashSet::new(),
-            owner: self.owner,
-        });
+        if let Some(owner) = self.owner {
+            self.builder.add(EntCore {
+                name: self.name,
+                real_card: self.real_card,
+                known: HashSet::new(),
+                owner,
+            });
+        }
         if !self.abilities.is_empty() {
             self.builder.add(self.abilities);
         };

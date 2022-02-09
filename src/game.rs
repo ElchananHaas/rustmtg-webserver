@@ -20,7 +20,6 @@ use serde_derive::Serialize;
 use serde_json;
 use std::cmp::max;
 use std::collections::{HashSet, VecDeque};
-use std::sync::Arc;
 use warp::ws::WebSocket;
 mod handle_event;
 mod layers;
@@ -133,7 +132,7 @@ impl GameBuilder {
         };
         let player: Entity = self.ents.spawn((player,));
         for cardname in card_names {
-            let card: Entity = db.spawn_card(&mut self.ents, &cardname, player)?;
+            let card: Entity = db.spawn_card(&mut self.ents, &cardname, player);
             cards.push(card);
         }
         //Now that the deck has been constructed, set the players deck
@@ -373,24 +372,31 @@ impl Game {
             .into_iter()
             .filter(move |&ent| self.get_controller(ent) == Some(player))
     }
-    pub fn ents_and_zones<'b>(&'b self)-> impl Iterator<Item=(Entity,Zone)> + 'b {
-        let field_iter=self.battlefield.iter().cloned().map(|x| (x,Zone::Battlefield));
-        let stack_iter=self.stack.iter().cloned().map(|e|(e,Zone::Stack));
-        let exile_iter=self.exile.iter().cloned().map(|e|(e,Zone::Exile));
-        let command_iter=self.command.iter().cloned().map(|e|(e,Zone::Command));
-        let ret_iter:Box<dyn Iterator<Item=(Entity,Zone)>>=Box::new(field_iter.chain(stack_iter).chain(exile_iter).chain(command_iter));
-        let mut iters=vec![ret_iter];
-        for player_id in self.turn_order.clone(){
-            if let Ok(player)=self.ents.get::<Player>(player_id){
-                let hand_iter=player.hand.clone().into_iter().map(|e|(e,Zone::Hand));
-                let graveyard_iter=player.graveyard.clone().into_iter().map(|e|(e,Zone::Graveyard));
-                let library_iter=player.library.clone().into_iter().map(|e|(e,Zone::Library));
-                let player_iters:Box<dyn Iterator<Item=(Entity,Zone)>>=Box::new(hand_iter.chain(graveyard_iter).chain(library_iter));
-                iters.push(player_iters);
+    pub fn ents_and_zones(&self) -> Vec<(Entity, Zone)> {
+        let mut res = Vec::new();
+        res.extend(
+            self.battlefield
+                .iter()
+                .cloned()
+                .map(|x| (x, Zone::Battlefield)),
+        );
+        res.extend(self.stack.iter().cloned().map(|e| (e, Zone::Stack)));
+        res.extend(self.exile.iter().cloned().map(|e| (e, Zone::Exile)));
+        res.extend(self.command.iter().cloned().map(|e| (e, Zone::Command)));
+        for player_id in self.turn_order.clone() {
+            if let Ok(player) = self.ents.get::<Player>(player_id) {
+                res.extend(player.hand.iter().cloned().map(|e| (e, Zone::Hand)));
+                res.extend(
+                    player
+                        .graveyard
+                        .iter()
+                        .cloned()
+                        .map(|e| (e, Zone::Graveyard)),
+                );
+                res.extend(player.library.iter().cloned().map(|e| (e, Zone::Library)))
             }
         }
-        let it=iters.into_iter().flatten();
-        it
+        res
     }
     pub fn players_permanents<'b>(&'b self, player: Entity) -> impl Iterator<Item = Entity> + 'b {
         self.battlefield
@@ -416,16 +422,7 @@ impl Game {
         if let Ok(types) = self.ents.get::<Types>(ent) {
             if types.creature {
                 if self.ents.get::<SummoningSickness>(ent).is_ok() {
-                    if let Ok(abilities) = self.ents.get::<Vec<Ability>>(ent) {
-                        for ability in &(*abilities) {
-                            if ability.keyword() == Some(KeywordAbility::Haste) {
-                                return true;
-                            }
-                        }
-                        return false;
-                    } else {
-                        false
-                    }
+                    self.has_keyword(ent, KeywordAbility::Haste)
                 } else {
                     true
                 }
@@ -452,15 +449,15 @@ impl Game {
     //Cycles priority-This will need ALOT more work!
     pub async fn cycle_priority(&mut self) {
         self.place_abilities().await;
-        for player in self.turn_order.clone(){
+        for player in self.turn_order.clone() {
             self.grant_priority(player).await;
         }
     }
-    pub async fn grant_priority(&mut self,player:Entity){
+    pub async fn grant_priority(&mut self, player: Entity) {
         self.layers();
     }
     //Places abilities on the stack
-    pub async fn place_abilities(&mut self){
+    pub async fn place_abilities(&mut self) {
         //TODO make this do something!
     }
     pub fn attack_targets(&self, player: Entity) -> Vec<Entity> {
@@ -504,8 +501,20 @@ impl Game {
         }
     }
     //Allow cards to use get, bu not get_mut
-    pub fn get<'a,T:Component>(&'a self,ent:Entity)->Result<hecs::Ref<'a,T>,hecs::ComponentError>{
+    pub fn get<'a, T: Component>(
+        &'a self,
+        ent: Entity,
+    ) -> Result<hecs::Ref<'a, T>, hecs::ComponentError> {
         self.ents.get::<T>(ent)
+    }
+    pub fn add_ability(&mut self, ent: Entity, ability: Ability) {
+        if let Ok(mut abils) = self.ents.get_mut::<Vec<Ability>>(ent) {
+            abils.push(ability);
+            return;
+        }
+        //If it has no abilities, so create a vec of them
+        let abils = vec![ability];
+        let _ = self.ents.insert_one(ent, abils);
     }
 }
 

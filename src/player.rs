@@ -192,7 +192,8 @@ impl PlayerCon {
         }
     }
     //There should be no contention on this lock,
-    //so jsut take the contents!
+    //so just take the contents!
+    //Can actually be replaced with async lock, that wasn't the problem.
     fn take_socket(&self) -> WebSocket {
         let mut guard = self.socket.lock().unwrap();
         let mut temp = None;

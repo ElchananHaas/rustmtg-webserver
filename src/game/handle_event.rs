@@ -255,10 +255,7 @@ impl Game {
         }
         if let Some(core) = core.as_mut() {
             if removed && core.real_card {
-                let newent = self
-                    .db
-                    .spawn_card(&mut self.ents, &core.name, core.owner)
-                    .unwrap();
+                let newent = self.db.spawn_card(&mut self.ents, &core.name, core.owner);
                 match dest {
                     Zone::Exile
                     | Zone::Stack
