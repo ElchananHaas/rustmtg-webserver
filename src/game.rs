@@ -1,5 +1,5 @@
 use crate::ability::Ability;
-use crate::ability::KeywordAbility;
+use crate::spellabil::KeywordAbility;
 use crate::carddb::CardDB;
 use crate::components::Supertypes;
 use crate::components::{Attacking, Blocked, Blocking, Damage, ImageUrl};

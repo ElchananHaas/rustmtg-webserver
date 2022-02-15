@@ -14,7 +14,7 @@ mod cost;
 mod event;
 mod game;
 mod player;
-
+mod spellabil;
 static CARDDB: OnceCell<carddb::CardDB> = OnceCell::new();
 static JS_UNKNOWN: OnceCell<Entity> = OnceCell::new();
 
