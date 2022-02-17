@@ -1,5 +1,4 @@
 use crate::ability::Ability;
-use crate::spellabil::KeywordAbility;
 use crate::carddb::CardDB;
 use crate::components::Supertypes;
 use crate::components::{Attacking, Blocked, Blocking, Damage, ImageUrl};
@@ -8,6 +7,7 @@ use crate::components::{
 };
 use crate::event::{DiscardCause, Event, EventResult, TagEvent};
 use crate::player::{Player, PlayerCon, PlayerSerialHelper};
+use crate::spellabil::KeywordAbility;
 use anyhow::{bail, Result};
 use futures::future;
 use hecs::serialize::row::{try_serialize, SerializeContext};
@@ -370,7 +370,7 @@ impl Game {
     pub fn players_creatures<'b>(&'b self, player: Entity) -> impl Iterator<Item = Entity> + 'b {
         self.all_creatures()
             .into_iter()
-            .filter(move |&ent| self.get_controller(ent) == Some(player))
+            .filter(move |&ent| self.get_controller(ent).ok() == Some(player))
     }
     pub fn ents_and_zones(&self) -> Vec<(Entity, Zone)> {
         let mut res = Vec::new();
@@ -402,7 +402,7 @@ impl Game {
         self.battlefield
             .clone()
             .into_iter()
-            .filter(move |&ent| self.get_controller(ent) == Some(player))
+            .filter(move |&ent| self.get_controller(ent).ok() == Some(player))
     }
     pub fn all_creatures<'b>(&'b self) -> impl Iterator<Item = Entity> + 'b {
         self.battlefield.clone().into_iter().filter(move |&ent| {
@@ -435,14 +435,14 @@ impl Game {
     }
     //takes in a card or permanent, returns it's controller or owner if the controller
     //is unavailable
-    pub fn get_controller(&self, ent: Entity) -> Option<Entity> {
+    pub fn get_controller(&self, ent: Entity) -> Result<Entity> {
         if let Ok(controller) = self.ents.get::<Controller>(ent) {
-            Some(controller.0)
+            Ok(controller.0)
         } else {
             if let Ok(core) = self.ents.get::<EntCore>(ent) {
-                Some(core.owner)
+                Ok(core.owner)
             } else {
-                None
+                bail!("No controller or owner");
             }
         }
     }
@@ -542,14 +542,6 @@ pub enum Subphase {
     EndCombat,
     EndStep,
     Cleanup,
-}
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Color {
-    White,
-    Blue,
-    Black,
-    Red,
-    Green,
 }
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[allow(dead_code)] //allow dead code to reduce warnings noise on each variant

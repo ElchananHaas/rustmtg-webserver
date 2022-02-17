@@ -1,10 +1,11 @@
-use std::{fmt, collections::HashSet, num::NonZeroU32};
+use std::{collections::HashSet, fmt, num::NonZeroU32, sync::Arc};
 
 use hecs::Entity;
 
-use crate::{game::Game, ability::{Ability, AbilityType}};
-
-pub type SpellAbilBuildType = fn(&mut SpellAbilBuilder) -> &mut SpellAbilBuilder;
+use crate::{
+    ability::{Ability, AbilityType},
+    game::Game, cost::Cost,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum KeywordAbility {
@@ -14,71 +15,93 @@ pub enum KeywordAbility {
     DoubleStrike,
 }
 
-
 #[derive(Default)]
 pub struct SpellAbilBuilder {
     pub clauses: Vec<Clause>,
-    pub keyword: Option<KeywordAbility>, 
+    pub keyword: Option<KeywordAbility>,
 }
-impl SpellAbilBuilder{
-    pub fn new()->Self{
+impl SpellAbilBuilder {
+    pub fn new() -> Self {
         Self::default()
     }
-    pub fn clause(&mut self, effect: fn(&mut Game, Entity) -> () )-> &mut Self{
-        self.clauses.push(Clause::Effect{effect});
+    pub fn clause(&mut self, effect: ClauseEffect) -> &mut Self {
+        self.clauses.push(Clause::Effect { effect });
         self
     }
-    pub fn target_clause(&mut self, targets:Targets,effect: fn(&mut Game,Entity, ChosenTargets) -> () )-> &mut Self{
-        self.clauses.push(Clause::Target{targets,effect});
+    pub fn target_clause(
+        &mut self,
+        targets: Targets,
+        effect: TargetClauseEffect,
+    ) -> &mut Self {
+        self.clauses.push(Clause::Target { targets, effect });
         self
     }
-    pub fn from_keyword(keyword:KeywordAbility)->Self{
-        let mut res=Self::default();
-        res.keyword=Some(keyword);
-        match keyword{
-            _=>todo!()
+    pub fn from_keyword(keyword: KeywordAbility) -> Self {
+        let mut res = Self::default();
+        res.keyword = Some(keyword);
+        match keyword {
+            _ => todo!(),
         };
-        res 
+        res
     }
-    pub fn activated_ability(mut self,mana_ability:bool)->Ability{
-        Ability{
+    pub fn activated_ability(mut self, cost:Cost, mana_ability: bool) -> Ability {
+        Ability {
             mana_ability,
-            abil: AbilityType::Activated{effect: self.clauses},
-            keyword: self.keyword
+            abil: AbilityType::Activated {
+                cost,
+                effect: self.clauses,
+            },
+            keyword: self.keyword,
         }
     }
-    pub fn build(mut self)->Vec<Clause>{
+    pub fn build(mut self) -> Vec<Clause> {
         self.clauses
     }
 }
 pub enum Clause {
-    Effect {
-        //The entity that this clause is a part of
-        effect: fn(&mut Game, Entity) -> (),
+    Effect{
+        effect: ClauseEffect
     },
     Target {
-        targets:Targets,
-        effect: fn(&mut Game, Entity, ChosenTargets) -> (),
+        targets: Targets,
+        effect: TargetClauseEffect,
     },
+}
+
+pub enum ClauseEffect{
+
+}
+impl ClauseEffect{
+    pub async fn run(&self,game:&mut Game,ent:Entity){
+
+    }
+}
+pub enum TargetClauseEffect{
+
+}
+impl TargetClauseEffect{
+    pub async fn run(&self,game:&mut Game,ent:Entity){
+        
+    }
 }
 
 pub enum ChosenClause {
     Effect {
         //The entity that this clause is a part of
-        effect: fn(&mut Game, Entity) -> (),
+        effect: Arc<dyn Fn(&mut Game, Entity)>,
     },
     Target {
-        targets:ChosenTargets,
-        effect: fn(&mut Game, ChosenTargets) -> (),
+        targets: ChosenTargets,
+        effect: Arc<dyn Fn(&mut Game, ChosenTargets)>,
     },
 }
 
-pub struct Targets{
-    num:NonZeroU32,//Ensure there is always at least 1 target, or
-    //this clause shouldn't be chosen 
-    valid:fn(&Game, Entity) -> bool
+pub struct Targets {
+    num: NonZeroU32, //Ensure there is always at least 1 target, or
+    //this clause shouldn't be chosen
+    valid: Arc<dyn Fn(&Game, Entity) -> bool + Send + Sync>,
 }
-pub struct ChosenTargets{
-    valid:fn(&Game, Entity) -> bool,
-    targets:HashSet<Entity>,
+pub struct ChosenTargets {
+    valid: Arc<dyn Fn(&Game, Entity) -> bool + Send + Sync>,
+    targets: HashSet<Entity>,
 }

@@ -1,4 +1,4 @@
-use crate::game::*;
+use crate::{game::*, spellabil::SpellAbilBuilder};
 
 pub enum Layer {
     OneA, //Copiable effects (Copy, As ETB,)
@@ -41,9 +41,11 @@ impl Game {
     fn layer_zero(&mut self) {
         for (ent, _zone) in self.ents_and_zones() {
             let mut builder = None;
+            //Rebuild from database
             if let Ok(core) = self.ents.get::<EntCore>(ent) {
                 builder = Some((self.db.layers_builder(&core.name), core.owner));
             }
+            //Set it's controller as its owner
             if let Some((mut builder, owner)) = builder {
                 let _ = self.ents.insert(ent, builder.build());
                 let _ = self.ents.insert_one(ent, owner);
@@ -51,6 +53,19 @@ impl Game {
         }
     }
     fn layer_four(&mut self) {
-        for ent in self.battlefield.clone().into_iter() {}
+        for (ent, zone) in self.ents_and_zones() {
+            if zone == Zone::Battlefield {
+                let _: Result<()> = try {
+                    let subtypes = self.ents.get::<HashSet<Subtype>>(ent)?;
+                    let mut abils = self.ents.get_mut::<Vec<Ability>>(ent)?;
+                    if subtypes.contains(&Subtype::Plains) {
+                        abils.push({
+
+                        });
+                    }
+                };
+            }
+        }
     }
 }
+

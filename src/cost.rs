@@ -1,13 +1,18 @@
-use crate::game::Color;
+use crate::mana::{Color, ManaCostSymbol};
 use crate::game::Game;
 use crate::player::Player;
-use anyhow::{bail, Result};
+use anyhow::{bail, Result, Error};
 use hecs::Entity;
 
+/*
+!!!!!!!!!TODO
+Fix this to check that the cost obligations are
+fulfilled by the supplied mana. This should enable
+hybrid mana with ease 
+*/
 #[derive(Clone, Debug)]
 pub enum Cost {
-    Generic,
-    Color(Color),
+    Mana(ManaCostSymbol),
     Selftap,
 }
 
@@ -28,31 +33,9 @@ impl Cost {
         payment: Entity,
     ) -> bool {
         match self {
-            Cost::Generic => {
-                if let Ok(player) = game.ents.get::<Player>(controller) {
-                    //Handle prevention effects
-                    player.mana_pool.contains(&payment)
-                } else {
-                    false
-                }
-            }
-            Cost::Color(color) => {
-                if let Ok(player) = game.ents.get::<Player>(controller) {
-                    //Handle prevention effects
-                    if let Some(mana) = player.mana_pool.get(&payment) {
-                        if let Ok(poolcolor) = game.ents.get::<Color>(*mana) {
-                            //Handle prevention effects/restrictions here!
-                            *color == *poolcolor
-                        } else {
-                            false
-                        }
-                    } else {
-                        false
-                    }
-                } else {
-                    false
-                }
-            }
+            &Cost::Mana(symbol)=>{
+                true
+            },
             Cost::Selftap => {
                 //Similarly handle prevention effects here!
                 if source == payment {
@@ -75,7 +58,7 @@ impl Cost {
             bail!("Invalid payment!");
         }
         match self {
-            Cost::Generic | Cost::Color(_) => {
+            Cost::Mana(symbol) => {
                 if let Ok(mut player) = game.ents.get_mut::<Player>(controller) {
                     //TODO Handle prevention effects/restrictions here!
                     if player.mana_pool.remove(&payment) {

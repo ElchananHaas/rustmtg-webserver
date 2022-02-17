@@ -102,37 +102,7 @@ impl Game {
                     self.subphase(&mut results, &mut events, subphase).await;
                 }
                 Event::Phase { phase } => {
-                    self.phase = Some(phase);
-                    self.subphase = None;
-                    match phase {
-                        Phase::Begin => {
-                            self.subphases
-                                .extend([Subphase::Untap, Subphase::Upkeep, Subphase::Draw].iter());
-                        }
-                        Phase::FirstMain => {
-                            self.cycle_priority().await;
-                        }
-                        Phase::Combat => {
-                            self.subphases.extend(
-                                [
-                                    Subphase::BeginCombat,
-                                    Subphase::Attackers,
-                                    Subphase::Blockers,
-                                    Subphase::FirstStrikeDamage,
-                                    Subphase::Damage,
-                                    Subphase::EndCombat,
-                                ]
-                                .iter(),
-                            );
-                        }
-                        Phase::SecondMain => {
-                            self.cycle_priority().await;
-                        }
-                        Phase::Ending => {
-                            self.subphases
-                                .extend([Subphase::EndStep, Subphase::Cleanup].iter());
-                        }
-                    }
+                    self.phase(&mut events, phase).await;
                 }
                 //Handle already being tapped as prevention effect
                 Event::Tap { ent } => {
@@ -201,6 +171,39 @@ impl Game {
             }
         }
     }
+    async fn phase(&mut self, _events: &mut Vec<TagEvent>, phase: Phase) {
+        self.phase = Some(phase);
+        self.subphase = None;
+        match phase {
+            Phase::Begin => {
+                self.subphases
+                    .extend([Subphase::Untap, Subphase::Upkeep, Subphase::Draw].iter());
+            }
+            Phase::FirstMain => {
+                self.cycle_priority().await;
+            }
+            Phase::Combat => {
+                self.subphases.extend(
+                    [
+                        Subphase::BeginCombat,
+                        Subphase::Attackers,
+                        Subphase::Blockers,
+                        Subphase::FirstStrikeDamage,
+                        Subphase::Damage,
+                        Subphase::EndCombat,
+                    ]
+                    .iter(),
+                );
+            }
+            Phase::SecondMain => {
+                self.cycle_priority().await;
+            }
+            Phase::Ending => {
+                self.subphases
+                    .extend([Subphase::EndStep, Subphase::Cleanup].iter());
+            }
+        }
+    }
     async fn zonemove(
         &mut self,
         results: &mut Vec<EventResult>,
@@ -264,13 +267,6 @@ impl Game {
                     | Zone::Graveyard => {
                         core.known.extend(self.turn_order.iter());
                         //Public zone
-                        //Morphs **are** publicly known, just some attributes of face
-                        //down cards will not be known. I may need a second
-                        //structure for face down cards to track who knows what they are
-                        //For MDFC and TDFC cards this isn't an issue because
-                        //from one side, you know what the other side is.
-                        //For moving to the hand or library
-                        //it retains it's current knowledge set
                         //Shuffling will destroy all knowledge of cards in the library
                     }
                     Zone::Hand => {
@@ -500,7 +496,6 @@ impl Game {
             let _ = self.ents.remove_one::<Damage>(perm);
             let _ = self.ents.remove_one::<DealtCombatDamage>(perm);
         }
-        //TODO clean up damage
         //TODO handle priority being given in cleanup step by giving
         //another cleanup step afterwards
     }

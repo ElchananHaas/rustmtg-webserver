@@ -1,3 +1,4 @@
+use crate::cost::Cost;
 use crate::spellabil::Clause;
 use crate::spellabil::KeywordAbility;
 //use crate::carddb::CardBuilder;
@@ -13,10 +14,9 @@ pub struct Ability {
     pub keyword: Option<KeywordAbility>,
     pub abil: AbilityType,
 }
-pub enum AbilityType{
-    Activated{
-        effect:Vec<Clause>
-    },
+pub enum AbilityType {
+    Activated { cost:Cost,
+        effect: Vec<Clause> },
     Triggered(TriggeredAbility),
     Static(StaticAbility),
 }

@@ -1,7 +1,7 @@
 use crate::ability::Ability;
 use crate::components::{CardName, EntCore, ImageUrl, Subtype, Supertypes, Types, PT};
 use crate::cost::Cost;
-use crate::game::Color;
+use crate::mana::{Color, mana_cost_string};
 use anyhow::{bail, Result};
 use hecs::{Entity, EntityBuilder, World};
 use serde::Deserialize;
@@ -145,31 +145,9 @@ impl CardBuilder {
         builder
     }
     pub fn mana_string(&mut self, coststr: &str) -> &mut Self {
-        let mut generic: i32 = 0;
-        for letter in coststr.chars() {
-            if letter.is_digit(10) {
-                generic *= 10;
-                //This should be safe bc/ these are hardcoded within the code
-                generic += i32::try_from(letter.to_digit(10).unwrap()).unwrap();
-            }
-            if letter == 'W' {
-                self.cost(Cost::Color(Color::White));
-            }
-            if letter == 'U' {
-                self.cost(Cost::Color(Color::Blue));
-            }
-            if letter == 'B' {
-                self.cost(Cost::Color(Color::Black));
-            }
-            if letter == 'R' {
-                self.cost(Cost::Color(Color::Red));
-            }
-            if letter == 'G' {
-                self.cost(Cost::Color(Color::Green));
-            }
-        }
-        for _ in 0..generic {
-            self.cost(Cost::Generic);
+        let costs=mana_cost_string(coststr);
+        for cost in costs{
+            self.costs.push(Cost::Mana(cost));
         }
         self
     }
@@ -241,6 +219,8 @@ impl CardBuilder {
         self
     }
     pub fn build(mut self) -> EntityBuilder {
+        //If there is no owner, it is called as a part of layers
+        //so don't overwrite its core
         if let Some(owner) = self.owner {
             self.builder.add(EntCore {
                 name: self.name,
@@ -249,14 +229,13 @@ impl CardBuilder {
                 owner,
             });
         }
-        if !self.abilities.is_empty() {
-            self.builder.add(self.abilities);
-        };
-        if !self.subtypes.is_empty() {
-            self.builder.add(self.subtypes);
-        };
+        //Add these even if empty to simplify later code,
+        //that can assume there presence
+        self.builder.add(self.abilities);
+        self.builder.add(self.subtypes);
         self.builder.add(self.types);
         self.builder.add(self.supertypes);
+        //Nonexistent costs are allowed, so don't blindly add these
         if !self.costs.is_empty() {
             self.builder.add(self.costs);
         };

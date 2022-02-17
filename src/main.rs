@@ -1,3 +1,4 @@
+#![feature(try_blocks)]
 use anyhow::Result;
 use hecs::Entity;
 use once_cell::sync::OnceCell;
@@ -15,6 +16,8 @@ mod event;
 mod game;
 mod player;
 mod spellabil;
+mod ability_db;
+mod mana;
 static CARDDB: OnceCell<carddb::CardDB> = OnceCell::new();
 static JS_UNKNOWN: OnceCell<Entity> = OnceCell::new();
 
