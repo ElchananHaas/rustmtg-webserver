@@ -6,6 +6,7 @@ use crate::components::{
     CardName, Controller, EntCore, Subtype, SummoningSickness, Tapped, Types, PT,
 };
 use crate::event::{DiscardCause, Event, EventResult, TagEvent};
+use crate::mana::{ManaCostSymbol, Color, Mana};
 use crate::player::{Player, PlayerCon, PlayerSerialHelper};
 use crate::spellabil::KeywordAbility;
 use anyhow::{bail, Result};
@@ -367,6 +368,25 @@ impl Game {
         discarded
         //TODO figure out which cards were discarded!
     }
+    pub async fn add_mana(&mut self,player:Entity,mana:ManaCostSymbol)->Result<Entity>{
+        let color:Color=match mana{
+            ManaCostSymbol::Black=>Color::Black,
+            ManaCostSymbol::Blue=>Color::Blue,
+            ManaCostSymbol::Green=>Color::Green,
+            ManaCostSymbol::Red=>Color::Red,
+            ManaCostSymbol::White=>Color::White,
+            ManaCostSymbol::Generic=>Color::Colorless,
+            ManaCostSymbol::Colorless=>Color::Colorless
+        };
+        {//If there is no player, avoid leaking memory by not spawining the mana
+            self.ents.get::<Player>(player)?;
+        }
+        //Handle snow mana later
+        let mana=self.ents.spawn((Mana(color),));
+        let mut player=self.ents.get_mut::<Player>(player)?;
+        player.mana_pool.insert(mana);
+        Ok(mana)
+    }
     pub fn players_creatures<'b>(&'b self, player: Entity) -> impl Iterator<Item = Entity> + 'b {
         self.all_creatures()
             .into_iter()
@@ -446,7 +466,6 @@ impl Game {
             }
         }
     }
-    //Cycles priority-This will need ALOT more work!
     pub async fn cycle_priority(&mut self) {
         self.place_abilities().await;
         for player in self.turn_order.clone() {
@@ -455,6 +474,7 @@ impl Game {
     }
     pub async fn grant_priority(&mut self, player: Entity) {
         self.layers();
+        //TODO actually grant priority
     }
     //Places abilities on the stack
     pub async fn place_abilities(&mut self) {
@@ -500,7 +520,7 @@ impl Game {
             false
         }
     }
-    //Allow cards to use get, bu not get_mut
+    //Allow cards to use get, but not get_mut
     pub fn get<'a, T: Component>(
         &'a self,
         ent: Entity,
@@ -517,6 +537,7 @@ impl Game {
         let _ = self.ents.insert_one(ent, abils);
     }
 }
+
 
 #[derive(Clone, Copy, Debug, Serialize, PartialEq)]
 #[allow(dead_code)] //allow dead code to reduce warnings noise on each variant

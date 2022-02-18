@@ -4,7 +4,7 @@ use hecs::Entity;
 
 use crate::{
     ability::{Ability, AbilityType},
-    game::Game, cost::Cost,
+    game::Game, cost::Cost, mana::{Color, ManaCostSymbol},
 };
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -44,7 +44,7 @@ impl SpellAbilBuilder {
         };
         res
     }
-    pub fn activated_ability(mut self, cost:Cost, mana_ability: bool) -> Ability {
+    pub fn activated_ability(mut self, cost:Vec<Cost>, mana_ability: bool) -> Ability {
         Ability {
             mana_ability,
             abil: AbilityType::Activated {
@@ -69,11 +69,19 @@ pub enum Clause {
 }
 
 pub enum ClauseEffect{
-
+    AddMana(Vec<ManaCostSymbol>)
 }
 impl ClauseEffect{
     pub async fn run(&self,game:&mut Game,ent:Entity){
-
+        match self{
+            Self::AddMana(manas)=>{
+                for mana in manas{
+                    if let Ok(controller)=game.get_controller(ent){
+                        let _=game.add_mana(controller,*mana).await;
+                    }
+                }
+            }
+        }
     }
 }
 pub enum TargetClauseEffect{

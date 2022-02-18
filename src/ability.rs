@@ -15,7 +15,7 @@ pub struct Ability {
     pub abil: AbilityType,
 }
 pub enum AbilityType {
-    Activated { cost:Cost,
+    Activated { cost:Vec<Cost>,
         effect: Vec<Clause> },
     Triggered(TriggeredAbility),
     Static(StaticAbility),

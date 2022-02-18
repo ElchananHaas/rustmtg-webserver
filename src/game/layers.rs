@@ -1,5 +1,6 @@
+use crate::mana::mana_cost_string;
 use crate::{game::*, spellabil::SpellAbilBuilder};
-
+use crate::ability_db::tap_for_mana;
 pub enum Layer {
     OneA, //Copiable effects (Copy, As ETB,)
     OneB, //Face down spells,permanents
@@ -59,9 +60,9 @@ impl Game {
                     let subtypes = self.ents.get::<HashSet<Subtype>>(ent)?;
                     let mut abils = self.ents.get_mut::<Vec<Ability>>(ent)?;
                     if subtypes.contains(&Subtype::Plains) {
-                        abils.push({
-
-                        });
+                        abils.push(
+                            tap_for_mana(vec![ManaCostSymbol::White])
+                        );
                     }
                 };
             }

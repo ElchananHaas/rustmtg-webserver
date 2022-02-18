@@ -5,8 +5,10 @@ pub enum Color {
     Black,
     Red,
     Green,
-    Colorless,
+    Colorless
 }
+pub struct Mana(pub Color);
+
 //Add support for hybrid mana later
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ManaCostSymbol {
@@ -46,37 +48,6 @@ pub fn mana_cost_string(coststr: &str) -> Vec<ManaCostSymbol> {
     }
     for _ in 0..generic {
         res.push(ManaCostSymbol::Generic);
-    }
-    res
-}
-
-pub fn mana_gen_string(coststr: &str) -> Vec<Color> {
-    let mut generic: i32 = 0;
-    let mut res=Vec::new();
-    for letter in coststr.chars() {
-        if letter.is_digit(10) {
-            generic *= 10;
-            //This should be safe bc/ these are hardcoded within the code
-            generic += i32::try_from(letter.to_digit(10).unwrap()).unwrap();
-        }
-        if letter == 'W' {
-            res.push(Color::White);
-        }
-        if letter == 'U' {
-            res.push(Color::Blue);
-        }
-        if letter == 'B' {
-            res.push(Color::Black);
-        }
-        if letter == 'R' {
-            res.push(Color::Red);
-        }
-        if letter == 'G' {
-            res.push(Color::Green);
-        }
-    }
-    for _ in 0..generic {
-        res.push(Color::Colorless);
     }
     res
 }
