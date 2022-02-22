@@ -1,15 +1,15 @@
 use crate::components::EntCore;
-use crate::entities::{PlayerId, EntId, CardId};
-use crate::mana::{Color, ManaCostSymbol};
+use crate::entities::{CardId, EntId, PlayerId};
 use crate::game::Game;
+use crate::mana::{Color, ManaCostSymbol};
 use crate::player::Player;
-use anyhow::{bail, Result, Error};
+use anyhow::{bail, Error, Result};
 
 /*
 !!!!!!!!!TODO
 Fix this to check that the cost obligations are
 fulfilled by the supplied mana. This should enable
-hybrid mana with ease 
+hybrid mana with ease
 */
 #[derive(Clone, Debug)]
 pub enum Cost {
@@ -34,9 +34,7 @@ impl Cost {
         payment: EntId,
     ) -> bool {
         match self {
-            &Cost::Mana(symbol)=>{
-                true
-            },
+            &Cost::Mana(symbol) => true,
             Cost::Selftap => {
                 //Similarly handle prevention effects here!
                 if source == payment {
@@ -65,7 +63,7 @@ impl Cost {
                     if player.mana_pool.remove(&payment) {
                         Some(payment)
                     } else {
-                       None
+                        None
                     }
                 } else {
                     None

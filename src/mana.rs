@@ -5,7 +5,7 @@ pub enum Color {
     Black,
     Red,
     Green,
-    Colorless
+    Colorless,
 }
 pub struct Mana(pub Color);
 
@@ -23,7 +23,7 @@ pub enum ManaCostSymbol {
 
 pub fn mana_cost_string(coststr: &str) -> Vec<ManaCostSymbol> {
     let mut generic: i32 = 0;
-    let mut res=Vec::new();
+    let mut res = Vec::new();
     for letter in coststr.chars() {
         if letter.is_digit(10) {
             generic *= 10;

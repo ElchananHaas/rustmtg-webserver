@@ -1,6 +1,6 @@
+use crate::ability_db::tap_for_mana;
 use crate::mana::mana_cost_string;
 use crate::{game::*, spellabil::SpellAbilBuilder};
-use crate::ability_db::tap_for_mana;
 pub enum Layer {
     OneA, //Copiable effects (Copy, As ETB,)
     OneB, //Face down spells,permanents
@@ -66,4 +66,3 @@ impl Game {
         }
     }
 }
-

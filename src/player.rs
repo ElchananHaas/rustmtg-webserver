@@ -1,17 +1,18 @@
+use crate::carddb::CardBuildType;
 use crate::components::EntCore;
-use crate::JS_UNKNOWN;
-use crate::entities::PlayerId;
+use crate::entities::{CardId, ManaId, PlayerId, EntId};
+use crate::game::Cards;
 use anyhow::{bail, Result};
 //derivative::Derivative, work around rust-analyzer bug for now
 use derivative::*;
 use futures::{SinkExt, StreamExt};
-use hecs::{Entity, World};
 use serde::de::DeserializeOwned;
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
 use serde_derive::Serialize;
 use std::cell::RefCell;
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
+use std::ops::RangeBounds;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::time::sleep;
@@ -22,68 +23,66 @@ use warp::ws::WebSocket;
 pub struct Player {
     pub name: String,
     pub life: i32,
-    pub library: RefCell<Vec<Entity>>,
-    pub hand: RefCell<HashSet<Entity>>,
-    pub mana_pool: RefCell<HashSet<Entity>>,
-    pub graveyard: RefCell<Vec<Entity>>,
-    pub lost: bool,
-    pub won: bool,
+    pub library: RefCell<Vec<CardId>>,
+    pub hand: RefCell<HashSet<CardId>>,
+    pub mana_pool: RefCell<HashSet<ManaId>>,
+    pub graveyard: RefCell<Vec<CardId>>,
     pub max_handsize: usize,
     #[derivative(Debug = "ignore")]
     pub player_con: PlayerCon,
 }
 
+#[derive(Serialize)]
+pub struct PlayerView<'a> {
+    pub name: &'a str,
+    pub life: i32,
+    pub library: Vec<Option<CardId>>,
+    pub hand: HashSet<Option<CardId>>,
+    pub graveyard: &'a RefCell<Vec<CardId>>,
+    pub mana_pool: &'a RefCell<HashSet<ManaId>>,
+    pub max_handsize: usize,
+}
+fn view_t<T>(cards: &Cards, r: impl Iterator<Item = CardId>, pl: PlayerId) -> T {
+    r.map(|id| {
+        cards
+            .get(id)
+            .map(|ent| {
+                if ent.known_to.contains(&pl) {
+                    Some(ent)
+                } else {
+                    None
+                }
+            })
+            .flatten()
+    })
+    .collect::<T>()
+}
 impl Player {
-    fn serialize_view<S>(
-        &self,
-        serializer: S,
-        ents: &World,
-        player: Entity,
-    ) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut ser = serializer.serialize_struct("player", 8)?;
-        let mut deckview = Vec::new();
-        let library=self.library.borrow();
-        for card in *library{
-            let core = ents.get::<EntCore>(*card).expect("All cards need a core");
-            if core.known.contains(&player) {
-                deckview.push(*card);
-            } else {
-                deckview.push(*JS_UNKNOWN.get().unwrap());
-            }
+    fn view(&self, cards: &Cards, player: PlayerId) -> PlayerView {
+        let libview = view_t::<Vec<Option<CardId>>>(cards, *self.library.borrow().iter(), player);
+        let handview = view_t::<HashSet<Option<CardId>>>(cards, *self.hand.borrow().iter(), player);
+        PlayerView {
+            name: &self.name,
+            life: self.life,
+            library: libview,
+            hand: handview,
+            graveyard: &self.graveyard,
+            mana_pool: &self.mana_pool,
+            max_handsize: self.max_handsize,
         }
-        let mut handview = Vec::new();
-        for card in &self.hand {
-            let core = ents.get::<EntCore>(*card).expect("All cards need a core");
-            if core.known.contains(&player) {
-                handview.push(*card);
-            } else {
-                handview.push(*JS_UNKNOWN.get().unwrap());
-            }
-        }
-        ser.serialize_field("deck", &deckview)?;
-        ser.serialize_field("hand", &handview)?;
-        ser.serialize_field("name", &self.name)?;
-        ser.serialize_field("mana_pool", &self.mana_pool)?;
-        ser.serialize_field("graveyard", &self.graveyard)?;
-        ser.serialize_field("life", &self.life)?;
-        ser.serialize_field("won", &self.won)?;
-        ser.serialize_field("lost", &self.lost)?;
-        ser.end()
     }
+
     pub async fn send_state(&mut self, buffer: Vec<u8>) -> Result<()> {
         self.player_con.send_state(buffer).await
     }
     //Select n entities from a set
     pub async fn ask_user_selectn(
         &self,
-        ents: &HashSet<Entity>,
+        ents: &HashSet<EntId>,
         min: i32,
         max: i32,
         reason: AskReason,
-    ) -> HashSet<Entity> {
+    ) -> HashSet<EntId> {
         let query = AskUser {
             asktype: AskType::SelectN {
                 ents: ents.clone(),
@@ -93,7 +92,7 @@ impl Player {
             reason,
         };
         loop {
-            let response = self.player_con.ask_user::<HashSet<Entity>>(&query).await;
+            let response = self.player_con.ask_user::<HashSet<EntId>>(&query).await;
             if response.len() < min.try_into().unwrap() || response.len() > max.try_into().unwrap()
             {
                 continue;
@@ -107,12 +106,12 @@ impl Player {
     //or the list of creatures each blocker is blocking
     pub async fn ask_user_pair(
         &self,
-        a: Vec<Entity>,
-        b: Vec<Entity>,
+        a: Vec<CardId>,
+        b: Vec<CardId>,
         //Min and max number of choices
         num_choices: Vec<(usize, usize)>,
         reason: AskReason,
-    ) -> Vec<Vec<Entity>> {
+    ) -> Vec<Vec<CardId>> {
         let query = AskUser {
             asktype: AskType::PairAB {
                 a: a.clone(),
@@ -122,7 +121,7 @@ impl Player {
             reason,
         };
         'outer: loop {
-            let response = self.player_con.ask_user::<Vec<Vec<Entity>>>(&query).await;
+            let response = self.player_con.ask_user::<Vec<Vec<CardId>>>(&query).await;
             if response.len() != a.len() {
                 continue 'outer;
             }
@@ -135,27 +134,13 @@ impl Player {
                 if row.len() < num_choices[i].0 || row.len() > num_choices[i].1 {
                     continue 'outer;
                 }
-                let as_set = row.iter().map(|x| *x).collect::<HashSet<Entity>>();
+                let as_set = row.iter().map(|x| *x).collect::<HashSet<CardId>>();
                 if row.len() != as_set.len() {
                     continue 'outer;
                 }
             }
             return response;
         }
-    }
-}
-pub struct PlayerSerialHelper<'a, 'b> {
-    pub viewpoint: Entity,
-    pub player: &'a Player,
-    pub world: &'b World,
-}
-impl<'a, 'b> Serialize for PlayerSerialHelper<'a, 'b> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        self.player
-            .serialize_view(serializer, &self.world, self.viewpoint)
     }
 }
 
@@ -165,15 +150,15 @@ pub struct AskUser {
     asktype: AskType,
 }
 #[derive(Clone, Debug, Serialize)]
-pub enum AskType {
+pub enum AskType{
     SelectN {
-        ents: HashSet<Entity>,
+        ents: HashSet<EntId>,
         min: i32,
         max: i32,
     },
     PairAB {
-        a: Vec<Entity>,
-        b: Vec<Entity>,
+        a: Vec<CardId>,
+        b: Vec<CardId>,
         num_choices: Vec<(usize, usize)>,
     },
 }

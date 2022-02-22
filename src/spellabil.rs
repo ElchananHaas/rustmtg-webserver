@@ -1,10 +1,11 @@
 use std::{collections::HashSet, fmt, num::NonZeroU32, sync::Arc};
 
-use hecs::Entity;
 
 use crate::{
     ability::{Ability, AbilityType},
-    game::Game, cost::Cost, mana::{Color, ManaCostSymbol},
+    cost::Cost,
+    game::Game,
+    mana::{Color, ManaCostSymbol}, entities::CardId,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -28,11 +29,7 @@ impl SpellAbilBuilder {
         self.clauses.push(Clause::Effect { effect });
         self
     }
-    pub fn target_clause(
-        &mut self,
-        targets: Targets,
-        effect: TargetClauseEffect,
-    ) -> &mut Self {
+    pub fn target_clause(&mut self, targets: Targets, effect: TargetClauseEffect) -> &mut Self {
         self.clauses.push(Clause::Target { targets, effect });
         self
     }
@@ -44,7 +41,7 @@ impl SpellAbilBuilder {
         };
         res
     }
-    pub fn activated_ability(mut self, cost:Vec<Cost>, mana_ability: bool) -> Ability {
+    pub fn activated_ability(mut self, cost: Vec<Cost>, mana_ability: bool) -> Ability {
         Ability {
             mana_ability,
             abil: AbilityType::Activated {
@@ -59,8 +56,8 @@ impl SpellAbilBuilder {
     }
 }
 pub enum Clause {
-    Effect{
-        effect: ClauseEffect
+    Effect {
+        effect: ClauseEffect,
     },
     Target {
         targets: Targets,
@@ -68,35 +65,31 @@ pub enum Clause {
     },
 }
 
-pub enum ClauseEffect{
-    AddMana(Vec<ManaCostSymbol>)
+pub enum ClauseEffect {
+    AddMana(Vec<ManaCostSymbol>),
 }
-impl ClauseEffect{
-    pub async fn run(&self,game:&mut Game,ent:Entity){
-        match self{
-            Self::AddMana(manas)=>{
-                for mana in manas{
-                    if let Ok(controller)=game.get_controller(ent){
-                        let _=game.add_mana(controller,*mana).await;
+impl ClauseEffect {
+    pub async fn run(&self, game: &mut Game, ent: CardId) {
+        match self {
+            Self::AddMana(manas) => {
+                for mana in manas {
+                    if let Ok(controller) = game.get_controller(ent) {
+                        let _ = game.add_mana(controller, *mana).await;
                     }
                 }
             }
         }
     }
 }
-pub enum TargetClauseEffect{
-
-}
-impl TargetClauseEffect{
-    pub async fn run(&self,game:&mut Game,ent:Entity){
-        
-    }
+pub enum TargetClauseEffect {}
+impl TargetClauseEffect {
+    pub async fn run(&self, game: &mut Game, ent: CardId) {}
 }
 
 pub enum ChosenClause {
     Effect {
         //The entity that this clause is a part of
-        effect: Arc<dyn Fn(&mut Game, Entity)>,
+        effect: Arc<dyn Fn(&mut Game, CardId)>,
     },
     Target {
         targets: ChosenTargets,
@@ -107,9 +100,9 @@ pub enum ChosenClause {
 pub struct Targets {
     num: NonZeroU32, //Ensure there is always at least 1 target, or
     //this clause shouldn't be chosen
-    valid: Arc<dyn Fn(&Game, Entity) -> bool + Send + Sync>,
+    valid: Arc<dyn Fn(&Game, CardId) -> bool + Send + Sync>,
 }
 pub struct ChosenTargets {
-    valid: Arc<dyn Fn(&Game, Entity) -> bool + Send + Sync>,
-    targets: HashSet<Entity>,
+    valid: Arc<dyn Fn(&Game, CardId) -> bool + Send + Sync>,
+    targets: HashSet<CardId>,
 }

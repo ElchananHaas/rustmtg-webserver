@@ -1,7 +1,7 @@
 use crate::ability::Ability;
 use crate::components::{CardName, EntCore, ImageUrl, Subtype, Supertypes, Types, PT};
 use crate::cost::Cost;
-use crate::mana::{Color, mana_cost_string};
+use crate::mana::{mana_cost_string, Color};
 use anyhow::{bail, Result};
 use serde::Deserialize;
 use serde_derive::Deserialize;
@@ -144,8 +144,8 @@ impl CardBuilder {
         builder
     }
     pub fn mana_string(&mut self, coststr: &str) -> &mut Self {
-        let costs=mana_cost_string(coststr);
-        for cost in costs{
+        let costs = mana_cost_string(coststr);
+        for cost in costs {
             self.costs.push(Cost::Mana(cost));
         }
         self

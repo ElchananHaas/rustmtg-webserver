@@ -1,16 +1,14 @@
-use crate::AppendableMap::{EntMap};
 use crate::ability::Ability;
-use crate::card_entities::{PT, CardEnt};
+use crate::card_entities::{CardEnt, PT};
 use crate::carddb::CardDB;
 use crate::components::{Attacking, Blocked, Blocking, Damage};
-use crate::components::{
-    CardName, Controller, EntCore, Subtype, SummoningSickness, Tapped,
-};
-use crate::entities::{PlayerId, CardId};
+use crate::components::{CardName, Controller, EntCore, Subtype, SummoningSickness, Tapped};
+use crate::entities::{CardId, PlayerId, ManaId, TargetId};
 use crate::event::{DiscardCause, Event, EventResult, TagEvent};
-use crate::mana::{ManaCostSymbol, Color, Mana};
-use crate::player::{Player, PlayerCon, PlayerSerialHelper};
+use crate::mana::{Color, Mana, ManaCostSymbol};
+use crate::player::{Player, PlayerCon};
 use crate::spellabil::KeywordAbility;
+use crate::AppendableMap::EntMap;
 use anyhow::{bail, Result};
 use futures::future;
 use rand::seq::SliceRandom;
@@ -20,22 +18,21 @@ use serde::{Serialize, Serializer};
 use serde_derive::Serialize;
 use serde_json;
 use std::cmp::max;
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashSet, VecDeque, HashMap};
 use warp::ws::WebSocket;
 mod handle_event;
 mod layers;
 
-
-pub type Players=EntMap<PlayerId,Player>;
-pub type Cards=EntMap<CardId,CardEnt>;
+pub type Players = EntMap<PlayerId, Player>;
+pub type Cards = EntMap<CardId, CardEnt>;
 pub struct GameBuilder {
-    players:Players,
-    cards:Cards,
+    players: Players,
+    cards: Cards,
     turn_order: Vec<PlayerId>,
     active_player: Option<PlayerId>,
 }
 //Implement debug trait!
-#[derive(Serialize)]
+#[derive(Serialize,Clone)]
 pub struct Game {
     #[serde(skip_serializing)]
     pub players: Players,
@@ -56,20 +53,12 @@ pub struct Game {
     #[serde(skip_serializing)]
     db: &'static CardDB,
     #[serde(skip_serializing)]
-    backup: Option<BackupGame>,
+    backup: Option<Box<Game>>,
     #[serde(skip_serializing)]
     rng: rand::rngs::StdRng, //Store the RNG to allow for deterministic replay
                              //if I choose to implement it
 }
 
-pub struct BackupGame {
-    pub players: EntMap<PlayerId,Player>,
-    pub cards: EntMap<CardId,CardEnt>,
-    pub battlefield: HashSet<CardId>,
-    pub exile: HashSet<CardId>,
-    pub command: HashSet<CardId>,
-    pub stack: Vec<CardId>,
-}
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub enum GameOutcome {
     Ongoing,
@@ -100,8 +89,6 @@ impl GameBuilder {
             life: 20,
             mana_pool: HashSet::new(),
             graveyard: Vec::new(),
-            lost: false,
-            won: false,
             library: Vec::new(),
             max_handsize: 7,
             player_con: PlayerCon::new(player_con),
@@ -150,34 +137,11 @@ impl GameBuilder {
         })
     }
 }
-//This structure serializes a game from the view of
-//the player for sending to the client
-struct CardSerializer<'a> {
-    viewpoint: PlayerId,
-    cards: &'a Cards,
-}
-struct PlayerSerializer<'a> {
-    viewpoint: PlayerId,
-    players: &'a Players,
-}
-
 
 //This is a helper struct for game serialization because
 //the function takes a mutable context,
 //so serialize needs to be implemented on a different struct
 
-impl<'a> Serialize for CardSerializer<'a> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut map = serializer.serialize_map(None)?;
-        for (k,v) in self.cards.ser_view(){
-            map.serialize_entry(k, v)?;
-        }
-        map.end()
-    }
-}
 impl Game {
     pub async fn run(&mut self) -> GameOutcome {
         for player in self.turn_order.clone() {
@@ -224,15 +188,22 @@ impl Game {
         let _results = future::join_all(state_futures).await;
     }
     async fn send_state_player(&self, player: PlayerId) -> Result<()> {
-        let serial_context = GameSerialContext {
-            player: player,
-            ents: &self.ents,
-        };
+        let mut card_views = HashMap::new();
+        for (card_id, card_ref) in self.cards.view() {
+            if card_ref.known_to.contains(&player) {
+                card_views.insert(card_id,card_ref);
+            } 
+        }
+        let mut player_views = HashMap::new();
+        for (player_id, player_ref) in self.players.view() {
+            let view=player_ref.view(&self.cards, player);
+            player_views.insert(player_id,view );
+        }
         let mut buffer = Vec::new();
         {
             let cursor = std::io::Cursor::new(&mut buffer);
             let mut json_serial = serde_json::Serializer::new(cursor);
-            let added_context = ("GameState", player, serial_context, self);
+            let added_context = ("GameState", player, card_views,player_views, self);
             added_context.serialize(&mut json_serial)?;
         }
         if let Ok(mut pl) = self.ents.get_mut::<Player>(player) {
@@ -245,47 +216,35 @@ impl Game {
     //backs the game up in case a spell casting or attacker/blocker
     //declaration fails. Only backs up what is needed
     pub fn backup(&mut self) {
-        let mut bup = BackupGame {
-            ents: World::new(),
-            battlefield: self.battlefield.clone(),
-            exile: self.exile.clone(),
-            command: self.command.clone(),
-            stack: self.stack.clone(),
-        };
-        copy_simple_comp(&mut self.ents, &mut bup.ents);
-        self.backup = Some(bup);
+        if self.backup.is_some(){
+            self.backup=None;
+        }
+        self.backup = Some(self.clone());
     }
     pub fn restore(&mut self) {
-        let bup = (self.backup)
-            .as_ref()
-            .expect("Game must already be backed up!");
-        self.battlefield = bup.battlefield.clone();
-        self.exile = bup.exile.clone();
-        self.command = bup.command.clone();
-        self.stack = bup.stack.clone();
-        clear_comp(&mut self.ents);
-        copy_simple_comp(&bup.ents, &mut self.ents);
+        let backup=self.backup.unwrap();
+        self=&*backup;
     }
     //Taps an entity, returns if it was sucsessfully tapped
-    pub async fn tap(&mut self, ent: Entity) -> bool {
+    pub async fn tap(&mut self, ent: CardId) -> bool {
         self.handle_event(Event::Tap { ent })
             .await
             .contains(&EventResult::Tap(ent))
     }
     //Taps an entity, returns if it was sucsessfully tapped
-    pub async fn untap(&mut self, ent: Entity) -> bool {
+    pub async fn untap(&mut self, ent: CardId) -> bool {
         self.handle_event(Event::Untap { ent })
             .await
             .contains(&EventResult::Untap(ent))
     }
     //draws a card, returns the entities drawn
-    pub async fn draw(&mut self, player: Entity) -> Vec<Entity> {
+    pub async fn draw(&mut self, player: PlayerId) -> Vec<CardId> {
         let res = self.handle_event(Event::Draw { player }).await;
         let drawn = Vec::new();
         drawn
         //TODO figure out which cards were drawn!
     }
-    pub fn shuffle(&mut self, player: Entity) {
+    pub fn shuffle(&mut self, player: PlayerId) {
         if let Ok(mut pl) = self.ents.get_mut::<Player>(player) {
             pl.library.shuffle(&mut self.rng);
         }
@@ -293,10 +252,10 @@ impl Game {
     //discard cards, returns discarded cards
     pub async fn discard(
         &mut self,
-        player: Entity,
-        card: Entity,
+        player: PlayerId,
+        card: CardId,
         cause: DiscardCause,
-    ) -> Vec<Entity> {
+    ) -> Vec<CardId> {
         let res = self
             .handle_event(Event::Discard {
                 player,
@@ -308,31 +267,32 @@ impl Game {
         discarded
         //TODO figure out which cards were discarded!
     }
-    pub async fn add_mana(&mut self,player:Entity,mana:ManaCostSymbol)->Result<Entity>{
-        let color:Color=match mana{
-            ManaCostSymbol::Black=>Color::Black,
-            ManaCostSymbol::Blue=>Color::Blue,
-            ManaCostSymbol::Green=>Color::Green,
-            ManaCostSymbol::Red=>Color::Red,
-            ManaCostSymbol::White=>Color::White,
-            ManaCostSymbol::Generic=>Color::Colorless,
-            ManaCostSymbol::Colorless=>Color::Colorless
+    pub async fn add_mana(&mut self, player: PlayerId, mana: ManaCostSymbol) -> Result<ManaId> {
+        let color: Color = match mana {
+            ManaCostSymbol::Black => Color::Black,
+            ManaCostSymbol::Blue => Color::Blue,
+            ManaCostSymbol::Green => Color::Green,
+            ManaCostSymbol::Red => Color::Red,
+            ManaCostSymbol::White => Color::White,
+            ManaCostSymbol::Generic => Color::Colorless,
+            ManaCostSymbol::Colorless => Color::Colorless,
         };
-        {//If there is no player, avoid leaking memory by not spawining the mana
+        {
+            //If there is no player, avoid leaking memory by not spawining the mana
             self.ents.get::<Player>(player)?;
         }
         // Handle snow mana later
-        let mana=self.ents.spawn((Mana(color),));
-        let mut player=self.ents.get_mut::<Player>(player)?;
+        let mana = self.ents.spawn((Mana(color),));
+        let mut player = self.ents.get_mut::<Player>(player)?;
         player.mana_pool.insert(mana);
         Ok(mana)
     }
-    pub fn players_creatures<'b>(&'b self, player: Entity) -> impl Iterator<Item = Entity> + 'b {
+    pub fn players_creatures<'b>(&'b self, player: PlayerId) -> impl Iterator<Item = CardId> + 'b {
         self.all_creatures()
             .into_iter()
             .filter(move |&ent| self.get_controller(ent).ok() == Some(player))
     }
-    pub fn ents_and_zones(&self) -> Vec<(Entity, Zone)> {
+    pub fn ents_and_zones(&self) -> Vec<(CardId, Zone)> {
         let mut res = Vec::new();
         res.extend(
             self.battlefield
@@ -358,13 +318,13 @@ impl Game {
         }
         res
     }
-    pub fn players_permanents<'b>(&'b self, player: Entity) -> impl Iterator<Item = Entity> + 'b {
+    pub fn players_permanents<'b>(&'b self, player: PlayerId) -> impl Iterator<Item = CardId> + 'b {
         self.battlefield
             .clone()
             .into_iter()
             .filter(move |&ent| self.get_controller(ent).ok() == Some(player))
     }
-    pub fn all_creatures<'b>(&'b self) -> impl Iterator<Item = Entity> + 'b {
+    pub fn all_creatures<'b>(&'b self) -> impl Iterator<Item = CardId> + 'b {
         self.battlefield.clone().into_iter().filter(move |&ent| {
             if let Ok(types) = self.ents.get::<Types>(ent) {
                 types.creature
@@ -375,7 +335,7 @@ impl Game {
     }
     //Can this creature tap to be declared an attacker or to activate an ability?
     //Doesn't include prevention effects, just if it can tap w/o them
-    pub fn can_tap(&self, ent: Entity) -> bool {
+    pub fn can_tap(&self, ent: CardId) -> bool {
         if self.ents.get::<Tapped>(ent).is_ok() {
             return false;
         }
@@ -395,7 +355,7 @@ impl Game {
     }
     //takes in a card or permanent, returns it's controller or owner if the controller
     //is unavailable
-    pub fn get_controller(&self, ent: Entity) -> Result<Entity> {
+    pub fn get_controller(&self, ent: CardId) -> Option<PlayerId> {
         if let Ok(controller) = self.ents.get::<Controller>(ent) {
             Ok(controller.0)
         } else {
@@ -412,7 +372,7 @@ impl Game {
             self.grant_priority(player).await;
         }
     }
-    pub async fn grant_priority(&mut self, player: Entity) {
+    pub async fn grant_priority(&mut self, player: PlayerId) {
         self.layers();
         //TODO actually grant priority
     }
@@ -420,11 +380,11 @@ impl Game {
     pub async fn place_abilities(&mut self) {
         //TODO make this do something!
     }
-    pub fn attack_targets(&self, player: Entity) -> Vec<Entity> {
+    pub fn attack_targets(&self, player: PlayerId) -> Vec<TargetId> {
         self.opponents(player)
     }
 
-    pub fn opponents(&self, player: Entity) -> Vec<Entity> {
+    pub fn opponents(&self, player: PlayerId) -> Vec<PlayerId> {
         self.turn_order
             .iter()
             .filter_map(|x| if *x == player { Some(*x) } else { None })
@@ -433,16 +393,13 @@ impl Game {
     //Checks if this attacking arragment is legal.
     //Does nothing for now, will need to implement legality
     //checking before I can make any progress on that
-    pub fn attackers_legal(&self, attackers: &Vec<Entity>, targets: &Vec<Entity>) -> bool {
+    pub fn attackers_legal(&self, attackers: &Vec<CardId>, targets: &Vec<TargetId>) -> bool {
         true
     }
-    pub fn blocks_legal(&self, blockers: &Vec<Entity>, blocked: &Vec<Vec<Entity>>) -> bool {
+    pub fn blocks_legal(&self, blockers: &Vec<CardId>, blocked: &Vec<Vec<CardId>>) -> bool {
         true
     }
-    fn has<T: Component>(&self, ent: Entity) -> bool {
-        self.ents.get::<T>(ent).is_ok()
-    }
-    pub fn remaining_lethal(&self, ent: Entity) -> Option<i32> {
+    pub fn remaining_lethal(&self, ent: CardId) -> Option<i32> {
         if let Ok(pt) = self.ents.get::<PT>(ent) {
             if let Ok(damage) = self.ents.get::<Damage>(ent) {
                 Some(max(pt.toughness - damage.0, 0))
@@ -453,21 +410,14 @@ impl Game {
             None
         }
     }
-    pub fn has_keyword(&self, ent: Entity, keyword: KeywordAbility) -> bool {
+    pub fn has_keyword(&self, ent: CardId, keyword: KeywordAbility) -> bool {
         if let Ok(abilities) = self.ents.get::<Vec<Ability>>(ent) {
             !abilities.iter().any(|abil| abil.keyword() == Some(keyword))
         } else {
             false
         }
     }
-    //Allow cards to use get, but not get_mut
-    pub fn get<'a, T: Component>(
-        &'a self,
-        ent: Entity,
-    ) -> Result<hecs::Ref<'a, T>, hecs::ComponentError> {
-        self.ents.get::<T>(ent)
-    }
-    pub fn add_ability(&self, ent: Entity, ability: Ability) {
+    pub fn add_ability(&self, ent: CardId, ability: Ability) {
         //Assume the builder has already added a vector of abilities
         if let Ok(mut abils) = self.ents.get_mut::<Vec<Ability>>(ent) {
             abils.push(ability);
@@ -475,7 +425,6 @@ impl Game {
         }
     }
 }
-
 
 #[derive(Clone, Copy, Debug, Serialize, PartialEq)]
 #[allow(dead_code)] //allow dead code to reduce warnings noise on each variant

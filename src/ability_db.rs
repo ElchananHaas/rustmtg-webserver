@@ -1,13 +1,20 @@
 //A list of a large number of ability/clause creating functions
 
-use std::sync::Arc;
-use anyhow::{ Result};
+use anyhow::Result;
 use hecs::Entity;
+use std::sync::Arc;
 
-use crate::{ability::Ability, spellabil::{SpellAbilBuilder, ClauseEffect}, player::Player, game::Game, cost::Cost, mana::{mana_cost_string, ManaCostSymbol}};
+use crate::{
+    ability::Ability,
+    cost::Cost,
+    game::Game,
+    mana::{mana_cost_string, ManaCostSymbol},
+    player::Player,
+    spellabil::{ClauseEffect, SpellAbilBuilder},
+};
 
-pub fn tap_for_mana(mana:Vec<ManaCostSymbol>)->Ability{
+pub fn tap_for_mana(mana: Vec<ManaCostSymbol>) -> Ability {
     let mut builder = SpellAbilBuilder::new();
     builder.clause(ClauseEffect::AddMana(mana));
-    builder.activated_ability(vec![Cost::Selftap],true)
+    builder.activated_ability(vec![Cost::Selftap], true)
 }
