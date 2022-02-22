@@ -32,35 +32,13 @@ pub struct EntCore {
 }
 #[derive(Clone, Debug, Serialize)]
 pub struct ImageUrl(pub String);
-#[derive(Clone, Copy, Debug, Serialize)]
-pub struct PT {
-    pub power: i32,
-    pub toughness: i32,
-}
-
 #[derive(Clone, Copy, Debug, Serialize, PartialEq)]
 pub struct Controller(pub Entity);
 
-#[derive(Clone, Copy, Debug, Default, Serialize)]
-pub struct Types {
-    //order this way for nice display
-    pub artifact: bool,
-    pub enchantment: bool,
-    pub planeswalker: bool,
-    pub instant: bool,
-    pub sorcery: bool,
-    pub land: bool,
-    pub creature: bool,
-}
-#[derive(Clone, Copy, Debug, Default, Serialize)]
-pub struct Supertypes {
-    //order this way for nice display
-    pub basic: bool,
-    pub legendary: bool,
-    pub snow: bool,
-}
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize)]
 #[allow(dead_code)] //allow dead code to reduce warnings noise on each variant
+#[repr(C)]
+#[derive(variant_count::VariantCount)]
 pub enum Subtype {
     Advisor,
     Aetherborn,

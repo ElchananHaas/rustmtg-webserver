@@ -1,19 +1,18 @@
+use crate::AppendableMap::{AppendableMap, self};
 use crate::ability::Ability;
+use crate::card_entities::{PT, CardEnt};
 use crate::carddb::CardDB;
-use crate::components::Supertypes;
-use crate::components::{Attacking, Blocked, Blocking, Damage, ImageUrl};
+use crate::components::{Attacking, Blocked, Blocking, Damage};
 use crate::components::{
-    CardName, Controller, EntCore, Subtype, SummoningSickness, Tapped, Types, PT,
+    CardName, Controller, EntCore, Subtype, SummoningSickness, Tapped,
 };
+use crate::entities::{PlayerId, CardId};
 use crate::event::{DiscardCause, Event, EventResult, TagEvent};
 use crate::mana::{ManaCostSymbol, Color, Mana};
 use crate::player::{Player, PlayerCon, PlayerSerialHelper};
 use crate::spellabil::KeywordAbility;
 use anyhow::{bail, Result};
 use futures::future;
-use hecs::serialize::row::{try_serialize, SerializeContext};
-use hecs::Component;
-use hecs::{Entity, EntityBuilder, EntityRef, World};
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
 use serde::{Serialize, Serializer};
@@ -58,12 +57,12 @@ macro_rules! backuprestore {
 backuprestore! {Tapped,Player,Attacking,Blocked,Blocking}
 
 pub struct GameBuilder {
-    ents: World,
-    turn_order: Vec<Entity>,
-    active_player: Option<Entity>,
+    players:AppendableMap<PlayerId,Player>,
+    cards:AppendableMap<CardId,CardEnt>,
+    turn_order: Vec<PlayerId>,
+    active_player: Option<PlayerId>,
 }
 //Implement debug trait!
-//Implement clone trait???
 #[derive(Serialize)]
 pub struct Game {
     #[serde(skip_serializing)]
@@ -381,7 +380,7 @@ impl Game {
         {//If there is no player, avoid leaking memory by not spawining the mana
             self.ents.get::<Player>(player)?;
         }
-        //Handle snow mana later
+        // Handle snow mana later
         let mana=self.ents.spawn((Mana(color),));
         let mut player=self.ents.get_mut::<Player>(player)?;
         player.mana_pool.insert(mana);
@@ -527,14 +526,12 @@ impl Game {
     ) -> Result<hecs::Ref<'a, T>, hecs::ComponentError> {
         self.ents.get::<T>(ent)
     }
-    pub fn add_ability(&mut self, ent: Entity, ability: Ability) {
+    pub fn add_ability(&self, ent: Entity, ability: Ability) {
+        //Assume the builder has already added a vector of abilities
         if let Ok(mut abils) = self.ents.get_mut::<Vec<Ability>>(ent) {
             abils.push(ability);
             return;
         }
-        //If it has no abilities, so create a vec of them
-        let abils = vec![ability];
-        let _ = self.ents.insert_one(ent, abils);
     }
 }
 

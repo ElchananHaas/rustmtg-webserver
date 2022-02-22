@@ -18,6 +18,9 @@ mod player;
 mod spellabil;
 mod ability_db;
 mod mana;
+mod card_entities;
+mod entities;
+mod AppendableMap;
 static CARDDB: OnceCell<carddb::CardDB> = OnceCell::new();
 static JS_UNKNOWN: OnceCell<Entity> = OnceCell::new();
 

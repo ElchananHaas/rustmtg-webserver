@@ -58,11 +58,8 @@ impl Game {
             if zone == Zone::Battlefield {
                 let _: Result<()> = try {
                     let subtypes = self.ents.get::<HashSet<Subtype>>(ent)?;
-                    let mut abils = self.ents.get_mut::<Vec<Ability>>(ent)?;
                     if subtypes.contains(&Subtype::Plains) {
-                        abils.push(
-                            tap_for_mana(vec![ManaCostSymbol::White])
-                        );
+                        self.add_ability(ent, tap_for_mana(vec![ManaCostSymbol::White]));
                     }
                 };
             }

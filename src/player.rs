@@ -1,5 +1,6 @@
 use crate::components::EntCore;
 use crate::JS_UNKNOWN;
+use crate::entities::PlayerId;
 use anyhow::{bail, Result};
 //derivative::Derivative, work around rust-analyzer bug for now
 use derivative::*;
@@ -9,7 +10,8 @@ use serde::de::DeserializeOwned;
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
 use serde_derive::Serialize;
-use std::collections::HashSet;
+use std::cell::RefCell;
+use std::collections::{HashSet, HashMap};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::time::sleep;
@@ -20,10 +22,10 @@ use warp::ws::WebSocket;
 pub struct Player {
     pub name: String,
     pub life: i32,
-    pub library: Vec<Entity>,
-    pub hand: HashSet<Entity>,
-    pub mana_pool: HashSet<Entity>,
-    pub graveyard: Vec<Entity>,
+    pub library: RefCell<Vec<Entity>>,
+    pub hand: RefCell<HashSet<Entity>>,
+    pub mana_pool: RefCell<HashSet<Entity>>,
+    pub graveyard: RefCell<Vec<Entity>>,
     pub lost: bool,
     pub won: bool,
     pub max_handsize: usize,
@@ -43,7 +45,8 @@ impl Player {
     {
         let mut ser = serializer.serialize_struct("player", 8)?;
         let mut deckview = Vec::new();
-        for card in &self.library {
+        let library=self.library.borrow();
+        for card in *library{
             let core = ents.get::<EntCore>(*card).expect("All cards need a core");
             if core.known.contains(&player) {
                 deckview.push(*card);
