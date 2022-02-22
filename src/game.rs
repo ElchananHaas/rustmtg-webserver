@@ -1,4 +1,4 @@
-use crate::AppendableMap::{AppendableMap, self};
+use crate::AppendableMap::{EntMap};
 use crate::ability::Ability;
 use crate::card_entities::{PT, CardEnt};
 use crate::carddb::CardDB;
@@ -15,6 +15,7 @@ use anyhow::{bail, Result};
 use futures::future;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
+use serde::ser::SerializeMap;
 use serde::{Serialize, Serializer};
 use serde_derive::Serialize;
 use serde_json;
@@ -24,41 +25,12 @@ use warp::ws::WebSocket;
 mod handle_event;
 mod layers;
 
-macro_rules! backuprestore {
-    ( $( $x:ty ),* ) => {
-        fn copy_simple_comp(source:& World,dest:&mut World){
-            let mut build=EntityBuilder::new();
-            for entref in source.iter(){
-            $(
-                if let Some(comp)=entref.get::<$x>(){
-                    build.add((*comp).clone());
-                }
-            )*
-            let entid=entref.entity();
-            if(dest.contains(entid)){
-                let _=dest.insert(entid,build.build());
-            }else{
-                dest.spawn_at(entid, build.build());
-            }
-            }
-        }
-        fn clear_comp(ents: &mut World){
-            let entids=ents.iter().map(|entref| entref.entity() ).collect::<Vec<Entity>>();
-            for id in entids{
-            $(
-                let _=ents.remove_one::<$x>(id);
-            )*
-            }
-        }
 
-    };
-}
-
-backuprestore! {Tapped,Player,Attacking,Blocked,Blocking}
-
+pub type Players=EntMap<PlayerId,Player>;
+pub type Cards=EntMap<CardId,CardEnt>;
 pub struct GameBuilder {
-    players:AppendableMap<PlayerId,Player>,
-    cards:AppendableMap<CardId,CardEnt>,
+    players:Players,
+    cards:Cards,
     turn_order: Vec<PlayerId>,
     active_player: Option<PlayerId>,
 }
@@ -66,18 +38,20 @@ pub struct GameBuilder {
 #[derive(Serialize)]
 pub struct Game {
     #[serde(skip_serializing)]
-    pub ents: World,
-    pub battlefield: HashSet<Entity>,
-    pub exile: HashSet<Entity>,
-    pub command: HashSet<Entity>,
-    pub stack: Vec<Entity>,
-    pub turn_order: Vec<Entity>,
-    pub extra_turns: VecDeque<Entity>,
+    pub players: Players,
+    #[serde(skip_serializing)]
+    pub cards: Cards,
+    pub battlefield: HashSet<CardId>,
+    pub exile: HashSet<CardId>,
+    pub command: HashSet<CardId>,
+    pub stack: Vec<CardId>,
+    pub turn_order: Vec<PlayerId>,
+    pub extra_turns: VecDeque<PlayerId>,
     pub phases: VecDeque<Phase>,
     pub subphases: VecDeque<Subphase>,
     pub phase: Option<Phase>,
     pub subphase: Option<Subphase>,
-    pub active_player: Entity,
+    pub active_player: PlayerId,
     pub outcome: GameOutcome,
     #[serde(skip_serializing)]
     db: &'static CardDB,
@@ -89,22 +63,24 @@ pub struct Game {
 }
 
 pub struct BackupGame {
-    pub ents: World,
-    pub battlefield: HashSet<Entity>,
-    pub exile: HashSet<Entity>,
-    pub command: HashSet<Entity>,
-    pub stack: Vec<Entity>,
+    pub players: EntMap<PlayerId,Player>,
+    pub cards: EntMap<CardId,CardEnt>,
+    pub battlefield: HashSet<CardId>,
+    pub exile: HashSet<CardId>,
+    pub command: HashSet<CardId>,
+    pub stack: Vec<CardId>,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub enum GameOutcome {
     Ongoing,
     Tie,
-    Winner(Entity),
+    Winner(PlayerId),
 }
 impl GameBuilder {
     pub fn new() -> Self {
         GameBuilder {
-            ents: World::new(),
+            players: Players::new(),
+            cards: Cards::new(),
             turn_order: Vec::new(),
             active_player: None,
         }
@@ -116,7 +92,7 @@ impl GameBuilder {
         db: &CardDB,
         card_names: &Vec<String>,
         player_con: WebSocket,
-    ) -> Result<Entity> {
+    ) -> Result<PlayerId> {
         let mut cards = Vec::new();
         let player = Player {
             name: name.to_owned(),
@@ -130,9 +106,9 @@ impl GameBuilder {
             max_handsize: 7,
             player_con: PlayerCon::new(player_con),
         };
-        let player: Entity = self.ents.spawn((player,));
+        let player_id: PlayerId = self.ents.spawn((player,));
         for cardname in card_names {
-            let card: Entity = db.spawn_card(&mut self.ents, &cardname, player);
+            let card: CardId = db.spawn_card(&mut self.ents, &cardname, player);
             cards.push(card);
         }
         //Now that the deck has been constructed, set the players deck
@@ -154,7 +130,8 @@ impl GameBuilder {
             bail!("Game needs at least two players in initialization")
         };
         Ok(Game {
-            ents: self.ents,
+            players: self.players,
+            cards: self.cards,
             battlefield: HashSet::new(),
             exile: HashSet::new(),
             command: HashSet::new(),
@@ -175,66 +152,30 @@ impl GameBuilder {
 }
 //This structure serializes a game from the view of
 //the player for sending to the client
-struct GameSerializer<'a> {
-    player: Entity,
-    ents: &'a World,
+struct CardSerializer<'a> {
+    viewpoint: PlayerId,
+    cards: &'a Cards,
 }
-impl<'a> SerializeContext for GameSerializer<'a> {
-    fn serialize_entity<S>(&mut self, entity: EntityRef<'_>, map: &mut S) -> Result<(), S::Error>
-    where
-        S: serde::ser::SerializeMap,
-    {
-        let toshow = match entity.get::<EntCore>() {
-            Some(core) => core.known.contains(&self.player),
-            None => true,
-        };
-        if toshow {
-            try_serialize::<SummoningSickness, _, _>(&entity, "summoning_sickness", map)?;
-            try_serialize::<Tapped, _, _>(&entity, "tapped", map)?;
-            try_serialize::<CardName, _, _>(&entity, "name", map)?;
-            try_serialize::<EntCore, _, _>(&entity, "base_identity", map)?;
-            try_serialize::<PT, _, _>(&entity, "pt", map)?;
-            try_serialize::<Types, _, _>(&entity, "types", map)?;
-            try_serialize::<HashSet<Subtype>, _, _>(&entity, "subtypes", map)?;
-            try_serialize::<Damage, _, _>(&entity, "damage", map)?;
-            try_serialize::<Attacking, _, _>(&entity, "attacking", map)?;
-            try_serialize::<Blocking, _, _>(&entity, "blocking", map)?;
-            try_serialize::<Blocked, _, _>(&entity, "blocked", map)?;
-            try_serialize::<Supertypes, _, _>(&entity, "supertypes", map)?;
-            try_serialize::<Controller, _, _>(&entity, "controller", map)?;
-            //Save this until I can serialize just the cutout
-            //Because the rest is dynamic
-            //try_serialize::<ImageUrl, _, _>(&entity, "image_url", map)?;
-        }
-        if let Some(pl) = entity.get::<Player>() {
-            let helper = PlayerSerialHelper {
-                viewpoint: self.player,
-                player: &pl,
-                world: self.ents,
-            };
-            map.serialize_entry("player", &helper)?;
-        }
-        Ok(())
-    }
+struct PlayerSerializer<'a> {
+    viewpoint: PlayerId,
+    players: &'a Players,
 }
+
+
 //This is a helper struct for game serialization because
 //the function takes a mutable context,
 //so serialize needs to be implemented on a different struct
-struct GameSerialContext<'a> {
-    player: Entity,
-    ents: &'a World,
-}
 
-impl<'a> Serialize for GameSerialContext<'a> {
+impl<'a> Serialize for CardSerializer<'a> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        let mut context = GameSerializer {
-            player: self.player,
-            ents: self.ents,
-        };
-        hecs::serialize::row::serialize(&self.ents, &mut context, serializer)
+        let mut map = serializer.serialize_map(None)?;
+        for (k,v) in self.cards.ser_view(){
+            map.serialize_entry(k, v)?;
+        }
+        map.end()
     }
 }
 impl Game {
@@ -282,7 +223,7 @@ impl Game {
         }
         let _results = future::join_all(state_futures).await;
     }
-    async fn send_state_player(&self, player: Entity) -> Result<()> {
+    async fn send_state_player(&self, player: PlayerId) -> Result<()> {
         let serial_context = GameSerialContext {
             player: player,
             ents: &self.ents,

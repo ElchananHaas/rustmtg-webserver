@@ -1,14 +1,14 @@
 use std::{collections::HashMap, hash::Hash, cell::{RefCell, Cell}, num::NonZeroU64};
 
 
-pub struct AppendableMap<K,V> where K:Copy+Hash+Eq+From<NonZeroU64>{
+pub struct EntMap<K,V> where K:Copy+Hash+Eq+From<NonZeroU64>{
     ents:HashMap<K,V>,
     appends:Vec<(K,Box<V>)>,
     count:Cell<NonZeroU64>,
 }
 const ARENA_CAP:usize=8;
 
-impl<K,V> AppendableMap<K,V> where K:Copy+Hash+Eq+From<NonZeroU64>{
+impl<K,V> EntMap<K,V> where K:Copy+Hash+Eq+From<NonZeroU64>{
     pub fn new()->Self{
         Self{
             ents:HashMap::new(),

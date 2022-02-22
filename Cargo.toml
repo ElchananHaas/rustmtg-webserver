@@ -7,7 +7,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-hecs = {version="0.7.1",features= ["row-serialize"]} 
 anyhow = "1.0.51"
 strum_macros = "0.23.1"
 if_chain = "1.0.2"

@@ -2,16 +2,17 @@ use std::{num::NonZeroU64, cell::{RefCell, Cell}, collections::{HashSet, HashMap
 use bitvec::{BitArr, array::BitArray};
 use serde_derive::Serialize;
 
-use crate::{entities::{CardId, EntId, PlayerId}, components::Subtype};
+use crate::{entities::{CardId, TargetId, PlayerId}, components::Subtype};
 
 
 
+#[derive(Serialize)]
 pub struct CardEnt{//Holds a card, token or embalem
     summoning_sickness:bool,
     pub damaged:u64,
     pub tapped:bool,
     dealt_combat_damage:bool,//Has this dealt combat damage this turn (First strike, double strike)
-    pub attacking:Option<EntId>,//Is this attacking a player of planeswalker
+    pub attacking:Option<TargetId>,//Is this attacking a player of planeswalker
     pub blocked:RefCell<Vec<CardId>>,
     pub blocking:RefCell<Vec<CardId>>,
     pub name:&'static str,

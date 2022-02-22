@@ -1,8 +1,9 @@
+use crate::components::EntCore;
+use crate::entities::{PlayerId, EntId, CardId};
 use crate::mana::{Color, ManaCostSymbol};
 use crate::game::Game;
 use crate::player::Player;
 use anyhow::{bail, Result, Error};
-use hecs::Entity;
 
 /*
 !!!!!!!!!TODO
@@ -28,9 +29,9 @@ impl Cost {
     pub fn valid_payment(
         &self,
         game: &Game,
-        source: Entity,
-        controller: Entity,
-        payment: Entity,
+        source: CardId,
+        controller: PlayerId,
+        payment: EntId,
     ) -> bool {
         match self {
             &Cost::Mana(symbol)=>{
@@ -50,10 +51,10 @@ impl Cost {
     pub async fn pay(
         &self,
         game: &mut Game,
-        source: Entity,
-        controller: Entity,
-        payment: Entity,
-    ) -> Result<Entity> {
+        source: CardId,
+        controller: PlayerId,
+        payment: EntId,
+    ) -> Option<EntId> {
         if !self.valid_payment(game, source, controller, payment) {
             bail!("Invalid payment!");
         }
@@ -62,18 +63,18 @@ impl Cost {
                 if let Ok(mut player) = game.ents.get_mut::<Player>(controller) {
                     //TODO Handle prevention effects/restrictions here!
                     if player.mana_pool.remove(&payment) {
-                        Ok(payment)
+                        Some(payment)
                     } else {
-                        bail!("Mana not present in pool!")
+                       None
                     }
                 } else {
-                    bail!("Player is gone!")
+                    None
                 }
             }
             Cost::Selftap => {
                 //Similarly handle prevention effects here!
                 game.tap(payment).await;
-                Ok(payment)
+                Some(payment)
             }
         }
     }

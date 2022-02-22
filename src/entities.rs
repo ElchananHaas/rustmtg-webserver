@@ -10,11 +10,16 @@ pub struct CardId(NonZeroU64);//a reference to a card, spell token or permanent
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash, Serialize)]
 pub struct ManaId(NonZeroU64);
 
-pub enum EntId{
+pub enum TargetId{
     PlayerId,
     CardId,
 }
 
+pub enum EntId{
+    PlayerId,
+    CardId,
+    ManaId
+}
 impl From<NonZeroU64> for PlayerId{
     fn from(x:NonZeroU64) -> Self{
         Self(x)

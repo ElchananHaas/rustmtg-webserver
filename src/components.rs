@@ -1,5 +1,4 @@
 //This file stores varius components that entities may
-use hecs::Entity;
 use serde_derive::Serialize;
 use std::collections::HashSet;
 

@@ -1,11 +1,12 @@
 #![feature(try_blocks)]
 use anyhow::Result;
-use hecs::Entity;
 use once_cell::sync::OnceCell;
 use std::mem;
 use std::sync::{Arc, Mutex};
 use warp::ws::WebSocket;
 use warp::Filter;
+
+use crate::entities::PlayerId;
 //use actix_files::NamedFile;
 //use actix_web::{HttpRequest, Result};
 mod ability;
@@ -22,15 +23,11 @@ mod card_entities;
 mod entities;
 mod AppendableMap;
 static CARDDB: OnceCell<carddb::CardDB> = OnceCell::new();
-static JS_UNKNOWN: OnceCell<Entity> = OnceCell::new();
 
 type Pairing = Arc<Mutex<Option<WebSocket>>>;
 #[tokio::main]
 async fn main() {
     CARDDB.set(carddb::CardDB::new()).unwrap();
-    JS_UNKNOWN
-        .set(Entity::from_bits(0x00000001FFFFFFFF).unwrap())
-        .unwrap();
     let pairer = Pairing::default();
     let pairer = warp::any().map(move || pairer.clone());
     let hello = warp::path!("hello" / String).map(|name| format!("Hello, {}!", name));
@@ -76,7 +73,7 @@ async fn launch_game(sockets: Vec<WebSocket>) -> Result<()> {
         .into_iter()
         .enumerate()
         .map(|(i, socket)| gamebuild.add_player(&format!("p{}", i), &db, &deck, socket))
-        .collect::<Result<Vec<Entity>>>()?;
+        .collect::<Result<Vec<PlayerId>>>()?;
     let mut game = gamebuild.build(&db)?;
     println!("Launching game!");
     game.run().await;
