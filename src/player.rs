@@ -1,5 +1,3 @@
-use crate::carddb::CardBuildType;
-use crate::components::EntCore;
 use crate::entities::{CardId, EntId, ManaId, PlayerId};
 use crate::game::Cards;
 use anyhow::{bail, Result};
@@ -7,13 +5,13 @@ use anyhow::{bail, Result};
 use derivative::*;
 use futures::{SinkExt, StreamExt};
 use serde::de::DeserializeOwned;
-use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
 use serde_derive::Serialize;
-use std::cell::RefCell;
+use tokio::sync::Mutex;
 use std::collections::{HashMap, HashSet};
 use std::ops::RangeBounds;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
+
 use std::time::Duration;
 use tokio::time::sleep;
 use warp::filters::ws::Message;
@@ -58,7 +56,7 @@ fn view_t<'a>(cards: &'a Cards, r: impl Iterator<Item = &'a CardId> + 'a, pl: Pl
 
 }
 impl Player {
-    fn view(&self, cards: &Cards, player: PlayerId) -> PlayerView {
+    pub fn view(&self, cards: &Cards, player: PlayerId) -> PlayerView {
         let libview = view_t(cards,self.library.iter(),player).collect::<Vec<_>>();
         let handview=view_t(cards,self.hand.iter(),player).collect::<HashSet<_>>();
         PlayerView {
@@ -72,7 +70,7 @@ impl Player {
         }
     }
 
-    pub async fn send_state(&mut self, buffer: Vec<u8>) -> Result<()> {
+    pub async fn send_state(&self, buffer: Vec<u8>) -> Result<()> {
         self.player_con.send_state(buffer).await
     }
     //Select n entities from a set
@@ -170,34 +168,20 @@ pub enum AskReason {
 }
 #[derive(Clone)]
 pub struct PlayerCon {
-    socket: Arc<Mutex<Option<WebSocket>>>,
+    socket: Arc<Mutex<WebSocket>>,
 }
 
 impl PlayerCon {
     pub fn new(socket: WebSocket) -> Self {
         PlayerCon {
-            socket: Arc::new(Mutex::new(Some(socket))),
+            socket: Arc::new(Mutex::new(socket)),
         }
     }
-    //There should be no contention on this lock,
-    //so just take the contents!
-    //Can actually be replaced with async lock, that wasn't the problem.
-    fn take_socket(&self) -> WebSocket {
-        let mut guard = self.socket.lock().unwrap();
-        let mut temp = None;
-        std::mem::swap(&mut temp, &mut *guard);
-        temp.unwrap()
-    }
-    fn restore_socket(&self, socket: WebSocket) {
-        let mut guard = self.socket.lock().unwrap();
-        let mut temp = Some(socket);
-        std::mem::swap(&mut temp, &mut *guard);
-    }
+
     //This function ensures the socket will be restored, even in the case of an error
     pub async fn ask_user<T: DeserializeOwned>(&self, query: &AskUser) -> T {
-        let mut socket = self.take_socket();
+        let mut socket = self.socket.lock().await;
         let res = self.ask_user_socket(query, &mut socket).await;
-        self.restore_socket(socket);
         res
     }
     async fn ask_user_socket<T: DeserializeOwned>(
@@ -240,13 +224,12 @@ impl PlayerCon {
             }
         }
     }
-    pub async fn send_state(&mut self, state: Vec<u8>) -> Result<()> {
-        let mut socket = self.take_socket();
+    pub async fn send_state(&self, state: Vec<u8>) -> Result<()> {
+        let mut socket = self.socket.lock().await;
         let res = self.send_state_socket(state, &mut socket).await;
-        self.restore_socket(socket);
         res
     }
-    async fn send_state_socket(&mut self, state: Vec<u8>, socket: &mut WebSocket) -> Result<()> {
+    async fn send_state_socket(&self, state: Vec<u8>, socket: &mut WebSocket) -> Result<()> {
         socket.send(Message::binary(state)).await?;
         Ok(())
     }

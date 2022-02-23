@@ -94,13 +94,13 @@ impl GameBuilder {
             max_handsize: 7,
             player_con: PlayerCon::new(player_con),
         };
-        let player_id: PlayerId = self.ents.spawn((player,));
+        let player: PlayerId = self.players.insert(player);
         for cardname in card_names {
             let card: CardId = db.spawn_card(&mut self.ents, &cardname, player);
             cards.push(card);
         }
         //Now that the deck has been constructed, set the players deck
-        self.ents.get_mut::<Player>(player).unwrap().library = cards;
+        self.players.get(player).unwrap().library=cards;
         self.turn_order.push(player);
         if self.active_player.is_none() {
             self.active_player = Some(player);
@@ -207,10 +207,9 @@ impl Game {
             let added_context = ("GameState", player, card_views, player_views, self);
             added_context.serialize(&mut json_serial)?;
         }
-        if let Ok(mut pl) = self.ents.get_mut::<Player>(player) {
+        if let Some( pl)=self.players.get(player){
             pl.send_state(buffer).await?;
         }
-
         Ok(())
     }
 
@@ -223,8 +222,7 @@ impl Game {
         self.backup = Some(Box::new(self.clone()));
     }
     pub fn restore(&mut self) {
-        let backup = self.backup.unwrap();
-        self = &*backup;
+        *self = *self.backup.unwrap();
     }
     //Taps an entity, returns if it was sucsessfully tapped
     pub async fn tap(&mut self, ent: CardId) -> bool {

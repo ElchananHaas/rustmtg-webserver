@@ -1,5 +1,6 @@
 use bitvec::{array::BitArray, BitArr};
 use serde_derive::Serialize;
+use serde::{Serialize, Serializer, ser::SerializeSeq};
 use std::{
     cell::{Cell, RefCell},
     collections::{HashMap, HashSet},
@@ -63,6 +64,25 @@ pub struct Subtypes {
     //Would probaboly be needed anyways for JS
     table: BitArr!(for Subtype::VARIANT_COUNT),
 }
+
+impl Serialize for Subtypes {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer{
+            let mut seq = serializer.serialize_seq(None)?;
+            for (i,bit) in self.table.iter().enumerate(){
+                if *bit{
+                    let i:u32=i.try_into().unwrap();
+                    let subtype:Subtype=unsafe{
+                        std::mem::transmute(i)
+                    };
+                    seq.serialize_element(&subtype)?;
+                }
+            }
+            seq.end()
+        }
+}
+
 impl Subtypes {
     pub fn new() -> Self {
         Subtypes {
