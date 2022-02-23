@@ -11,7 +11,7 @@ use crate::{
     entities::{CardId, PlayerId, TargetId},
 };
 
-#[derive(Serialize,Clone)]
+#[derive(Serialize, Clone)]
 pub struct CardEnt {
     //Holds a card, token or embalem
     summoning_sickness: bool,
@@ -19,8 +19,8 @@ pub struct CardEnt {
     pub tapped: bool,
     dealt_combat_damage: bool, //Has this dealt combat damage this turn (First strike, double strike)
     pub attacking: Option<TargetId>, //Is this attacking a player of planeswalker
-    pub blocked: RefCell<Vec<CardId>>,
-    pub blocking: RefCell<Vec<CardId>>,
+    pub blocked: Vec<CardId>,
+    pub blocking: Vec<CardId>,
     pub name: &'static str,
     pub owner: PlayerId,
     pub printed_name: String,

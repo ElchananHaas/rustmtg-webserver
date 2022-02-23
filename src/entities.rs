@@ -1,19 +1,19 @@
 use std::num::NonZeroU64;
 
-use serde_derive::Serialize;
+use serde_derive::{Serialize, Deserialize};
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash, Serialize)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash, Serialize, Deserialize)]
 pub struct PlayerId(NonZeroU64);
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash, Serialize)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash, Serialize, Deserialize)]
 pub struct CardId(NonZeroU64); //a reference to a card, spell token or permanent
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash, Serialize)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash, Serialize, Deserialize)]
 pub struct ManaId(NonZeroU64);
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash, Serialize)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash, Serialize, Deserialize)]
 pub enum TargetId {
     PlayerId,
     CardId,
 }
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash, Serialize)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash, Serialize, Deserialize)]
 pub enum EntId {
     PlayerId,
     CardId,

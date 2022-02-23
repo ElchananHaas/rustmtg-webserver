@@ -3,7 +3,7 @@ use crate::card_entities::{CardEnt, PT};
 use crate::carddb::CardDB;
 use crate::components::{Attacking, Blocked, Blocking, Damage};
 use crate::components::{CardName, Controller, EntCore, Subtype, SummoningSickness, Tapped};
-use crate::entities::{CardId, PlayerId, ManaId, TargetId};
+use crate::entities::{CardId, ManaId, PlayerId, TargetId};
 use crate::event::{DiscardCause, Event, EventResult, TagEvent};
 use crate::mana::{Color, Mana, ManaCostSymbol};
 use crate::player::{Player, PlayerCon};
@@ -17,8 +17,9 @@ use serde::ser::SerializeMap;
 use serde::{Serialize, Serializer};
 use serde_derive::Serialize;
 use serde_json;
+use std::cell::RefCell;
 use std::cmp::max;
-use std::collections::{HashSet, VecDeque, HashMap};
+use std::collections::{HashMap, HashSet, VecDeque};
 use warp::ws::WebSocket;
 mod handle_event;
 mod layers;
@@ -32,7 +33,7 @@ pub struct GameBuilder {
     active_player: Option<PlayerId>,
 }
 //Implement debug trait!
-#[derive(Serialize,Clone)]
+#[derive(Serialize, Clone)]
 pub struct Game {
     #[serde(skip_serializing)]
     pub players: Players,
@@ -191,19 +192,19 @@ impl Game {
         let mut card_views = HashMap::new();
         for (card_id, card_ref) in self.cards.view() {
             if card_ref.known_to.contains(&player) {
-                card_views.insert(card_id,card_ref);
-            } 
+                card_views.insert(card_id, card_ref);
+            }
         }
         let mut player_views = HashMap::new();
         for (player_id, player_ref) in self.players.view() {
-            let view=player_ref.view(&self.cards, player);
-            player_views.insert(player_id,view );
+            let view = player_ref.view(&self.cards, player);
+            player_views.insert(player_id, view);
         }
         let mut buffer = Vec::new();
         {
             let cursor = std::io::Cursor::new(&mut buffer);
             let mut json_serial = serde_json::Serializer::new(cursor);
-            let added_context = ("GameState", player, card_views,player_views, self);
+            let added_context = ("GameState", player, card_views, player_views, self);
             added_context.serialize(&mut json_serial)?;
         }
         if let Ok(mut pl) = self.ents.get_mut::<Player>(player) {
@@ -216,14 +217,14 @@ impl Game {
     //backs the game up in case a spell casting or attacker/blocker
     //declaration fails. Only backs up what is needed
     pub fn backup(&mut self) {
-        if self.backup.is_some(){
-            self.backup=None;
+        if self.backup.is_some() {
+            self.backup = None;
         }
-        self.backup = Some(self.clone());
+        self.backup = Some(Box::new(self.clone()));
     }
     pub fn restore(&mut self) {
-        let backup=self.backup.unwrap();
-        self=&*backup;
+        let backup = self.backup.unwrap();
+        self = &*backup;
     }
     //Taps an entity, returns if it was sucsessfully tapped
     pub async fn tap(&mut self, ent: CardId) -> bool {

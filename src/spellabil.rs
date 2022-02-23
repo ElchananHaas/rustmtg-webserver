@@ -1,11 +1,11 @@
 use std::{collections::HashSet, fmt, num::NonZeroU32, sync::Arc};
 
-
 use crate::{
     ability::{Ability, AbilityType},
     cost::Cost,
+    entities::CardId,
     game::Game,
-    mana::{Color, ManaCostSymbol}, entities::CardId,
+    mana::{Color, ManaCostSymbol},
 };
 
 #[derive(Clone, Copy, Debug, PartialEq)]

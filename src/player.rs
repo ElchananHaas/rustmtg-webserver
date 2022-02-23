@@ -1,6 +1,6 @@
 use crate::carddb::CardBuildType;
 use crate::components::EntCore;
-use crate::entities::{CardId, ManaId, PlayerId, EntId};
+use crate::entities::{CardId, EntId, ManaId, PlayerId};
 use crate::game::Cards;
 use anyhow::{bail, Result};
 //derivative::Derivative, work around rust-analyzer bug for now
@@ -23,10 +23,10 @@ use warp::ws::WebSocket;
 pub struct Player {
     pub name: String,
     pub life: i32,
-    pub library: RefCell<Vec<CardId>>,
-    pub hand: RefCell<HashSet<CardId>>,
-    pub mana_pool: RefCell<HashSet<ManaId>>,
-    pub graveyard: RefCell<Vec<CardId>>,
+    pub library: Vec<CardId>,
+    pub hand: HashSet<CardId>,
+    pub mana_pool: HashSet<ManaId>,
+    pub graveyard: Vec<CardId>,
     pub max_handsize: usize,
     #[derivative(Debug = "ignore")]
     pub player_con: PlayerCon,
@@ -38,29 +38,29 @@ pub struct PlayerView<'a> {
     pub life: i32,
     pub library: Vec<Option<CardId>>,
     pub hand: HashSet<Option<CardId>>,
-    pub graveyard: &'a RefCell<Vec<CardId>>,
-    pub mana_pool: &'a RefCell<HashSet<ManaId>>,
+    pub graveyard: &'a Vec<CardId>,
+    pub mana_pool: &'a HashSet<ManaId>,
     pub max_handsize: usize,
 }
-fn view_t<T>(cards: &Cards, r: impl Iterator<Item = CardId>, pl: PlayerId) -> T {
-    r.map(|id| {
+fn view_t<'a>(cards: &'a Cards, r: impl Iterator<Item = &'a CardId> + 'a, pl: PlayerId)->impl Iterator<Item=Option<CardId>> + 'a{
+    r.map(move |&id| {
         cards
             .get(id)
             .map(|ent| {
                 if ent.known_to.contains(&pl) {
-                    Some(ent)
+                    Some(id)
                 } else {
                     None
                 }
             })
             .flatten()
     })
-    .collect::<T>()
+
 }
 impl Player {
     fn view(&self, cards: &Cards, player: PlayerId) -> PlayerView {
-        let libview = view_t::<Vec<Option<CardId>>>(cards, *self.library.borrow().iter(), player);
-        let handview = view_t::<HashSet<Option<CardId>>>(cards, *self.hand.borrow().iter(), player);
+        let libview = view_t(cards,self.library.iter(),player).collect::<Vec<_>>();
+        let handview=view_t(cards,self.hand.iter(),player).collect::<HashSet<_>>();
         PlayerView {
             name: &self.name,
             life: self.life,
@@ -150,7 +150,7 @@ pub struct AskUser {
     asktype: AskType,
 }
 #[derive(Clone, Debug, Serialize)]
-pub enum AskType{
+pub enum AskType {
     SelectN {
         ents: HashSet<EntId>,
         min: i32,
