@@ -1,8 +1,7 @@
 use crate::ability::Ability;
 use crate::card_entities::{CardEnt, PT};
 use crate::carddb::CardDB;
-use crate::components::{Attacking, Blocked, Blocking, Damage};
-use crate::components::{CardName, Controller, EntCore, Subtype, SummoningSickness, Tapped};
+use crate::components::{Subtype};
 use crate::entities::{CardId, ManaId, PlayerId, TargetId};
 use crate::event::{DiscardCause, Event, EventResult, TagEvent};
 use crate::mana::{Color, Mana, ManaCostSymbol};
@@ -88,7 +87,7 @@ impl GameBuilder {
             name: name.to_owned(),
             hand: HashSet::new(),
             life: 20,
-            mana_pool: HashSet::new(),
+            mana_pool: EntMap::new(),
             graveyard: Vec::new(),
             library: Vec::new(),
             max_handsize: 7,
@@ -96,11 +95,11 @@ impl GameBuilder {
         };
         let player: PlayerId = self.players.insert(player);
         for cardname in card_names {
-            let card: CardId = db.spawn_card(&mut self.ents, &cardname, player);
+            let card: CardId = db.spawn_card(&mut self.cards, &cardname, player);
             cards.push(card);
         }
         //Now that the deck has been constructed, set the players deck
-        self.players.get(player).unwrap().library=cards;
+        self.players.get(player).unwrap().library = cards;
         self.turn_order.push(player);
         if self.active_player.is_none() {
             self.active_player = Some(player);
@@ -207,7 +206,7 @@ impl Game {
             let added_context = ("GameState", player, card_views, player_views, self);
             added_context.serialize(&mut json_serial)?;
         }
-        if let Some( pl)=self.players.get(player){
+        if let Some(pl) = self.players.get(player) {
             pl.send_state(buffer).await?;
         }
         Ok(())
@@ -244,7 +243,7 @@ impl Game {
         //TODO figure out which cards were drawn!
     }
     pub fn shuffle(&mut self, player: PlayerId) {
-        if let Ok(mut pl) = self.ents.get_mut::<Player>(player) {
+        if let Some(pl) = self.players.get(player) {
             pl.library.shuffle(&mut self.rng);
         }
     }
@@ -266,7 +265,7 @@ impl Game {
         discarded
         //TODO figure out which cards were discarded!
     }
-    pub async fn add_mana(&mut self, player: PlayerId, mana: ManaCostSymbol) -> Result<ManaId> {
+    pub async fn add_mana(&mut self, player: PlayerId, mana: ManaCostSymbol) -> Option<ManaId> {
         let color: Color = match mana {
             ManaCostSymbol::Black => Color::Black,
             ManaCostSymbol::Blue => Color::Blue,
@@ -276,20 +275,15 @@ impl Game {
             ManaCostSymbol::Generic => Color::Colorless,
             ManaCostSymbol::Colorless => Color::Colorless,
         };
-        {
-            //If there is no player, avoid leaking memory by not spawining the mana
-            self.ents.get::<Player>(player)?;
-        }
-        // Handle snow mana later
-        let mana = self.ents.spawn((Mana(color),));
-        let mut player = self.ents.get_mut::<Player>(player)?;
-        player.mana_pool.insert(mana);
-        Ok(mana)
+        let pl=self.players.get_mut(player)?;
+            let mana=Mana::new(color);
+            let id=pl.mana_pool.insert(mana);
+            Some(id)
     }
     pub fn players_creatures<'b>(&'b self, player: PlayerId) -> impl Iterator<Item = CardId> + 'b {
         self.all_creatures()
             .into_iter()
-            .filter(move |&ent| self.get_controller(ent).ok() == Some(player))
+            .filter(move |&ent| self.get_controller(ent) == Some(player))
     }
     pub fn ents_and_zones(&self) -> Vec<(CardId, Zone)> {
         let mut res = Vec::new();
@@ -303,7 +297,7 @@ impl Game {
         res.extend(self.exile.iter().cloned().map(|e| (e, Zone::Exile)));
         res.extend(self.command.iter().cloned().map(|e| (e, Zone::Command)));
         for player_id in self.turn_order.clone() {
-            if let Ok(player) = self.ents.get::<Player>(player_id) {
+            if let Some(player) = self.players.get(player_id) {
                 res.extend(player.hand.iter().cloned().map(|e| (e, Zone::Hand)));
                 res.extend(
                     player
@@ -321,49 +315,29 @@ impl Game {
         self.battlefield
             .clone()
             .into_iter()
-            .filter(move |&ent| self.get_controller(ent).ok() == Some(player))
+            .filter(move |&ent| self.get_controller(ent) == Some(player))
     }
     pub fn all_creatures<'b>(&'b self) -> impl Iterator<Item = CardId> + 'b {
         self.battlefield.clone().into_iter().filter(move |&ent| {
-            if let Ok(types) = self.ents.get::<Types>(ent) {
-                types.creature
-            } else {
-                false
-            }
+            self.cards.get(ent).filter(|&card|card.types.creature).is_some()
         })
     }
     //Can this creature tap to be declared an attacker or to activate an ability?
     //Doesn't include prevention effects, just if it can tap w/o them
     pub fn can_tap(&self, ent: CardId) -> bool {
-        if self.ents.get::<Tapped>(ent).is_ok() {
-            return false;
-        }
-        if let Ok(types) = self.ents.get::<Types>(ent) {
-            if types.creature {
-                if self.ents.get::<SummoningSickness>(ent).is_ok() {
-                    self.has_keyword(ent, KeywordAbility::Haste)
-                } else {
-                    true
-                }
-            } else {
-                true
-            }
-        } else {
+        if let Some(card)=self.cards.get(ent){
+            if card.tapped {return false;}
+            !card.types.creature || card.has_keyword(KeywordAbility::Haste) || !card.summoning_sickness
+        }else{
             false
         }
     }
     //takes in a card or permanent, returns it's controller or owner if the controller
     //is unavailable
     pub fn get_controller(&self, ent: CardId) -> Option<PlayerId> {
-        if let Ok(controller) = self.ents.get::<Controller>(ent) {
-            Ok(controller.0)
-        } else {
-            if let Ok(core) = self.ents.get::<EntCore>(ent) {
-                Ok(core.owner)
-            } else {
-                bail!("No controller or owner");
-            }
-        }
+        self.cards.get(ent).and_then(|card|
+            card.controller.or(Some(card.owner))
+        )
     }
     pub async fn cycle_priority(&mut self) {
         self.place_abilities().await;
@@ -380,7 +354,7 @@ impl Game {
         //TODO make this do something!
     }
     pub fn attack_targets(&self, player: PlayerId) -> Vec<TargetId> {
-        self.opponents(player)
+        self.opponents(player).iter().map(|pl| TargetId::Player(*pl)).collect::<Vec<_>>()
     }
 
     pub fn opponents(&self, player: PlayerId) -> Vec<PlayerId> {
@@ -398,29 +372,17 @@ impl Game {
     pub fn blocks_legal(&self, blockers: &Vec<CardId>, blocked: &Vec<Vec<CardId>>) -> bool {
         true
     }
-    pub fn remaining_lethal(&self, ent: CardId) -> Option<i32> {
-        if let Ok(pt) = self.ents.get::<PT>(ent) {
-            if let Ok(damage) = self.ents.get::<Damage>(ent) {
-                Some(max(pt.toughness - damage.0, 0))
-            } else {
-                Some(pt.toughness)
-            }
-        } else {
-            None
-        }
+    pub fn remaining_lethal(&self, ent: CardId) -> Option<u64> {
+        self.cards.get(ent).and_then(|card|
+            card.pt.map(|pt|
+                pt.toughness-card.damaged
+            )  
+        )
     }
-    pub fn has_keyword(&self, ent: CardId, keyword: KeywordAbility) -> bool {
-        if let Ok(abilities) = self.ents.get::<Vec<Ability>>(ent) {
-            !abilities.iter().any(|abil| abil.keyword() == Some(keyword))
-        } else {
-            false
-        }
-    }
-    pub fn add_ability(&self, ent: CardId, ability: Ability) {
+    pub fn add_ability(&mut self, ent: CardId, ability: Ability) {
         //Assume the builder has already added a vector of abilities
-        if let Ok(mut abils) = self.ents.get_mut::<Vec<Ability>>(ent) {
-            abils.push(ability);
-            return;
+        if let Some(ent)=self.cards.get_mut(ent){
+            ent.abilities.push(ability);
         }
     }
 }

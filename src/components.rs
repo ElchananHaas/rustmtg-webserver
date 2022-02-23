@@ -2,37 +2,6 @@
 use serde_derive::Serialize;
 use std::collections::HashSet;
 
-#[derive(Clone, Copy, Debug, Serialize, PartialEq)]
-pub struct Damage(pub i32);
-
-//Utility structure for figuring out if a creature can tap
-//Added the turn it ETBs or changes control
-#[derive(Clone, Copy, Debug, Serialize, PartialEq)]
-pub struct SummoningSickness();
-#[derive(Clone, Copy, Debug, Serialize, PartialEq)]
-pub struct Tapped();
-#[derive(Clone, Copy, Debug, Serialize, PartialEq)]
-pub struct DealtCombatDamage();
-#[derive(Clone, Copy, Debug, Serialize, PartialEq)]
-pub struct Attacking(pub Entity);
-#[derive(Clone, Debug, Serialize, PartialEq)]
-pub struct Blocked(pub Vec<Entity>);
-
-#[derive(Clone, Debug, Serialize, PartialEq)]
-pub struct Blocking(pub Vec<Entity>);
-#[derive(Clone, Debug, Serialize, PartialEq)]
-pub struct CardName(pub String);
-#[derive(Clone, Debug, Serialize)]
-pub struct EntCore {
-    pub owner: Entity,
-    pub name: String,
-    pub real_card: bool,
-    pub known: HashSet<Entity>,
-}
-#[derive(Clone, Debug, Serialize)]
-pub struct ImageUrl(pub String);
-#[derive(Clone, Copy, Debug, Serialize, PartialEq)]
-pub struct Controller(pub Entity);
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize)]
 #[allow(dead_code)] //allow dead code to reduce warnings noise on each variant

@@ -1,5 +1,4 @@
-use crate::game::{Phase, Subphase, Zone};
-use hecs::Entity;
+use crate::{game::{Phase, Subphase, Zone}, entities::{CardId, PlayerId, TargetId}};
 
 //An event tagged with replacement effects already applied to it
 #[derive(Clone, Debug)]
@@ -10,65 +9,65 @@ pub struct TagEvent {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum DiscardCause {
     GameInternal,
-    SpellAbility(Entity),
+    SpellAbility(CardId),
 }
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum DamageReason {
     Combat,
-    SpellAbility(Entity),
+    SpellAbility(CardId),
 }
 //This will be wrapped when resolving to prevent
 //replacement effects from triggering twice
 #[derive(Clone, Debug)]
 pub enum Event {
     Draw {
-        player: Entity,
+        player: PlayerId,
     },
     Damage {
         amount: i32,
-        target: Entity,
-        source: Entity,
+        target: TargetId,
+        source: CardId,
         reason: DamageReason,
     },
     Discard {
-        player: Entity,
-        card: Entity,
+        player: PlayerId,
+        card: CardId,
         cause: DiscardCause,
     },
     Block {
-        blocker: Entity,
+        blocker: CardId,
     },
     Blocked {
-        attacker: Entity,
+        attacker: CardId,
     },
     BlockedBy {
-        attacker: Entity,
-        blocker: Entity,
+        attacker: CardId,
+        blocker: CardId,
     },
     AttackUnblocked {
-        attacker: Entity,
+        attacker: CardId,
     },
     Cast {
-        player: Entity,
-        spell: Entity,
+        player: PlayerId,
+        spell: CardId,
     },
     Attack {
-        attackers: Vec<Entity>,
+        attackers: Vec<CardId>,
     },
     Activate {
-        controller: Entity,
-        ability: Entity,
+        controller: PlayerId,
+        ability: CardId,
     },
     MoveZones {
-        ent: Entity,
+        ent: CardId,
         origin: Zone,
         dest: Zone,
     },
     Lose {
-        player: Entity,
+        player: PlayerId,
     },
     Tap {
-        ent: Entity,
+        ent: CardId,
     },
     Subphase {
         subphase: Subphase,
@@ -78,22 +77,22 @@ pub enum Event {
     },
     Turn {
         extra: bool,
-        player: Entity,
+        player: PlayerId,
     },
     Untap {
-        ent: Entity,
+        ent: CardId,
     },
 }
 #[derive(Clone, Debug, PartialEq)]
 pub enum EventResult {
-    Draw(Entity),
-    Cast(Entity),
-    Activate(Entity),
+    Draw(CardId),
+    Cast(CardId),
+    Activate(CardId),
     MoveZones {
-        oldent: Entity,
-        newent: Entity,
+        oldent: CardId,
+        newent: CardId,
         dest: Zone,
     },
-    Tap(Entity),
-    Untap(Entity),
+    Tap(CardId),
+    Untap(CardId),
 }

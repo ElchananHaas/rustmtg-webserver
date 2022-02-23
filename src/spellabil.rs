@@ -1,5 +1,7 @@
 use std::{collections::HashSet, fmt, num::NonZeroU32, sync::Arc};
 
+use serde_derive::Serialize;
+
 use crate::{
     ability::{Ability, AbilityType},
     cost::Cost,
@@ -8,7 +10,7 @@ use crate::{
     mana::{Color, ManaCostSymbol},
 };
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub enum KeywordAbility {
     FirstStrike,
     Haste,
@@ -55,6 +57,7 @@ impl SpellAbilBuilder {
         self.clauses
     }
 }
+#[derive(Clone, Serialize)]
 pub enum Clause {
     Effect {
         effect: ClauseEffect,
@@ -64,7 +67,7 @@ pub enum Clause {
         effect: TargetClauseEffect,
     },
 }
-
+#[derive(Clone, Serialize)]
 pub enum ClauseEffect {
     AddMana(Vec<ManaCostSymbol>),
 }
@@ -73,7 +76,7 @@ impl ClauseEffect {
         match self {
             Self::AddMana(manas) => {
                 for mana in manas {
-                    if let Ok(controller) = game.get_controller(ent) {
+                    if let Some(controller) = game.get_controller(ent) {
                         let _ = game.add_mana(controller, *mana).await;
                     }
                 }
@@ -81,6 +84,7 @@ impl ClauseEffect {
         }
     }
 }
+#[derive(Clone, Serialize)]
 pub enum TargetClauseEffect {}
 impl TargetClauseEffect {
     pub async fn run(&self, game: &mut Game, ent: CardId) {}
@@ -96,13 +100,16 @@ pub enum ChosenClause {
         effect: Arc<dyn Fn(&mut Game, ChosenTargets)>,
     },
 }
-
+#[derive(Clone, Serialize)]
 pub struct Targets {
     num: NonZeroU32, //Ensure there is always at least 1 target, or
     //this clause shouldn't be chosen
+    #[serde(skip_serializing)]
     valid: Arc<dyn Fn(&Game, CardId) -> bool + Send + Sync>,
 }
+#[derive(Clone, Serialize)]
 pub struct ChosenTargets {
+    #[serde(skip_serializing)]
     valid: Arc<dyn Fn(&Game, CardId) -> bool + Send + Sync>,
     targets: HashSet<CardId>,
 }

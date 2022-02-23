@@ -1,4 +1,11 @@
-#[derive(Clone, Copy, Debug, PartialEq)]
+use std::sync::Arc;
+
+use serde::ser::SerializeMap;
+use serde_derive::Serialize;
+
+use crate::{entities::{CardId, ManaId}, game::Game, AppendableMap::EntMap};
+
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub enum Color {
     White,
     Blue,
@@ -7,10 +14,36 @@ pub enum Color {
     Green,
     Colorless,
 }
-pub struct Mana(pub Color);
+#[derive(Clone,Serialize)]
+pub struct Mana{
+    pub color:Color,
+    pub restriction:Option<ManaRestriction>
+}
+#[derive(Clone,Serialize)]
+pub struct ManaRestriction{
+    
+}
+impl Mana{//Use direct building for 
+    pub fn new(color:Color)->Self{
+        Self{
+            color,
+            restriction:None
+        }
+    }
+}
 
+impl serde::Serialize for EntMap<ManaId,Mana>{
+    fn serialize<S>(&self, ser: S) -> std::result::Result<S::Ok, S::Error>
+    where S:serde::Serializer{
+        let mut map = ser.serialize_map(None)?;
+        for (k,v) in self.view(){
+            map.serialize_entry(&k, v)?;
+        }
+        map.end()
+    }
+}
 //Add support for hybrid mana later
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub enum ManaCostSymbol {
     White,
     Blue,

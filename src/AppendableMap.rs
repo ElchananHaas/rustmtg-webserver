@@ -3,15 +3,26 @@ use std::{
     collections::HashMap,
     hash::Hash,
     num::NonZeroU64,
+    sync::{Mutex, Arc, atomic::{AtomicU64, Ordering}}, ops::DerefMut,
 };
-#[derive(Clone)]
 pub struct EntMap<K, V>
 where
     K: Copy + Hash + Eq + From<NonZeroU64>,
 {
     ents: HashMap<K, V>,
     appends: Vec<(K, Box<V>)>,
-    count: Cell<NonZeroU64>,
+    count: AtomicU64,
+}
+
+impl<K,V> Clone for EntMap<K,V> where
+K: Copy + Hash + Eq + From<NonZeroU64>,V:Clone{
+    fn clone(&self) -> Self { 
+        Self{
+            ents:self.ents.clone(),
+            appends:self.appends.clone(),
+            count: AtomicU64::new(self.count.load(Ordering::Acquire))
+        }
+     }
 }
 const ARENA_CAP: usize = 8;
 
@@ -24,7 +35,7 @@ where
             ents: HashMap::new(),
             appends: Vec::new(), //By default hold space for 1 element,
             //which is probably what I want
-            count: Cell::new(NonZeroU64::new(1).unwrap()),
+            count: AtomicU64::new(1),
         }
     }
     pub fn view(&self) -> Vec<(K, &V)> {
@@ -50,6 +61,19 @@ where
             }),
         }
     }
+    pub fn get_mut(&self, id: K) -> Option<&mut V> {
+        match self.ents.get_mut(&id) {
+            Some(v) => Some(v),
+            None => self.appends.iter_mut().find_map(|(key, val)| {
+                let mut interior = val.deref_mut();
+                if *key == id {
+                    Some(interior)
+                } else {
+                    None
+                }
+            }),
+        }
+    }
     //Flush all inserts. Call before every mutable function
     pub fn flush_inserts(&mut self) {
         for (key, val) in self.appends.drain(..) {
@@ -61,8 +85,9 @@ where
         self.ents.remove(&id)
     }
     fn get_newkey(&self) -> K {
-        let count = self.count.get();
-        self.count.set(NonZeroU64::new(count.get() + 1).unwrap());
+        let count = self.count.load(std::sync::atomic::Ordering::Acquire);
+        self.count.fetch_add(1, std::sync::atomic::Ordering::Release);
+        let count=NonZeroU64::try_from(count).unwrap();
         let newkey = K::from(count);
         newkey
     }

@@ -1,6 +1,6 @@
 use std::num::NonZeroU64;
 
-use serde_derive::{Serialize, Deserialize};
+use serde_derive::{Deserialize, Serialize};
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash, Serialize, Deserialize)]
 pub struct PlayerId(NonZeroU64);
@@ -10,14 +10,14 @@ pub struct CardId(NonZeroU64); //a reference to a card, spell token or permanent
 pub struct ManaId(NonZeroU64);
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash, Serialize, Deserialize)]
 pub enum TargetId {
-    PlayerId,
-    CardId,
+    Player(PlayerId),
+    Card(CardId),
 }
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash, Serialize, Deserialize)]
 pub enum EntId {
-    PlayerId,
-    CardId,
-    ManaId,
+    Player(PlayerId),
+    Card(CardId),
+    Mana(ManaId),
 }
 impl From<NonZeroU64> for PlayerId {
     fn from(x: NonZeroU64) -> Self {

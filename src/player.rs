@@ -1,5 +1,7 @@
+use crate::AppendableMap::{self, EntMap};
 use crate::entities::{CardId, EntId, ManaId, PlayerId};
 use crate::game::Cards;
+use crate::mana::Mana;
 use anyhow::{bail, Result};
 //derivative::Derivative, work around rust-analyzer bug for now
 use derivative::*;
@@ -7,26 +9,24 @@ use futures::{SinkExt, StreamExt};
 use serde::de::DeserializeOwned;
 use serde::{Serialize, Serializer};
 use serde_derive::Serialize;
-use tokio::sync::Mutex;
 use std::collections::{HashMap, HashSet};
 use std::ops::RangeBounds;
-use std::sync::{Arc};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 use std::time::Duration;
 use tokio::time::sleep;
 use warp::filters::ws::Message;
 use warp::ws::WebSocket;
-#[derive(Derivative, Clone)]
-#[derivative(Debug)]
+#[derive(Clone)]
 pub struct Player {
     pub name: String,
     pub life: i32,
     pub library: Vec<CardId>,
     pub hand: HashSet<CardId>,
-    pub mana_pool: HashSet<ManaId>,
+    pub mana_pool: EntMap<ManaId,Mana>,
     pub graveyard: Vec<CardId>,
     pub max_handsize: usize,
-    #[derivative(Debug = "ignore")]
     pub player_con: PlayerCon,
 }
 
@@ -37,10 +37,14 @@ pub struct PlayerView<'a> {
     pub library: Vec<Option<CardId>>,
     pub hand: HashSet<Option<CardId>>,
     pub graveyard: &'a Vec<CardId>,
-    pub mana_pool: &'a HashSet<ManaId>,
+    pub mana_pool: &'a EntMap<ManaId,Mana>,
     pub max_handsize: usize,
 }
-fn view_t<'a>(cards: &'a Cards, r: impl Iterator<Item = &'a CardId> + 'a, pl: PlayerId)->impl Iterator<Item=Option<CardId>> + 'a{
+fn view_t<'a>(
+    cards: &'a Cards,
+    r: impl Iterator<Item = &'a CardId> + 'a,
+    pl: PlayerId,
+) -> impl Iterator<Item = Option<CardId>> + 'a {
     r.map(move |&id| {
         cards
             .get(id)
@@ -53,12 +57,11 @@ fn view_t<'a>(cards: &'a Cards, r: impl Iterator<Item = &'a CardId> + 'a, pl: Pl
             })
             .flatten()
     })
-
 }
 impl Player {
     pub fn view(&self, cards: &Cards, player: PlayerId) -> PlayerView {
-        let libview = view_t(cards,self.library.iter(),player).collect::<Vec<_>>();
-        let handview=view_t(cards,self.hand.iter(),player).collect::<HashSet<_>>();
+        let libview = view_t(cards, self.library.iter(), player).collect::<Vec<_>>();
+        let handview = view_t(cards, self.hand.iter(), player).collect::<HashSet<_>>();
         PlayerView {
             name: &self.name,
             life: self.life,

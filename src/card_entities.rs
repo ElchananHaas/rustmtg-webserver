@@ -1,6 +1,6 @@
 use bitvec::{array::BitArray, BitArr};
+use serde::{ser::SerializeSeq, Serialize, Serializer};
 use serde_derive::Serialize;
-use serde::{Serialize, Serializer, ser::SerializeSeq};
 use std::{
     cell::{Cell, RefCell},
     collections::{HashMap, HashSet},
@@ -9,16 +9,16 @@ use std::{
 
 use crate::{
     components::Subtype,
-    entities::{CardId, PlayerId, TargetId},
+    entities::{CardId, PlayerId, TargetId}, ability::Ability, spellabil::KeywordAbility,
 };
 
 #[derive(Serialize, Clone)]
 pub struct CardEnt {
     //Holds a card, token or embalem
-    summoning_sickness: bool,
+    pub summoning_sickness: bool,
     pub damaged: u64,
     pub tapped: bool,
-    dealt_combat_damage: bool, //Has this dealt combat damage this turn (First strike, double strike)
+    pub dealt_combat_damage: bool, //Has this dealt combat damage this turn (First strike, double strike)
     pub attacking: Option<TargetId>, //Is this attacking a player of planeswalker
     pub blocked: Vec<CardId>,
     pub blocking: Vec<CardId>,
@@ -32,12 +32,20 @@ pub struct CardEnt {
     pub types: Types,
     pub supertypes: Supertypes,
     pub subtypes: Subtypes,
+    pub abilities: Vec<Ability>,
 }
-
+impl CardEnt{
+    pub fn has_keyword(&self,keyword:KeywordAbility)->bool{
+        for ability in &self.abilities{
+            if ability.keyword==Some(keyword){ return true;}
+        }
+        false
+    }
+}
 #[derive(Clone, Copy, Debug, Serialize)]
 pub struct PT {
     pub power: i64,
-    pub toughness: i64,
+    pub toughness: u64,
 }
 
 #[derive(Clone, Copy, Debug, Default, Serialize)]
@@ -68,19 +76,18 @@ pub struct Subtypes {
 impl Serialize for Subtypes {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: Serializer{
-            let mut seq = serializer.serialize_seq(None)?;
-            for (i,bit) in self.table.iter().enumerate(){
-                if *bit{
-                    let i:u32=i.try_into().unwrap();
-                    let subtype:Subtype=unsafe{
-                        std::mem::transmute(i)
-                    };
-                    seq.serialize_element(&subtype)?;
-                }
+        S: Serializer,
+    {
+        let mut seq = serializer.serialize_seq(None)?;
+        for (i, bit) in self.table.iter().enumerate() {
+            if *bit {
+                let i: u32 = i.try_into().unwrap();
+                let subtype: Subtype = unsafe { std::mem::transmute(i) };
+                seq.serialize_element(&subtype)?;
             }
-            seq.end()
         }
+        seq.end()
+    }
 }
 
 impl Subtypes {
