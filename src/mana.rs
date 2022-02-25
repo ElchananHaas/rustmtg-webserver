@@ -32,16 +32,7 @@ impl Mana{//Use direct building for
     }
 }
 
-impl serde::Serialize for EntMap<ManaId,Mana>{
-    fn serialize<S>(&self, ser: S) -> std::result::Result<S::Ok, S::Error>
-    where S:serde::Serializer{
-        let mut map = ser.serialize_map(None)?;
-        for (k,v) in self.view(){
-            map.serialize_entry(&k, v)?;
-        }
-        map.end()
-    }
-}
+
 //Add support for hybrid mana later
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub enum ManaCostSymbol {

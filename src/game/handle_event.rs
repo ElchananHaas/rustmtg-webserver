@@ -1,6 +1,5 @@
 use std::cmp::min;
 
-use crate::components::{Attacking, Blocked, Blocking, DealtCombatDamage};
 use crate::event::DamageReason;
 use crate::game::*;
 use crate::player::{AskReason, Player};

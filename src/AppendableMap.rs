@@ -5,6 +5,8 @@ use std::{
     num::NonZeroU64,
     sync::{Mutex, Arc, atomic::{AtomicU64, Ordering}}, ops::DerefMut,
 };
+
+use serde::{Serialize, ser::SerializeMap};
 pub struct EntMap<K, V>
 where
     K: Copy + Hash + Eq + From<NonZeroU64>,
@@ -24,6 +26,23 @@ K: Copy + Hash + Eq + From<NonZeroU64>,V:Clone{
         }
      }
 }
+
+impl<K,V> serde::Serialize for EntMap<K,V> where K: Copy + Hash + Eq + From<NonZeroU64>+Serialize,
+V:Serialize{
+    fn serialize<S>(&self, ser: S) -> std::result::Result<S::Ok, S::Error>
+    where S:serde::Serializer{
+        let mut map = ser.serialize_map(None)?;
+        for (k,v) in &self.ents{
+            map.serialize_entry(k, v)?;
+        }
+        for (k,v) in &self.appends{
+            let v_ref=v.as_ref();
+            map.serialize_entry(k, v_ref)?;
+        }
+        map.end()
+    }
+}
+
 const ARENA_CAP: usize = 8;
 
 impl<K, V> EntMap<K, V>
