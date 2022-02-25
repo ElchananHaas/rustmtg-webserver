@@ -1,7 +1,7 @@
-use crate::AppendableMap::{self, EntMap};
 use crate::entities::{CardId, EntId, ManaId, PlayerId};
 use crate::game::Cards;
 use crate::mana::Mana;
+use crate::AppendableMap::{self, EntMap};
 use anyhow::{bail, Result};
 //derivative::Derivative, work around rust-analyzer bug for now
 use derivative::*;
@@ -24,7 +24,7 @@ pub struct Player {
     pub life: i64,
     pub library: Vec<CardId>,
     pub hand: HashSet<CardId>,
-    pub mana_pool: EntMap<ManaId,Mana>,
+    pub mana_pool: EntMap<ManaId, Mana>,
     pub graveyard: Vec<CardId>,
     pub max_handsize: usize,
     pub player_con: PlayerCon,
@@ -37,7 +37,7 @@ pub struct PlayerView<'a> {
     pub library: Vec<Option<CardId>>,
     pub hand: HashSet<Option<CardId>>,
     pub graveyard: &'a Vec<CardId>,
-    pub mana_pool: &'a EntMap<ManaId,Mana>,
+    pub mana_pool: &'a EntMap<ManaId, Mana>,
     pub max_handsize: usize,
 }
 fn view_t<'a>(

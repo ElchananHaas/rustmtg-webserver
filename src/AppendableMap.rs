@@ -3,10 +3,14 @@ use std::{
     collections::HashMap,
     hash::Hash,
     num::NonZeroU64,
-    sync::{Mutex, Arc, atomic::{AtomicU64, Ordering}}, ops::DerefMut,
+    ops::DerefMut,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc, Mutex,
+    },
 };
 
-use serde::{Serialize, ser::SerializeMap};
+use serde::{ser::SerializeMap, Serialize};
 use serde_derive::Serialize;
 #[derive(Serialize, Clone)]
 pub struct EntMap<K, V>
@@ -14,9 +18,8 @@ where
     K: Copy + Hash + Eq + From<NonZeroU64>,
 {
     ents: HashMap<K, V>,
-    count: usize
+    count: usize,
 }
-
 
 const ARENA_CAP: usize = 8;
 
@@ -27,7 +30,7 @@ where
     pub fn new() -> Self {
         Self {
             ents: HashMap::new(),
-            count:0,
+            count: 0,
         }
     }
     pub fn view(&self) -> Vec<(K, &V)> {
@@ -48,7 +51,7 @@ where
         self.ents.remove(&id)
     }
     fn get_newkey(&mut self) -> K {
-        self.count+=1;
+        self.count += 1;
         let newkey = K::from(self.count);
         newkey
     }

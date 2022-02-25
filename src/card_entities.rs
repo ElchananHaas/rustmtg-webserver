@@ -8,8 +8,10 @@ use std::{
 };
 
 use crate::{
+    ability::Ability,
     components::Subtype,
-    entities::{CardId, PlayerId, TargetId}, ability::Ability, spellabil::KeywordAbility,
+    entities::{CardId, PlayerId, TargetId},
+    spellabil::KeywordAbility,
 };
 
 #[derive(Serialize, Clone)]
@@ -34,10 +36,12 @@ pub struct CardEnt {
     pub subtypes: Subtypes,
     pub abilities: Vec<Ability>,
 }
-impl CardEnt{
-    pub fn has_keyword(&self,keyword:KeywordAbility)->bool{
-        for ability in &self.abilities{
-            if ability.keyword==Some(keyword){ return true;}
+impl CardEnt {
+    pub fn has_keyword(&self, keyword: KeywordAbility) -> bool {
+        for ability in &self.abilities {
+            if ability.keyword == Some(keyword) {
+                return true;
+            }
         }
         false
     }

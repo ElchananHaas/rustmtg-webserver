@@ -3,7 +3,11 @@ use std::sync::Arc;
 use serde::ser::SerializeMap;
 use serde_derive::Serialize;
 
-use crate::{entities::{CardId, ManaId}, game::Game, AppendableMap::EntMap};
+use crate::{
+    entities::{CardId, ManaId},
+    game::Game,
+    AppendableMap::EntMap,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub enum Color {
@@ -14,24 +18,22 @@ pub enum Color {
     Green,
     Colorless,
 }
-#[derive(Clone,Serialize)]
-pub struct Mana{
-    pub color:Color,
-    pub restriction:Option<ManaRestriction>
+#[derive(Clone, Serialize)]
+pub struct Mana {
+    pub color: Color,
+    pub restriction: Option<ManaRestriction>,
 }
-#[derive(Clone,Serialize)]
-pub struct ManaRestriction{
-    
-}
-impl Mana{//Use direct building for 
-    pub fn new(color:Color)->Self{
-        Self{
+#[derive(Clone, Serialize)]
+pub struct ManaRestriction {}
+impl Mana {
+    //Use direct building for
+    pub fn new(color: Color) -> Self {
+        Self {
             color,
-            restriction:None
+            restriction: None,
         }
     }
 }
-
 
 //Add support for hybrid mana later
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]

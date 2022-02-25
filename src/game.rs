@@ -1,7 +1,7 @@
 use crate::ability::Ability;
 use crate::card_entities::{CardEnt, PT};
 use crate::carddb::CardDB;
-use crate::components::{Subtype};
+use crate::components::Subtype;
 use crate::entities::{CardId, ManaId, PlayerId, TargetId};
 use crate::event::{DiscardCause, Event, EventResult, TagEvent};
 use crate::mana::{Color, Mana, ManaCostSymbol};
@@ -275,10 +275,10 @@ impl Game {
             ManaCostSymbol::Generic => Color::Colorless,
             ManaCostSymbol::Colorless => Color::Colorless,
         };
-        let pl=self.players.get_mut(player)?;
-            let mana=Mana::new(color);
-            let id=pl.mana_pool.insert(mana);
-            Some(id)
+        let pl = self.players.get_mut(player)?;
+        let mana = Mana::new(color);
+        let id = pl.mana_pool.insert(mana);
+        Some(id)
     }
     pub fn players_creatures<'b>(&'b self, player: PlayerId) -> impl Iterator<Item = CardId> + 'b {
         self.all_creatures()
@@ -319,25 +319,32 @@ impl Game {
     }
     pub fn all_creatures<'b>(&'b self) -> impl Iterator<Item = CardId> + 'b {
         self.battlefield.clone().into_iter().filter(move |&ent| {
-            self.cards.get(ent).filter(|&card|card.types.creature).is_some()
+            self.cards
+                .get(ent)
+                .filter(|&card| card.types.creature)
+                .is_some()
         })
     }
     //Can this creature tap to be declared an attacker or to activate an ability?
     //Doesn't include prevention effects, just if it can tap w/o them
     pub fn can_tap(&self, ent: CardId) -> bool {
-        if let Some(card)=self.cards.get(ent){
-            if card.tapped {return false;}
-            !card.types.creature || card.has_keyword(KeywordAbility::Haste) || !card.summoning_sickness
-        }else{
+        if let Some(card) = self.cards.get(ent) {
+            if card.tapped {
+                return false;
+            }
+            !card.types.creature
+                || card.has_keyword(KeywordAbility::Haste)
+                || !card.summoning_sickness
+        } else {
             false
         }
     }
     //takes in a card or permanent, returns it's controller or owner if the controller
     //is unavailable
     pub fn get_controller(&self, ent: CardId) -> Option<PlayerId> {
-        self.cards.get(ent).and_then(|card|
-            card.controller.or(Some(card.owner))
-        )
+        self.cards
+            .get(ent)
+            .and_then(|card| card.controller.or(Some(card.owner)))
     }
     pub async fn cycle_priority(&mut self) {
         self.place_abilities().await;
@@ -354,7 +361,10 @@ impl Game {
         //TODO make this do something!
     }
     pub fn attack_targets(&self, player: PlayerId) -> Vec<TargetId> {
-        self.opponents(player).iter().map(|pl| TargetId::Player(*pl)).collect::<Vec<_>>()
+        self.opponents(player)
+            .iter()
+            .map(|pl| TargetId::Player(*pl))
+            .collect::<Vec<_>>()
     }
 
     pub fn opponents(&self, player: PlayerId) -> Vec<PlayerId> {
@@ -373,15 +383,13 @@ impl Game {
         true
     }
     pub fn remaining_lethal(&self, ent: CardId) -> Option<i64> {
-        self.cards.get(ent).and_then(|card|
-            card.pt.map(|pt|
-                max(pt.toughness-card.damaged,0)
-            )  
-        )
+        self.cards
+            .get(ent)
+            .and_then(|card| card.pt.map(|pt| max(pt.toughness - card.damaged, 0)))
     }
     pub fn add_ability(&mut self, ent: CardId, ability: Ability) {
         //Assume the builder has already added a vector of abilities
-        if let Some(ent)=self.cards.get_mut(ent){
+        if let Some(ent) = self.cards.get_mut(ent) {
             ent.abilities.push(ability);
         }
     }

@@ -32,12 +32,11 @@ impl Game {
                     source,
                     reason,
                 } => {
-                    self.handle_damage(amount,target,source).await;
-                    
+                    self.handle_damage(amount, target, source).await;
                 }
                 Event::Block { blocker: _ } => {}
                 Event::BlockedBy { attacker, blocker } => {
-                    self.blocked_by(&mut events,attacker,blocker);
+                    self.blocked_by(&mut events, attacker, blocker);
                 }
                 Event::Blocked { attacker: _ } => {}
                 Event::AttackUnblocked { attacker: _ } => {}
@@ -78,23 +77,23 @@ impl Game {
                 //Handle already being tapped as prevention effect
                 Event::Tap { ent } => {
                     self.cards.get(ent).map(|card| {
-                        if !card.tapped{
+                        if !card.tapped {
                             results.push(EventResult::Tap(ent));
-                            card.tapped=true;
+                            card.tapped = true;
                         }
                     });
                 }
                 //Handle already being untapped as prevention effect
                 Event::Untap { ent } => {
                     self.cards.get(ent).map(|card| {
-                        if card.tapped{
+                        if card.tapped {
                             results.push(EventResult::Untap(ent));
-                            card.tapped=false;
+                            card.tapped = false;
                         }
                     });
                 }
                 Event::Draw { player } => {
-                    if let Some(pl)=self.players.get_mut(player){
+                    if let Some(pl) = self.players.get_mut(player) {
                         match pl.library.last() {
                             Some(card) => {
                                 Game::add_event(
@@ -183,10 +182,11 @@ impl Game {
         origin: Zone,
         dest: Zone,
     ) {
-        try{
-            let card=self.cards.get_mut(ent)?;
-            let owner=self.players.get_mut(card.owner)?;
-            let removed=match origin {
+        let props = None;
+        try {
+            let card = self.cards.get_mut(ent)?;
+            let owner = self.players.get_mut(card.owner)?;
+            let removed = match origin {
                 Zone::Exile => self.exile.remove(&ent),
                 Zone::Command => self.command.remove(&ent),
                 Zone::Battlefield => self.battlefield.remove(&ent),
@@ -214,57 +214,56 @@ impl Game {
                 },
             };
             //Udate knowledge of new card on zonemove
-            if removed && !card.token{
-                let newcard_id=self.db.spawn_card(&mut self.cards, card.name, card.owner);
-                let newcard=self.cards.get_mut(newcard_id).unwrap();//I know this is safe b/c I just spawned it
-                match dest {
-                    Zone::Exile
-                    | Zone::Stack
-                    | Zone::Command
-                    | Zone::Battlefield
-                    | Zone::Graveyard => {
-                        newcard.known_to.extend(self.turn_order.iter());
-                        //Public zone    
-                    }
-                    Zone::Hand => {
-                        newcard.known_to.insert(newcard.owner);
-                    }//Shuffling will destroy all knowledge of cards in the library
-                    _ => {}
-                }
-            }
-        };
-
-        if let Some(core) = core.as_mut() {
-            if removed && core.real_card {
-                let newent = self.db.spawn_card(&mut self.ents, &core.name, core.owner);
-                
-                self.ents.insert_one(newent, core.clone()).unwrap();
-                let mut player = self.ents.get_mut::<Player>(core.owner).unwrap();
-                match dest {
-                    Zone::Exile => {
-                        self.exile.insert(newent);
-                    }
-                    Zone::Command => {
-                        self.command.insert(newent);
-                    }
-                    Zone::Battlefield => {
-                        self.battlefield.insert(newent);
-                    }
-                    Zone::Hand => {
-                        player.hand.insert(newent);
-                    }
-                    //Handle inserting a distance from the top. Perhaps swap them afterwards?
-                    Zone::Library => player.library.push(newent),
-                    Zone::Graveyard => player.graveyard.push(newent),
-                    Zone::Stack => self.stack.push(newent),
-                }
+            if removed && !card.token {
+                props = Some((card.name, card.owner));
+            };
+            if removed && card.token {
                 results.push(EventResult::MoveZones {
                     oldent: ent,
-                    newent: newent,
-                    dest: dest,
+                    newent: None,
+                    dest,
                 });
             }
-        }
+        };
+        try {
+            let (name, owner_id) = props?;
+            let owner = self.players.get_mut(owner_id)?;
+            let newent = self.db.spawn_card(&mut self.cards, name, owner_id);
+            let newcard = self.cards.get_mut(newent).unwrap(); //I know this is safe b/c I just spawned it
+            match dest {
+                Zone::Exile | Zone::Stack | Zone::Command | Zone::Battlefield | Zone::Graveyard => {
+                    newcard.known_to.extend(self.turn_order.iter());
+                    //Public zone
+                }
+                Zone::Hand => {
+                    newcard.known_to.insert(newcard.owner);
+                } //Shuffling will destroy all knowledge of cards in the library
+                _ => {}
+            }
+            match dest {
+                Zone::Exile => {
+                    self.exile.insert(newent);
+                }
+                Zone::Command => {
+                    self.command.insert(newent);
+                }
+                Zone::Battlefield => {
+                    self.battlefield.insert(newent);
+                }
+                Zone::Hand => {
+                    owner.hand.insert(newent);
+                }
+                //Handle inserting a distance from the top. Perhaps swap them afterwards?
+                Zone::Library => owner.library.push(newent),
+                Zone::Graveyard => owner.graveyard.push(newent),
+                Zone::Stack => self.stack.push(newent),
+            }
+            results.push(EventResult::MoveZones {
+                oldent: ent,
+                newent: Some(newent),
+                dest,
+            });
+        };
     }
     async fn subphase(
         &mut self,
@@ -526,35 +525,44 @@ impl Game {
             }
         })
     }
-    async fn blocked_by(&mut self,events:&mut Vec<TagEvent>,attacker_id:CardId,blocker_id:CardId){
-        if let Some(attacker)=self.cards.get_mut(attacker_id){
-            if attacker.blocked.len()==0{
-                Game::add_event(events, Event::Blocked { attacker:attacker_id });
+    async fn blocked_by(
+        &mut self,
+        events: &mut Vec<TagEvent>,
+        attacker_id: CardId,
+        blocker_id: CardId,
+    ) {
+        if let Some(attacker) = self.cards.get_mut(attacker_id) {
+            if attacker.blocked.len() == 0 {
+                Game::add_event(
+                    events,
+                    Event::Blocked {
+                        attacker: attacker_id,
+                    },
+                );
             }
             attacker.blocked.push(blocker_id);
         }
-        if let Some(blocker)=self.cards.get_mut(blocker_id){
+        if let Some(blocker) = self.cards.get_mut(blocker_id) {
             blocker.blocking.push(attacker_id);
         }
     }
     //Add deathtouch and combat triggers
-    async fn handle_damage(&mut self,amount:i64,target:TargetId,source:CardId){
-        if amount<=0{
+    async fn handle_damage(&mut self, amount: i64, target: TargetId, source: CardId) {
+        if amount <= 0 {
             return;
         }
-        match target{
-            TargetId::Card(cardid)=>{
-                if let Some(card)=self.cards.get_mut(cardid){
-                    card.damaged+=amount;
+        match target {
+            TargetId::Card(cardid) => {
+                if let Some(card) = self.cards.get_mut(cardid) {
+                    card.damaged += amount;
                 }
-            },
-            TargetId::Player(playerid)=>{
-                if let Some(player)=self.players.get_mut(playerid){
-                    player.life-=amount;
-                }  
+            }
+            TargetId::Player(playerid) => {
+                if let Some(player) = self.players.get_mut(playerid) {
+                    player.life -= amount;
+                }
             }
         }
-
     }
     async fn spread_damage(
         &self,

@@ -1,4 +1,7 @@
-use crate::{game::{Phase, Subphase, Zone}, entities::{CardId, PlayerId, TargetId}};
+use crate::{
+    entities::{CardId, PlayerId, TargetId},
+    game::{Phase, Subphase, Zone},
+};
 
 //An event tagged with replacement effects already applied to it
 #[derive(Clone, Debug)]
@@ -90,7 +93,7 @@ pub enum EventResult {
     Activate(CardId),
     MoveZones {
         oldent: CardId,
-        newent: CardId,
+        newent: Option<CardId>,
         dest: Zone,
     },
     Tap(CardId),
