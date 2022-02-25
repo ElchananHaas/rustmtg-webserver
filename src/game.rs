@@ -372,10 +372,10 @@ impl Game {
     pub fn blocks_legal(&self, blockers: &Vec<CardId>, blocked: &Vec<Vec<CardId>>) -> bool {
         true
     }
-    pub fn remaining_lethal(&self, ent: CardId) -> Option<u64> {
+    pub fn remaining_lethal(&self, ent: CardId) -> Option<i64> {
         self.cards.get(ent).and_then(|card|
             card.pt.map(|pt|
-                pt.toughness-card.damaged
+                max(pt.toughness-card.damaged,0)
             )  
         )
     }

@@ -1,6 +1,9 @@
+use crate::AppendableMap::EntMap;
 use crate::ability::Ability;
+use crate::card_entities::CardEnt;
 use crate::components::{Subtype,};
 use crate::cost::Cost;
+use crate::entities::{CardId, PlayerId};
 use crate::mana::{mana_cost_string, Color};
 use anyhow::{bail, Result};
 use serde::Deserialize;
@@ -109,7 +112,7 @@ impl CardDB {
             None => panic!("Unknown card!"),
         }
     }
-    pub fn spawn_card(&self, ents: &mut World, card_name: &str, owner: Entity) -> Entity {
+    pub fn spawn_card(&self, ents: &mut EntMap<CardId,CardEnt>, card_name: &str, owner: PlayerId) -> CardId {
         let mut builder = self.make_builder(card_name, Some(owner));
         let res = ents.spawn(builder.build());
         res

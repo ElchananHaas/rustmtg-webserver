@@ -24,7 +24,7 @@ pub enum Event {
         player: PlayerId,
     },
     Damage {
-        amount: i32,
+        amount: i64,
         target: TargetId,
         source: CardId,
         reason: DamageReason,

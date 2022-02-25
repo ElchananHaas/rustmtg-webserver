@@ -16,9 +16,9 @@ use crate::{
 pub struct CardEnt {
     //Holds a card, token or embalem
     pub summoning_sickness: bool,
-    pub damaged: u64,
+    pub damaged: i64,
     pub tapped: bool,
-    pub dealt_combat_damage: bool, //Has this dealt combat damage this turn (First strike, double strike)
+    pub already_attacked: bool, //Has this dealt combat damage this turn (First strike, double strike)
     pub attacking: Option<TargetId>, //Is this attacking a player of planeswalker
     pub blocked: Vec<CardId>,
     pub blocking: Vec<CardId>,
@@ -45,7 +45,7 @@ impl CardEnt{
 #[derive(Clone, Copy, Debug, Serialize)]
 pub struct PT {
     pub power: i64,
-    pub toughness: u64,
+    pub toughness: i64,
 }
 
 #[derive(Clone, Copy, Debug, Default, Serialize)]

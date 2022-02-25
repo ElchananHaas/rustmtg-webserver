@@ -11,7 +11,7 @@ impl Game {
         let mut results: Vec<EventResult> = Vec::new();
         let mut events: Vec<TagEvent> = Vec::new();
         events.push(TagEvent {
-            event: event,
+            event,
             replacements: Vec::new(),
         });
         loop {
@@ -32,40 +32,12 @@ impl Game {
                     source,
                     reason,
                 } => {
-                    if amount <= 0 {
-                        continue;
-                    }
-                    if reason == DamageReason::Combat {
-                        let _ = self.ents.insert_one(source, DealtCombatDamage());
-                    }
-                    let already_damaged =
-                        if let Ok(mut damage) = self.ents.get_mut::<Damage>(target) {
-                            damage.0 += amount;
-                            true
-                        } else {
-                            false
-                        };
-                    if !already_damaged {
-                        let _ = self.ents.insert_one(target, Damage(amount));
-                    };
+                    self.handle_damage(amount,target,source).await;
+                    
                 }
                 Event::Block { blocker: _ } => {}
                 Event::BlockedBy { attacker, blocker } => {
-                    let unblocked = self.ents.get::<Blocked>(attacker).is_err();
-                    if unblocked {
-                        let _ = self.ents.insert_one(attacker, Blocked(Vec::new()));
-                        Game::add_event(&mut events, Event::Blocked { attacker });
-                    }
-                    if let Ok(mut blockedby) = self.ents.get_mut::<Blocked>(attacker) {
-                        blockedby.0.push(blocker);
-                    }
-                    let noblock = self.ents.get::<Blocking>(blocker).is_err();
-                    if noblock {
-                        let _ = self.ents.insert_one(blocker, Blocking(Vec::new()));
-                    }
-                    if let Ok(mut blocking) = self.ents.get_mut::<Blocking>(blocker) {
-                        blocking.0.push(attacker);
-                    }
+                    self.blocked_by(&mut events,attacker,blocker);
                 }
                 Event::Blocked { attacker: _ } => {}
                 Event::AttackUnblocked { attacker: _ } => {}
@@ -105,22 +77,24 @@ impl Game {
                 }
                 //Handle already being tapped as prevention effect
                 Event::Tap { ent } => {
-                    if self.battlefield.contains(&ent)
-                        && self.ents.insert_one(ent, Tapped()).is_ok()
-                    {
-                        results.push(EventResult::Tap(ent));
-                    }
+                    self.cards.get(ent).map(|card| {
+                        if !card.tapped{
+                            results.push(EventResult::Tap(ent));
+                            card.tapped=true;
+                        }
+                    });
                 }
                 //Handle already being untapped as prevention effect
                 Event::Untap { ent } => {
-                    if self.battlefield.contains(&ent)
-                        && self.ents.remove_one::<Tapped>(ent).is_ok()
-                    {
-                        results.push(EventResult::Untap(ent));
-                    }
+                    self.cards.get(ent).map(|card| {
+                        if card.tapped{
+                            results.push(EventResult::Untap(ent));
+                            card.tapped=false;
+                        }
+                    });
                 }
                 Event::Draw { player } => {
-                    if let Ok(pl) = self.ents.get::<Player>(player) {
+                    if let Some(pl)=self.players.get_mut(player){
                         match pl.library.last() {
                             Some(card) => {
                                 Game::add_event(
@@ -159,9 +133,7 @@ impl Game {
                 Event::Attack { attackers: _ } => {}
                 Event::Lose { player } => {
                     //TODO add in the logic to have the game terminate such as setting winners
-                    if let Ok(mut pl) = self.ents.get_mut::<Player>(player) {
-                        (*pl).lost = true;
-                    }
+                    todo!();
                 }
                 Event::MoveZones { ent, origin, dest } => {
                     self.zonemove(&mut results, &mut events, ent, origin, dest)
@@ -207,72 +179,65 @@ impl Game {
         &mut self,
         results: &mut Vec<EventResult>,
         _events: &mut Vec<TagEvent>,
-        ent: Entity,
+        ent: CardId,
         origin: Zone,
         dest: Zone,
     ) {
-        if origin == dest {
-            return;
-        };
-        let core = &mut None;
-        {
-            if let Ok(coreborrow) = self.ents.get::<EntCore>(ent) {
-                let refentcore = &(*coreborrow);
-                *core = Some(refentcore.clone());
-            }
-        }
-        let mut removed = false;
-        if let Some(core) = core.as_mut() {
-            removed = if let Ok(mut player) = self.ents.get_mut::<Player>(core.owner) {
-                match origin {
-                    Zone::Exile => self.exile.remove(&ent),
-                    Zone::Command => self.command.remove(&ent),
-                    Zone::Battlefield => self.battlefield.remove(&ent),
-                    Zone::Hand => player.hand.remove(&ent),
-                    Zone::Library => match player.library.iter().position(|x| *x == ent) {
-                        Some(i) => {
-                            player.library.remove(i);
-                            true
-                        }
-                        None => false,
-                    },
-                    Zone::Graveyard => match player.graveyard.iter().position(|x| *x == ent) {
-                        Some(i) => {
-                            player.graveyard.remove(i);
-                            true
-                        }
-                        None => false,
-                    },
-                    Zone::Stack => match self.stack.iter().position(|x| *x == ent) {
-                        Some(i) => {
-                            self.stack.remove(i);
-                            true
-                        }
-                        None => false,
-                    },
-                }
-            } else {
-                false
-            }
-        }
-        if let Some(core) = core.as_mut() {
-            if removed && core.real_card {
-                let newent = self.db.spawn_card(&mut self.ents, &core.name, core.owner);
+        try{
+            let card=self.cards.get_mut(ent)?;
+            let owner=self.players.get_mut(card.owner)?;
+            let removed=match origin {
+                Zone::Exile => self.exile.remove(&ent),
+                Zone::Command => self.command.remove(&ent),
+                Zone::Battlefield => self.battlefield.remove(&ent),
+                Zone::Hand => owner.hand.remove(&ent),
+                Zone::Library => match owner.library.iter().position(|x| *x == ent) {
+                    Some(i) => {
+                        owner.library.remove(i);
+                        true
+                    }
+                    None => false,
+                },
+                Zone::Graveyard => match owner.graveyard.iter().position(|x| *x == ent) {
+                    Some(i) => {
+                        owner.graveyard.remove(i);
+                        true
+                    }
+                    None => false,
+                },
+                Zone::Stack => match self.stack.iter().position(|x| *x == ent) {
+                    Some(i) => {
+                        self.stack.remove(i);
+                        true
+                    }
+                    None => false,
+                },
+            };
+            //Udate knowledge of new card on zonemove
+            if removed && !card.token{
+                let newcard_id=self.db.spawn_card(&mut self.cards, card.name, card.owner);
+                let newcard=self.cards.get_mut(newcard_id).unwrap();//I know this is safe b/c I just spawned it
                 match dest {
                     Zone::Exile
                     | Zone::Stack
                     | Zone::Command
                     | Zone::Battlefield
                     | Zone::Graveyard => {
-                        core.known.extend(self.turn_order.iter());
-                        //Public zone
-                        //Shuffling will destroy all knowledge of cards in the library
+                        newcard.known_to.extend(self.turn_order.iter());
+                        //Public zone    
                     }
                     Zone::Hand => {
-                        core.known.insert(core.owner);
-                    }
+                        newcard.known_to.insert(newcard.owner);
+                    }//Shuffling will destroy all knowledge of cards in the library
                     _ => {}
                 }
+            }
+        };
+
+        if let Some(core) = core.as_mut() {
+            if removed && core.real_card {
+                let newent = self.db.spawn_card(&mut self.ents, &core.name, core.owner);
+                
                 self.ents.insert_one(newent, core.clone()).unwrap();
                 let mut player = self.ents.get_mut::<Player>(core.owner).unwrap();
                 match dest {
@@ -561,7 +526,36 @@ impl Game {
             }
         })
     }
+    async fn blocked_by(&mut self,events:&mut Vec<TagEvent>,attacker_id:CardId,blocker_id:CardId){
+        if let Some(attacker)=self.cards.get_mut(attacker_id){
+            if attacker.blocked.len()==0{
+                Game::add_event(events, Event::Blocked { attacker:attacker_id });
+            }
+            attacker.blocked.push(blocker_id);
+        }
+        if let Some(blocker)=self.cards.get_mut(blocker_id){
+            blocker.blocking.push(attacker_id);
+        }
+    }
+    //Add deathtouch and combat triggers
+    async fn handle_damage(&mut self,amount:i64,target:TargetId,source:CardId){
+        if amount<=0{
+            return;
+        }
+        match target{
+            TargetId::Card(cardid)=>{
+                if let Some(card)=self.cards.get_mut(cardid){
+                    card.damaged+=amount;
+                }
+            },
+            TargetId::Player(playerid)=>{
+                if let Some(player)=self.players.get_mut(playerid){
+                    player.life-=amount;
+                }  
+            }
+        }
 
+    }
     async fn spread_damage(
         &self,
         events: &mut Vec<TagEvent>,

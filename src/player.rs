@@ -21,7 +21,7 @@ use warp::ws::WebSocket;
 #[derive(Clone)]
 pub struct Player {
     pub name: String,
-    pub life: i32,
+    pub life: i64,
     pub library: Vec<CardId>,
     pub hand: HashSet<CardId>,
     pub mana_pool: EntMap<ManaId,Mana>,
@@ -33,7 +33,7 @@ pub struct Player {
 #[derive(Serialize)]
 pub struct PlayerView<'a> {
     pub name: &'a str,
-    pub life: i32,
+    pub life: i64,
     pub library: Vec<Option<CardId>>,
     pub hand: HashSet<Option<CardId>>,
     pub graveyard: &'a Vec<CardId>,
