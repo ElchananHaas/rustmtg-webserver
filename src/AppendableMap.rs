@@ -46,7 +46,12 @@ where
     pub fn get_mut(&self, id: K) -> Option<&mut V> {
         self.ents.get_mut(&id)
     }
-
+    pub fn is(&self, id:K, f:impl FnOnce(&V) -> bool)->bool{
+        match self.ents.get(&id){
+            None=>false,
+            Some(ent)=>f(ent)
+        }
+    }
     pub fn remove(&mut self, id: K) -> Option<V> {
         self.ents.remove(&id)
     }

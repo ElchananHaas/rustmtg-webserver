@@ -298,7 +298,7 @@ impl Game {
                 let legal_attackers = self
                     .players_creatures(self.active_player)
                     .filter(|e| self.can_tap(*e))
-                    .collect::<Vec<Entity>>();
+                    .collect::<Vec<CardId>>();
                 let attack_targets = self.attack_targets(self.active_player);
 
                 loop {
@@ -342,7 +342,8 @@ impl Game {
                     //Now declare them attackers and fire attacking events
                     for (&attacker, &attacked) in actual_attackers.iter().zip(attack_targets.iter())
                     {
-                        let _ = self.ents.insert_one(attacker, Attacking(attacked));
+                        self.cards.get(attacker).map(|card|card.attacking=Some(attacked));
+                       
                     }
                     events.push(TagEvent {
                         event: Event::Attack {
@@ -362,16 +363,12 @@ impl Game {
                     let attacking = self
                         .all_creatures()
                         .filter(|&creature| {
-                            if let Ok(attack) = self.ents.get::<Attacking>(creature) {
-                                attack.0 == opponent
-                            } else {
-                                false
-                            }
+                            self.cards.get(creature).filter_ok(|&card| card.attacking==Some(opponent))
                         })
                         .collect::<Vec<_>>();
                     let potential_blockers = self
                         .players_creatures(opponent)
-                        .filter(|&creature| !self.has::<Tapped>(creature))
+                        .filter(|&creature| self.cards.is(creature,|card|!card.tapped))
                         .collect::<Vec<_>>();
                     //This will be adjusted for creatres that can make multiple blocks
                     let choice_limits = vec![(0, 1); potential_blockers.len()];
@@ -417,7 +414,7 @@ impl Game {
                 }
                 for attacker in self
                     .all_creatures()
-                    .filter(|&creature| self.has::<Attacking>(creature))
+                    .filter(|&creature| self.cards.is(creature,|card|card.attacking))
                 {
                     Game::add_event(events, Event::AttackUnblocked { attacker });
                 }
@@ -426,10 +423,13 @@ impl Game {
             Subphase::Damage => self.damagephase(results, events, subphase).await,
             Subphase::EndCombat => {
                 self.cycle_priority().await;
-                for perm in self.battlefield.clone() {
-                    let _ = self.ents.remove_one::<Attacking>(perm);
-                    let _ = self.ents.remove_one::<Blocked>(perm);
-                    let _ = self.ents.remove_one::<Blocking>(perm);
+                for perm in self.battlefield {
+                    if let Some(card)=self.cards.get_mut(perm){
+                        card.attacking=None;
+                        card.blocked=Vec::new();
+                        card.blocking=Vec::new();
+                        card.already_attacked=false;
+                    }
                 }
             }
             Subphase::EndStep => {
@@ -455,9 +455,10 @@ impl Game {
             self.discard(self.active_player, card, DiscardCause::GameInternal)
                 .await;
         }
-        for perm in self.battlefield.clone() {
-            let _ = self.ents.remove_one::<Damage>(perm);
-            let _ = self.ents.remove_one::<DealtCombatDamage>(perm);
+        for perm in self.battlefield {
+            if let Some(perm)=self.cards.get_mut(perm){
+                perm.damaged=0;
+            }
         }
         //TODO handle priority being given in cleanup step by giving
         //another cleanup step afterwards
@@ -471,55 +472,44 @@ impl Game {
         //Handle first strike and normal strike
         for attacker in self
             .damage_phase_permanents(self.players_creatures(self.active_player), subphase)
-            .collect::<Vec<_>>()
         {
-            let is_attacking = if let Ok(attack) = self.ents.get::<Attacking>(attacker) {
-                Some(*attack)
-            } else {
-                None
-            };
-            if let Some(unblocked_attack) = is_attacking {
-                if let Ok(pt) = self.ents.get::<PT>(attacker) {
-                    if pt.power <= 0 {
-                        continue;
-                    }
-                    if let Ok(blocks) = self.ents.get::<Blocked>(attacker) {
-                        self.spread_damage(events, attacker, &blocks.0).await;
-                    } else {
-                        Game::add_event(
-                            events,
-                            Event::Damage {
-                                amount: pt.power,
-                                target: unblocked_attack.0,
-                                source: attacker,
-                                reason: DamageReason::Combat,
-                            },
-                        );
-                    }
+            try{
+                let attack=self.cards.get(attacker)?;
+                let target=attack.attacking?;
+                if let Some(blocks)=attack.blocked{
+                    self.spread_damage(events, attacker, &blocks).await;
+                }else{
+                    Game::add_event(
+                        events,
+                        Event::Damage {
+                            amount: attack.pt.power,
+                            target,
+                            source: attacker,
+                            reason: DamageReason::Combat,
+                        },
+                    );
                 }
-            }
+            };
         }
-        for blocker in self
-            .damage_phase_permanents(self.all_creatures(), subphase)
-            .collect::<Vec<_>>()
+        for blocker in self.all_creatures()
         {
-            if let Ok(blocked) = self.ents.get::<Blocking>(blocker) {
-                self.spread_damage(events, blocker, &blocked.0).await;
+            if let Some(card) = self.cards.get(blocker) {
+                self.spread_damage(events, blocker, card.blocking).await;
             }
         }
     }
     pub fn damage_phase_permanents<'b>(
         &'b self,
-        creatures: impl Iterator<Item = Entity> + 'b,
+        creatures: impl Iterator<Item = CardId> + 'b,
         subphase: Subphase,
-    ) -> impl Iterator<Item = Entity> + 'b {
+    ) -> impl Iterator<Item = CardId> + 'b {
         creatures.filter(move |&ent| {
             if subphase == Subphase::FirstStrikeDamage {
                 self.has_keyword(ent, KeywordAbility::FirstStrike)
                     || self.has_keyword(ent, KeywordAbility::DoubleStrike)
             } else if subphase == Subphase::Damage {
                 self.has_keyword(ent, KeywordAbility::DoubleStrike)
-                    || !self.has::<DealtCombatDamage>(ent)
+                    || !self.cards(ent)
             } else {
                 panic!("This function may only be called within the damage phases")
             }
@@ -567,8 +557,8 @@ impl Game {
     async fn spread_damage(
         &self,
         events: &mut Vec<TagEvent>,
-        dealer: Entity,
-        creatures: &Vec<Entity>,
+        dealer: CardId,
+        creatures: &Vec<TargetId>,
     ) {
         let mut damage_to_deal = if let Ok(pt) = self.ents.get::<PT>(dealer) {
             pt.power

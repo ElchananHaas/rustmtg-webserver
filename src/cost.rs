@@ -7,9 +7,7 @@ use serde_derive::Serialize;
 
 /*
 !!!!!!!!!TODO
-Fix this to check that the cost obligations are
-fulfilled by the supplied mana. This should enable
-hybrid mana with ease
+Allow the game to interactively ask for costs to be paid
 */
 #[derive(Clone, Debug, Serialize)]
 pub enum Cost {
