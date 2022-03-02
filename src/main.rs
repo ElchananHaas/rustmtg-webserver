@@ -64,10 +64,10 @@ async fn launch_game(sockets: Vec<WebSocket>) -> Result<()> {
     let mut gamebuild = game::GameBuilder::new();
     let mut deck = Vec::new();
     for _ in 0..30 {
-        deck.push(String::from("Staunch Shieldmate"));
+        deck.push("Staunch Shieldmate");
     }
     for _ in 0..30 {
-        deck.push(String::from("Plains"));
+        deck.push("Plains");
     }
     sockets
         .into_iter()

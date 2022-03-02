@@ -12,13 +12,15 @@ use std::{
 
 use serde::{ser::SerializeMap, Serialize};
 use serde_derive::Serialize;
+
+use crate::{entities::CardId, card_entities::CardEnt, spellabil::KeywordAbility};
 #[derive(Serialize, Clone)]
 pub struct EntMap<K, V>
 where
     K: Copy + Hash + Eq + From<NonZeroU64>,
 {
     ents: HashMap<K, V>,
-    count: usize,
+    count: NonZeroU64,
 }
 
 const ARENA_CAP: usize = 8;
@@ -30,20 +32,20 @@ where
     pub fn new() -> Self {
         Self {
             ents: HashMap::new(),
-            count: 0,
+            count: NonZeroU64::new(1).unwrap(),
         }
     }
     pub fn view(&self) -> Vec<(K, &V)> {
-        let res = Vec::new();
-        for (k, v) in self.ents {
-            res.push((k, &v));
+        let mut res = Vec::new();
+        for (k, v) in &self.ents {
+            res.push((*k, v));
         }
         res
     }
     pub fn get(&self, id: K) -> Option<&V> {
         self.ents.get(&id)
     }
-    pub fn get_mut(&self, id: K) -> Option<&mut V> {
+    pub fn get_mut(&mut self, id: K) -> Option<&mut V> {
         self.ents.get_mut(&id)
     }
     pub fn is(&self, id:K, f:impl FnOnce(&V) -> bool)->bool{
@@ -56,13 +58,19 @@ where
         self.ents.remove(&id)
     }
     fn get_newkey(&mut self) -> K {
-        self.count += 1;
         let newkey = K::from(self.count);
+        let val=self.count.get();
+        self.count=NonZeroU64::new(val).unwrap();
         newkey
     }
-    pub fn insert(&mut self, value: V) -> K {
+    pub fn insert(&mut self, value: V) -> (K,&mut V) {
         let newkey = self.get_newkey();
         self.ents.insert(newkey, value);
-        newkey
+        (newkey,self.ents.get_mut(&newkey).unwrap())
+    }
+}
+impl EntMap<CardId,CardEnt>{
+    pub fn has_keyword(&self,ent:CardId,keyword:KeywordAbility)->bool{
+        self.is(ent,|card|card.has_keyword(keyword))
     }
 }

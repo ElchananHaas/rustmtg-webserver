@@ -36,3 +36,14 @@ impl From<NonZeroU64> for ManaId {
         Self(x)
     }
 }
+impl From<PlayerId> for TargetId{
+    fn from(x:PlayerId)->Self{
+        Self::Player(x)
+    }
+}
+
+impl From<CardId> for TargetId{
+    fn from(x:CardId)->Self{
+        Self::Card(x)
+    }
+}

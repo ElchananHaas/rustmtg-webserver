@@ -1,6 +1,5 @@
 //This file stores varius components that entities may
 use serde_derive::Serialize;
-use std::collections::HashSet;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize)]
 #[allow(dead_code)] //allow dead code to reduce warnings noise on each variant

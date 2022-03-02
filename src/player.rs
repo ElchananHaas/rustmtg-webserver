@@ -1,15 +1,15 @@
-use crate::entities::{CardId, EntId, ManaId, PlayerId};
+use crate::entities::{CardId, EntId, ManaId, PlayerId, TargetId};
 use crate::game::Cards;
 use crate::mana::Mana;
 use crate::AppendableMap::{self, EntMap};
 use anyhow::{bail, Result};
 //derivative::Derivative, work around rust-analyzer bug for now
-use derivative::*;
 use futures::{SinkExt, StreamExt};
 use serde::de::DeserializeOwned;
 use serde::{Serialize, Serializer};
 use serde_derive::Serialize;
 use std::collections::{HashMap, HashSet};
+use std::hash::Hash;
 use std::ops::RangeBounds;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -77,13 +77,13 @@ impl Player {
         self.player_con.send_state(buffer).await
     }
     //Select n entities from a set
-    pub async fn ask_user_selectn(
+    pub async fn ask_user_selectn<T:DeserializeOwned+Serialize+Hash+Eq+Clone>(
         &self,
-        ents: &HashSet<EntId>,
+        ents: &HashSet<T>,
         min: i32,
         max: i32,
         reason: AskReason,
-    ) -> HashSet<EntId> {
+    ) -> HashSet<T> {
         let query = AskUser {
             asktype: AskType::SelectN {
                 ents: ents.clone(),
@@ -93,7 +93,7 @@ impl Player {
             reason,
         };
         loop {
-            let response = self.player_con.ask_user::<HashSet<EntId>>(&query).await;
+            let response = self.player_con.ask_user::<HashSet<T>,T>(&query).await;
             if response.len() < min.try_into().unwrap() || response.len() > max.try_into().unwrap()
             {
                 continue;
@@ -105,14 +105,14 @@ impl Player {
     //Returns an adjacency matrix with either the
     //planeswalker/player each attacker is attacking,
     //or the list of creatures each blocker is blocking
-    pub async fn ask_user_pair(
+    pub async fn ask_user_pair<T:Clone+Eq+DeserializeOwned+Hash+Copy+Serialize>(
         &self,
         a: Vec<CardId>,
-        b: Vec<CardId>,
+        b: Vec<T>,
         //Min and max number of choices
         num_choices: Vec<(usize, usize)>,
         reason: AskReason,
-    ) -> Vec<Vec<CardId>> {
+    ) -> Vec<Vec<T>> {
         let query = AskUser {
             asktype: AskType::PairAB {
                 a: a.clone(),
@@ -122,7 +122,7 @@ impl Player {
             reason,
         };
         'outer: loop {
-            let response = self.player_con.ask_user::<Vec<Vec<CardId>>>(&query).await;
+            let response = self.player_con.ask_user::<Vec<Vec<T>>,T>(&query).await;
             if response.len() != a.len() {
                 continue 'outer;
             }
@@ -135,7 +135,7 @@ impl Player {
                 if row.len() < num_choices[i].0 || row.len() > num_choices[i].1 {
                     continue 'outer;
                 }
-                let as_set = row.iter().map(|x| *x).collect::<HashSet<CardId>>();
+                let as_set = row.iter().map(|x| *x).collect::<HashSet<T>>();
                 if row.len() != as_set.len() {
                     continue 'outer;
                 }
@@ -146,20 +146,20 @@ impl Player {
 }
 
 #[derive(Clone, Debug, Serialize)]
-pub struct AskUser {
+pub struct AskUser<T:Hash+Eq> {
     reason: AskReason,
-    asktype: AskType,
+    asktype: AskType<T>,
 }
 #[derive(Clone, Debug, Serialize)]
-pub enum AskType {
+pub enum AskType<T:Hash+Eq> {
     SelectN {
-        ents: HashSet<EntId>,
+        ents: HashSet<T>,
         min: i32,
         max: i32,
     },
     PairAB {
         a: Vec<CardId>,
-        b: Vec<CardId>,
+        b: Vec<T>,
         num_choices: Vec<(usize, usize)>,
     },
 }
@@ -182,14 +182,14 @@ impl PlayerCon {
     }
 
     //This function ensures the socket will be restored, even in the case of an error
-    pub async fn ask_user<T: DeserializeOwned>(&self, query: &AskUser) -> T {
+    pub async fn ask_user<T: DeserializeOwned,U:Serialize+Hash+Eq>(&self, query: &AskUser<U>) -> T {
         let mut socket = self.socket.lock().await;
-        let res = self.ask_user_socket(query, &mut socket).await;
+        let res = self.ask_user_socket::<T,U>(query, &mut socket).await;
         res
     }
-    async fn ask_user_socket<T: DeserializeOwned>(
+    async fn ask_user_socket<T: DeserializeOwned,U: Serialize+Hash+Eq>(
         &self,
-        query: &AskUser,
+        query: &AskUser<U>,
         socket: &mut WebSocket,
     ) -> T {
         let mut buffer = Vec::<u8>::new();

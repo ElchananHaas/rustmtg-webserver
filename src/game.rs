@@ -79,7 +79,7 @@ impl GameBuilder {
         &mut self,
         name: &str,
         db: &CardDB,
-        card_names: &Vec<String>,
+        card_names: &Vec<&'static str>,
         player_con: WebSocket,
     ) -> Result<PlayerId> {
         let mut cards = Vec::new();
@@ -93,18 +93,19 @@ impl GameBuilder {
             max_handsize: 7,
             player_con: PlayerCon::new(player_con),
         };
-        let player: PlayerId = self.players.insert(player);
+        let (player_id,player) = self.players.insert(player);
         for cardname in card_names {
-            let card: CardId = db.spawn_card(&mut self.cards, &cardname, player);
-            cards.push(card);
+            let card: CardEnt = db.spawn_card( &cardname, player_id);
+            let (card_id,card)=self.cards.insert(card);
+            cards.push(card_id);
         }
         //Now that the deck has been constructed, set the players deck
-        self.players.get(player).unwrap().library = cards;
-        self.turn_order.push(player);
+        player.library = cards;
+        self.turn_order.push(player_id);
         if self.active_player.is_none() {
-            self.active_player = Some(player);
+            self.active_player = Some(player_id);
         }
-        Ok(player)
+        Ok(player_id)
     }
     pub fn build(self, db: &'static CardDB) -> Result<Game> {
         let active_player = match self.active_player {
@@ -221,7 +222,9 @@ impl Game {
         self.backup = Some(Box::new(self.clone()));
     }
     pub fn restore(&mut self) {
-        *self = *self.backup.unwrap();
+        let mut b=None;
+        std::mem::swap(&mut b, &mut self.backup);
+        *self = *b.unwrap();
     }
     //Taps an entity, returns if it was sucsessfully tapped
     pub async fn tap(&mut self, ent: CardId) -> bool {
@@ -243,7 +246,7 @@ impl Game {
         //TODO figure out which cards were drawn!
     }
     pub fn shuffle(&mut self, player: PlayerId) {
-        if let Some(pl) = self.players.get(player) {
+        if let Some(pl) = self.players.get_mut(player) {
             pl.library.shuffle(&mut self.rng);
         }
     }
@@ -277,7 +280,7 @@ impl Game {
         };
         let pl = self.players.get_mut(player)?;
         let mana = Mana::new(color);
-        let id = pl.mana_pool.insert(mana);
+        let (id,_) = pl.mana_pool.insert(mana);
         Some(id)
     }
     pub fn players_creatures<'b>(&'b self, player: PlayerId) -> impl Iterator<Item = CardId> + 'b {

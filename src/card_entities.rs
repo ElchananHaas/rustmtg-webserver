@@ -1,6 +1,7 @@
 use bitvec::{array::BitArray, BitArr};
 use serde::{ser::SerializeSeq, Serialize, Serializer};
 use serde_derive::Serialize;
+use derivative::*;
 use std::{
     cell::{Cell, RefCell},
     collections::{HashMap, HashSet},
@@ -13,7 +14,8 @@ use crate::{
     entities::{CardId, PlayerId, TargetId},
     spellabil::KeywordAbility,
 };
-
+#[derive(Derivative)]
+#[derivative(Default)]
 #[derive(Serialize, Clone)]
 pub struct CardEnt {
     //Holds a card, token or embalem
@@ -25,6 +27,7 @@ pub struct CardEnt {
     pub blocked: Vec<CardId>,
     pub blocking: Vec<CardId>,
     pub name: &'static str,
+    #[derivative(Default(value="PlayerId::from(NonZeroU64::new(u64::MAX).unwrap())"))]
     pub owner: PlayerId,
     pub printed_name: String,
     pub token: bool,
@@ -70,7 +73,7 @@ pub struct Supertypes {
     pub legendary: bool,
     pub snow: bool,
 }
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct Subtypes {
     //needs a manual serialize implementation
     //Would probaboly be needed anyways for JS
@@ -103,7 +106,7 @@ impl Subtypes {
     pub fn add(&mut self, t: Subtype) {
         *self.table.get_mut(t as usize).unwrap() = true;
     }
-    pub fn get(&self, t: Subtype) -> bool {
+    pub fn has(&self, t: Subtype) -> bool {
         *self.table.get(t as usize).unwrap()
     }
     pub fn lose_all_subtypes(&mut self) {
