@@ -1,16 +1,15 @@
-use crate::entities::{CardId, EntId, ManaId, PlayerId, TargetId};
+use crate::ent_maps::EntMap;
+use crate::entities::{CardId, ManaId, PlayerId};
 use crate::game::Cards;
 use crate::mana::Mana;
-use crate::AppendableMap::{self, EntMap};
-use anyhow::{bail, Result};
+use anyhow::Result;
 //derivative::Derivative, work around rust-analyzer bug for now
 use futures::{SinkExt, StreamExt};
 use serde::de::DeserializeOwned;
-use serde::{Serialize, Serializer};
+use serde::Serialize;
 use serde_derive::Serialize;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::hash::Hash;
-use std::ops::RangeBounds;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -77,7 +76,7 @@ impl Player {
         self.player_con.send_state(buffer).await
     }
     //Select n entities from a set
-    pub async fn ask_user_selectn<T:DeserializeOwned+Serialize+Hash+Eq+Clone>(
+    pub async fn ask_user_selectn<T: DeserializeOwned + Serialize + Hash + Eq + Clone>(
         &self,
         ents: &HashSet<T>,
         min: i32,
@@ -93,7 +92,7 @@ impl Player {
             reason,
         };
         loop {
-            let response = self.player_con.ask_user::<HashSet<T>,T>(&query).await;
+            let response = self.player_con.ask_user::<HashSet<T>, T>(&query).await;
             if response.len() < min.try_into().unwrap() || response.len() > max.try_into().unwrap()
             {
                 continue;
@@ -105,7 +104,7 @@ impl Player {
     //Returns an adjacency matrix with either the
     //planeswalker/player each attacker is attacking,
     //or the list of creatures each blocker is blocking
-    pub async fn ask_user_pair<T:Clone+Eq+DeserializeOwned+Hash+Copy+Serialize>(
+    pub async fn ask_user_pair<T: Clone + Eq + DeserializeOwned + Hash + Copy + Serialize>(
         &self,
         a: Vec<CardId>,
         b: Vec<T>,
@@ -122,7 +121,7 @@ impl Player {
             reason,
         };
         'outer: loop {
-            let response = self.player_con.ask_user::<Vec<Vec<T>>,T>(&query).await;
+            let response = self.player_con.ask_user::<Vec<Vec<T>>, T>(&query).await;
             if response.len() != a.len() {
                 continue 'outer;
             }
@@ -146,12 +145,12 @@ impl Player {
 }
 
 #[derive(Clone, Debug, Serialize)]
-pub struct AskUser<T:Hash+Eq> {
+pub struct AskUser<T: Hash + Eq> {
     reason: AskReason,
     asktype: AskType<T>,
 }
 #[derive(Clone, Debug, Serialize)]
-pub enum AskType<T:Hash+Eq> {
+pub enum AskType<T: Hash + Eq> {
     SelectN {
         ents: HashSet<T>,
         min: i32,
@@ -182,12 +181,15 @@ impl PlayerCon {
     }
 
     //This function ensures the socket will be restored, even in the case of an error
-    pub async fn ask_user<T: DeserializeOwned,U:Serialize+Hash+Eq>(&self, query: &AskUser<U>) -> T {
+    pub async fn ask_user<T: DeserializeOwned, U: Serialize + Hash + Eq>(
+        &self,
+        query: &AskUser<U>,
+    ) -> T {
         let mut socket = self.socket.lock().await;
-        let res = self.ask_user_socket::<T,U>(query, &mut socket).await;
+        let res = self.ask_user_socket::<T, U>(query, &mut socket).await;
         res
     }
-    async fn ask_user_socket<T: DeserializeOwned,U: Serialize+Hash+Eq>(
+    async fn ask_user_socket<T: DeserializeOwned, U: Serialize + Hash + Eq>(
         &self,
         query: &AskUser<U>,
         socket: &mut WebSocket,

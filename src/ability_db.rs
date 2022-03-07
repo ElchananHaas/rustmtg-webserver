@@ -1,7 +1,6 @@
 //A list of a large number of ability/clause creating functions
 
 use anyhow::Result;
-use std::sync::Arc;
 
 use crate::{
     ability::Ability,

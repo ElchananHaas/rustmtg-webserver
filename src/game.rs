@@ -2,12 +2,12 @@ use crate::ability::Ability;
 use crate::card_entities::{CardEnt, PT};
 use crate::carddb::CardDB;
 use crate::components::Subtype;
+use crate::ent_maps::EntMap;
 use crate::entities::{CardId, ManaId, PlayerId, TargetId};
 use crate::event::{DiscardCause, Event, EventResult, TagEvent};
 use crate::mana::{Color, Mana, ManaCostSymbol};
 use crate::player::{Player, PlayerCon};
 use crate::spellabil::KeywordAbility;
-use crate::AppendableMap::EntMap;
 use anyhow::{bail, Result};
 use futures::future;
 use rand::seq::SliceRandom;
@@ -93,10 +93,10 @@ impl GameBuilder {
             max_handsize: 7,
             player_con: PlayerCon::new(player_con),
         };
-        let (player_id,player) = self.players.insert(player);
+        let (player_id, player) = self.players.insert(player);
         for cardname in card_names {
-            let card: CardEnt = db.spawn_card( &cardname, player_id);
-            let (card_id,card)=self.cards.insert(card);
+            let card: CardEnt = db.spawn_card(&cardname, player_id);
+            let (card_id, card) = self.cards.insert(card);
             cards.push(card_id);
         }
         //Now that the deck has been constructed, set the players deck
@@ -222,7 +222,7 @@ impl Game {
         self.backup = Some(Box::new(self.clone()));
     }
     pub fn restore(&mut self) {
-        let mut b=None;
+        let mut b = None;
         std::mem::swap(&mut b, &mut self.backup);
         *self = *b.unwrap();
     }
@@ -268,20 +268,25 @@ impl Game {
         discarded
         //TODO figure out which cards were discarded!
     }
-    pub async fn add_mana(&mut self, player: PlayerId, mana: ManaCostSymbol) -> Option<ManaId> {
-        let color: Color = match mana {
-            ManaCostSymbol::Black => Color::Black,
-            ManaCostSymbol::Blue => Color::Blue,
-            ManaCostSymbol::Green => Color::Green,
-            ManaCostSymbol::Red => Color::Red,
-            ManaCostSymbol::White => Color::White,
-            ManaCostSymbol::Generic => Color::Colorless,
-            ManaCostSymbol::Colorless => Color::Colorless,
+    pub async fn add_mana(&mut self, player: PlayerId, mana: ManaCostSymbol) -> Vec<ManaId> {
+        let colors: Vec<Color> = match mana {
+            ManaCostSymbol::Black => vec![Color::Black],
+            ManaCostSymbol::Blue => vec![Color::Blue],
+            ManaCostSymbol::Green => vec![Color::Green],
+            ManaCostSymbol::Red => vec![Color::Red],
+            ManaCostSymbol::White => vec![Color::White],
+            ManaCostSymbol::Generic(x) => vec![Color::Colorless].repeat(x.try_into().unwrap()),
+            ManaCostSymbol::Colorless => vec![Color::Colorless],
         };
-        let pl = self.players.get_mut(player)?;
-        let mana = Mana::new(color);
-        let (id,_) = pl.mana_pool.insert(mana);
-        Some(id)
+        let mut ids = Vec::new();
+        if let Some(pl) = self.players.get_mut(player) {
+            for color in colors {
+                let mana = Mana::new(color);
+                let (id, _) = pl.mana_pool.insert(mana);
+                ids.push(id);
+            }
+        }
+        ids
     }
     pub fn players_creatures<'b>(&'b self, player: PlayerId) -> impl Iterator<Item = CardId> + 'b {
         self.all_creatures()

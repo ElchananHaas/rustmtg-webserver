@@ -1,7 +1,7 @@
 use bitvec::{array::BitArray, BitArr};
+use derivative::*;
 use serde::{ser::SerializeSeq, Serialize, Serializer};
 use serde_derive::Serialize;
-use derivative::*;
 use std::{
     cell::{Cell, RefCell},
     collections::{HashMap, HashSet},
@@ -11,6 +11,7 @@ use std::{
 use crate::{
     ability::Ability,
     components::Subtype,
+    cost::Cost,
     entities::{CardId, PlayerId, TargetId},
     spellabil::KeywordAbility,
 };
@@ -27,7 +28,7 @@ pub struct CardEnt {
     pub blocked: Vec<CardId>,
     pub blocking: Vec<CardId>,
     pub name: &'static str,
-    #[derivative(Default(value="PlayerId::from(NonZeroU64::new(u64::MAX).unwrap())"))]
+    #[derivative(Default(value = "PlayerId::from(NonZeroU64::new(u64::MAX).unwrap())"))]
     pub owner: PlayerId,
     pub printed_name: String,
     pub token: bool,
@@ -38,6 +39,8 @@ pub struct CardEnt {
     pub supertypes: Supertypes,
     pub subtypes: Subtypes,
     pub abilities: Vec<Ability>,
+    pub mana_cost: Option<Cost>,
+    pub additional_costs: Vec<Cost>,
 }
 impl CardEnt {
     pub fn has_keyword(&self, keyword: KeywordAbility) -> bool {

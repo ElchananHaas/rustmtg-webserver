@@ -1,6 +1,72 @@
-//This file stores varius components that entities may
+use paste::paste;
 use serde_derive::Serialize;
-
+use nom;
+use nom::IResult;
+use std::convert::AsRef;
+use strum_macros::AsRefStr;
+use nom::bytes::complete::tag;
+use nom::Err;
+use nom::error::{Error,ParseError};
+macro_rules! enumset{
+    ($name:ident, $($e:ident),*) => {
+        //#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize)]
+        #[derive(AsRefStr)]
+        #[allow(dead_code)] //allow dead code to reduce warnings noise on each variant
+        #[repr(C)]
+        pub enum $name{
+            $($e,)*
+        }
+        impl $name{
+            pub fn recognize(x:&str)->IResult<&str, Self>{
+                $(
+                    let parse:IResult<&str,&str>=tag($name::$e.as_ref())(x);
+                    if let Ok((rest,_))=parse{
+                        return Ok((rest,$name::$e));
+                    }
+                )*
+                return Err(Err::Error(Error::from_error_kind(x, nom::error::ErrorKind::Alt)));
+            }
+        }
+        paste!{
+            #[derive(Default)]
+            struct [<$name s>]{
+                $( 
+                    pub [<$e:lower>]:bool,
+                )*
+            }
+            impl [<$name s>]{
+                pub fn new()->Self{
+                    Self::default()
+                }  
+                pub fn get(&self,x:$name)->bool{
+                    match x{
+                        $(
+                            $e=>self.[<$e:lower>],
+                        )*
+                    }
+                }
+                pub fn add(&mut self,x:$name){
+                    match x{
+                        $(
+                            $e=>{self.[<$e:lower>]=true},
+                        )*
+                    }  
+                }
+                pub fn remove(&mut self,x:$name){
+                    match x{
+                        $(
+                            $e=>{self.[<$e:lower>]=false},
+                        )*
+                    }  
+                }
+                pub fn remove_all(&mut self){
+                    *self=Default::default();
+                }
+            }
+        }
+    };
+}
+enumset!(Abc, Def, Ghi);
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize)]
 #[allow(dead_code)] //allow dead code to reduce warnings noise on each variant
 #[repr(C)]

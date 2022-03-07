@@ -4,9 +4,9 @@ use serde::ser::SerializeMap;
 use serde_derive::Serialize;
 
 use crate::{
+    ent_maps::EntMap,
     entities::{CardId, ManaId},
     game::Game,
-    AppendableMap::EntMap,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
@@ -44,17 +44,17 @@ pub enum ManaCostSymbol {
     Red,
     Green,
     Colorless,
-    Generic,
+    Generic(u64),
 }
 
 pub fn mana_cost_string(coststr: &str) -> Vec<ManaCostSymbol> {
-    let mut generic: i32 = 0;
+    let mut generic: u64 = 0;
     let mut res = Vec::new();
     for letter in coststr.chars() {
         if letter.is_digit(10) {
             generic *= 10;
             //This should be safe bc/ these are hardcoded within the code
-            generic += i32::try_from(letter.to_digit(10).unwrap()).unwrap();
+            generic += u64::try_from(letter.to_digit(10).unwrap()).unwrap();
         }
         if letter == 'W' {
             res.push(ManaCostSymbol::White);
@@ -72,8 +72,6 @@ pub fn mana_cost_string(coststr: &str) -> Vec<ManaCostSymbol> {
             res.push(ManaCostSymbol::Green);
         }
     }
-    for _ in 0..generic {
-        res.push(ManaCostSymbol::Generic);
-    }
+    res.push(ManaCostSymbol::Generic(generic));
     res
 }

@@ -1,19 +1,8 @@
-use std::{
-    cell::{Cell, RefCell},
-    collections::HashMap,
-    hash::Hash,
-    num::NonZeroU64,
-    ops::DerefMut,
-    sync::{
-        atomic::{AtomicU64, Ordering},
-        Arc, Mutex,
-    },
-};
+use std::{collections::HashMap, hash::Hash, num::NonZeroU64};
 
-use serde::{ser::SerializeMap, Serialize};
 use serde_derive::Serialize;
 
-use crate::{entities::CardId, card_entities::CardEnt, spellabil::KeywordAbility};
+use crate::{card_entities::CardEnt, entities::CardId, spellabil::KeywordAbility};
 #[derive(Serialize, Clone)]
 pub struct EntMap<K, V>
 where
@@ -22,8 +11,6 @@ where
     ents: HashMap<K, V>,
     count: NonZeroU64,
 }
-
-const ARENA_CAP: usize = 8;
 
 impl<K, V> EntMap<K, V>
 where
@@ -48,10 +35,10 @@ where
     pub fn get_mut(&mut self, id: K) -> Option<&mut V> {
         self.ents.get_mut(&id)
     }
-    pub fn is(&self, id:K, f:impl FnOnce(&V) -> bool)->bool{
-        match self.ents.get(&id){
-            None=>false,
-            Some(ent)=>f(ent)
+    pub fn is(&self, id: K, f: impl FnOnce(&V) -> bool) -> bool {
+        match self.ents.get(&id) {
+            None => false,
+            Some(ent) => f(ent),
         }
     }
     pub fn remove(&mut self, id: K) -> Option<V> {
@@ -59,18 +46,18 @@ where
     }
     fn get_newkey(&mut self) -> K {
         let newkey = K::from(self.count);
-        let val=self.count.get();
-        self.count=NonZeroU64::new(val).unwrap();
+        let val = self.count.get();
+        self.count = NonZeroU64::new(val).unwrap();
         newkey
     }
-    pub fn insert(&mut self, value: V) -> (K,&mut V) {
+    pub fn insert(&mut self, value: V) -> (K, &mut V) {
         let newkey = self.get_newkey();
         self.ents.insert(newkey, value);
-        (newkey,self.ents.get_mut(&newkey).unwrap())
+        (newkey, self.ents.get_mut(&newkey).unwrap())
     }
 }
-impl EntMap<CardId,CardEnt>{
-    pub fn has_keyword(&self,ent:CardId,keyword:KeywordAbility)->bool{
-        self.is(ent,|card|card.has_keyword(keyword))
+impl EntMap<CardId, CardEnt> {
+    pub fn has_keyword(&self, ent: CardId, keyword: KeywordAbility) -> bool {
+        self.is(ent, |card| card.has_keyword(keyword))
     }
 }
