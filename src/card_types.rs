@@ -1,15 +1,16 @@
+use crate::carddb::trim_spaces;
+use nom;
+use nom::bytes::complete::tag;
+use nom::error::{Error, ParseError};
+use nom::Err;
+use nom::IResult;
 use paste::paste;
 use serde_derive::Serialize;
-use nom;
-use nom::IResult;
 use std::convert::AsRef;
 use strum_macros::AsRefStr;
-use nom::bytes::complete::tag;
-use nom::Err;
-use nom::error::{Error,ParseError};
 macro_rules! enumset{
     ($name:ident, $($e:ident),*) => {
-        //#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize)]
+        #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize)]
         #[derive(AsRefStr)]
         #[allow(dead_code)] //allow dead code to reduce warnings noise on each variant
         #[repr(C)]
@@ -17,7 +18,7 @@ macro_rules! enumset{
             $($e,)*
         }
         impl $name{
-            pub fn recognize(x:&str)->IResult<&str, Self>{
+            pub fn parse(x:&str)->IResult<&str, Self>{
                 $(
                     let parse:IResult<&str,&str>=tag($name::$e.as_ref())(x);
                     if let Ok((rest,_))=parse{
@@ -29,15 +30,16 @@ macro_rules! enumset{
         }
         paste!{
             #[derive(Default)]
-            struct [<$name s>]{
-                $( 
+            #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize)]
+            pub struct [<$name s>]{
+                $(
                     pub [<$e:lower>]:bool,
                 )*
             }
             impl [<$name s>]{
                 pub fn new()->Self{
                     Self::default()
-                }  
+                }
                 pub fn get(&self,x:$name)->bool{
                     match x{
                         $(
@@ -50,28 +52,48 @@ macro_rules! enumset{
                         $(
                             $e=>{self.[<$e:lower>]=true},
                         )*
-                    }  
+                    }
                 }
                 pub fn remove(&mut self,x:$name){
                     match x{
                         $(
                             $e=>{self.[<$e:lower>]=false},
                         )*
-                    }  
+                    }
                 }
                 pub fn remove_all(&mut self){
                     *self=Default::default();
+                }
+                //TODO handle spaces-or lex, then parse
+                pub fn parse(mut x:&str)->IResult<&str, Self>{
+                    let mut res=Self::new();
+                    loop{
+                        (x,_)=trim_spaces(x)?;
+                        if let Ok((rest,t))=$name::parse(x){
+                            x=rest;
+                            res.add(t);
+                        }else{
+                            return Ok((x,res));
+                        }
+                    }
                 }
             }
         }
     };
 }
-enumset!(Abc, Def, Ghi);
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize)]
-#[allow(dead_code)] //allow dead code to reduce warnings noise on each variant
-#[repr(C)]
-#[derive(variant_count::VariantCount)]
-pub enum Subtype {
+enumset!(
+    Type,
+    Artifact,
+    Enchantment,
+    Planeswalker,
+    Land,
+    Creature,
+    Instant,
+    Sorcery
+);
+enumset!(Supertype, Basic, World, Legendary, Snow);
+enumset!(
+    Subtype,
     Advisor,
     Aetherborn,
     Ally,
@@ -338,5 +360,5 @@ pub enum Subtype {
     Island,
     Swamp,
     Mountain,
-    Forest,
-}
+    Forest
+);

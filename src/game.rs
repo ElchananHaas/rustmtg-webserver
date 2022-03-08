@@ -1,7 +1,7 @@
 use crate::ability::Ability;
 use crate::card_entities::{CardEnt, PT};
+use crate::card_types::Subtype;
 use crate::carddb::CardDB;
-use crate::components::Subtype;
 use crate::ent_maps::EntMap;
 use crate::entities::{CardId, ManaId, PlayerId, TargetId};
 use crate::event::{DiscardCause, Event, EventResult, TagEvent};

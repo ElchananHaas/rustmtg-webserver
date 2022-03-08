@@ -1,16 +1,14 @@
-use bitvec::{array::BitArray, BitArr};
 use derivative::*;
-use serde::{ser::SerializeSeq, Serialize, Serializer};
 use serde_derive::Serialize;
+use crate::card_types::{Subtypes,Supertypes,Types};
 use std::{
-    cell::{Cell, RefCell},
     collections::{HashMap, HashSet},
     num::NonZeroU64,
 };
 
 use crate::{
     ability::Ability,
-    components::Subtype,
+    card_types::Subtype,
     cost::Cost,
     entities::{CardId, PlayerId, TargetId},
     spellabil::KeywordAbility,
@@ -56,63 +54,4 @@ impl CardEnt {
 pub struct PT {
     pub power: i64,
     pub toughness: i64,
-}
-
-#[derive(Clone, Copy, Debug, Default, Serialize)]
-pub struct Types {
-    //order this way for nice display
-    pub artifact: bool,
-    pub enchantment: bool,
-    pub planeswalker: bool,
-    pub instant: bool,
-    pub sorcery: bool,
-    pub land: bool,
-    pub creature: bool,
-}
-#[derive(Clone, Copy, Debug, Default, Serialize)]
-pub struct Supertypes {
-    //order this way for nice display
-    pub basic: bool,
-    pub legendary: bool,
-    pub snow: bool,
-}
-#[derive(Clone, Copy, Default)]
-pub struct Subtypes {
-    //needs a manual serialize implementation
-    //Would probaboly be needed anyways for JS
-    table: BitArr!(for Subtype::VARIANT_COUNT),
-}
-
-impl Serialize for Subtypes {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut seq = serializer.serialize_seq(None)?;
-        for (i, bit) in self.table.iter().enumerate() {
-            if *bit {
-                let i: u32 = i.try_into().unwrap();
-                let subtype: Subtype = unsafe { std::mem::transmute(i) };
-                seq.serialize_element(&subtype)?;
-            }
-        }
-        seq.end()
-    }
-}
-
-impl Subtypes {
-    pub fn new() -> Self {
-        Subtypes {
-            table: BitArray::ZERO,
-        }
-    }
-    pub fn add(&mut self, t: Subtype) {
-        *self.table.get_mut(t as usize).unwrap() = true;
-    }
-    pub fn has(&self, t: Subtype) -> bool {
-        *self.table.get(t as usize).unwrap()
-    }
-    pub fn lose_all_subtypes(&mut self) {
-        self.table = BitArray::ZERO
-    }
 }

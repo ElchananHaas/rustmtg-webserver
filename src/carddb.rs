@@ -1,5 +1,4 @@
 use crate::card_entities::CardEnt;
-use crate::card_entities::Supertypes;
 use crate::cost::Cost;
 use crate::entities::PlayerId;
 use crate::mana::ManaCostSymbol;
@@ -12,6 +11,7 @@ use serde_json;
 use std::collections::HashMap;
 use std::fmt;
 use std::fs;
+use crate::card_types::{Subtypes,Supertypes,Types};
 //It returns mut cardbuilder due to method chaining
 pub struct CardDB {
     scryfall: HashMap<String, ScryfallEntry>,
@@ -57,22 +57,30 @@ impl CardDB {
     //Precondition: card_name is the name of a valid magic card.
     //Will panic if that is not the case.
     pub fn spawn_card(&self, card_name: &'static str, owner: PlayerId) -> CardEnt {
+        self.try_spawn_card(card_name, owner).expect("couldn't spawn card")
+    }
+
+    pub fn try_spawn_card(&self, card_name: &'static str, owner: PlayerId) -> Result<CardEnt,()> {
         let mut card: CardEnt = CardEnt::default();
         card.name = card_name;
         card.owner = owner;
-        let scryfall: &ScryfallEntry = self.scryfall.get(card_name).unwrap();
-        parse_cost_line(&mut card, scryfall);
-        card
+        let scryfall: &ScryfallEntry = self.scryfall.get(card_name).ok_or(())?;
+        parse_cost_line(&mut card, scryfall)?;
+        parse_type_line(&mut card, scryfall)?;
+        Ok(card)
     }
 }
 
-fn parse_cost_line(card: &mut CardEnt, entry: &ScryfallEntry) {
+fn parse_cost_line<'a>(card: &mut CardEnt, entry: &'a ScryfallEntry)->Result<(),()> {
     if let Some(manatext) = entry.mana_cost.as_ref() {
-        let (rest, manas) = parse_mana(&manatext).expect("Failed to parse cost line!");
+        let (rest, manas) = parse_mana(&manatext).map_err(|_|())?;
         if rest.len() > 0 {
             panic!("parser error!");
         }
         card.mana_cost = Some(Cost::Mana(manas));
+        Ok(())
+    }else{
+        Err(())
     }
 }
 
@@ -103,12 +111,28 @@ fn parse_mana(input: &str) -> IResult<&str, Vec<ManaCostSymbol>> {
     many0(parse_manasymbol)(input)
 }
 
-fn trim_spaces(input: &str) -> IResult<&str, Vec<char>> {
+pub fn trim_spaces(input: &str) -> IResult<&str, Vec<char>> {
     many0(complete::char(' '))(input)
 }
-fn parse_supertypes(input: &str) -> IResult<&str, Supertypes> {
-    let supertypes = Supertypes::default();
-    loop {
-        let (input, _) = trim_spaces(input)?;
+fn parse_type_line<'a>(card: &mut CardEnt, entry: &'a ScryfallEntry)->Result<(),()>{
+    if let Some(text) = entry.type_line.as_ref() {
+        if let Ok((_,(types,subtypes,supertypes)))=parse_type_line_h(text){
+            card.types=types;
+            card.supertypes=supertypes;
+            card.subtypes=subtypes;
+            Ok(())
+        }else{
+            Err(())
+        }
+    }else{
+        Err(())
     }
+}
+fn parse_type_line_h<'a>( text: &'a str)->IResult<&'a str,(Types, Subtypes, Supertypes)>{
+    let (text,supertypes)=Supertypes::parse(text)?;
+    let (text,types)=Types::parse(text)?;
+    let (text,_)=trim_spaces(text)?;
+    let (text,_)=complete::char('-')(text)?;
+    let (text,subtypes)=Subtypes::parse(text)?;
+    Ok((text,(types,subtypes,supertypes)))
 }

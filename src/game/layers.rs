@@ -36,7 +36,7 @@ impl Game {
             if zone == Zone::Battlefield {
                 let _: Option<_> = try {
                     let card = self.cards.get_mut(ent)?;
-                    if card.subtypes.has(Subtype::Plains) {
+                    if card.subtypes.get(Subtype::Plains) {
                         self.add_ability(ent, tap_for_mana(vec![ManaCostSymbol::White]));
                     }
                 };
