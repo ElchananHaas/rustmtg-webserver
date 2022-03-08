@@ -1,6 +1,7 @@
 use crate::card_entities::CardEnt;
 use crate::cost::Cost;
 use crate::entities::PlayerId;
+use crate::mana::Mana;
 use crate::mana::ManaCostSymbol;
 use anyhow::Result;
 use nom::character::complete;
@@ -12,6 +13,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::fs;
 use crate::card_types::{Subtypes,Supertypes,Types};
+use nom::error::ErrorKind;
 //It returns mut cardbuilder due to method chaining
 pub struct CardDB {
     scryfall: HashMap<String, ScryfallEntry>,
@@ -85,19 +87,19 @@ fn parse_cost_line<'a>(card: &mut CardEnt, entry: &'a ScryfallEntry)->Result<(),
 }
 
 fn parse_manasymbol_contents(input: &str) -> IResult<&str, ManaCostSymbol> {
-    let costsymbol = match input {
-        "W" => ManaCostSymbol::White,
-        "U" => ManaCostSymbol::Blue,
-        "B" => ManaCostSymbol::Black,
-        "R" => ManaCostSymbol::Red,
-        "G" => ManaCostSymbol::Green,
-        x => {
-            let (rest, cost) = complete::u64(x)?;
-            ManaCostSymbol::Generic(cost)
-            //A generic cost here
-        }
-    };
-    Ok(("", costsymbol))
+    if let Ok((rest,symbol))=complete::one_of::<_, _, (&str, ErrorKind)>("WUBRG")(input){
+        let costsymbol = match symbol {
+            'W' => ManaCostSymbol::White,
+            'U' => ManaCostSymbol::Blue,
+            'B' => ManaCostSymbol::Black,
+            'R' => ManaCostSymbol::Red,
+            'G' => ManaCostSymbol::Green,
+            _=>unreachable!("Already checked symbol")
+        };
+        Ok((rest,costsymbol))
+    }else{
+        complete::u64(input).map(|(rest,x)|(rest,ManaCostSymbol::Generic(x)))
+    }
 }
 fn parse_manasymbol(input: &str) -> IResult<&str, ManaCostSymbol> {
     nom::sequence::delimited(
@@ -132,7 +134,7 @@ fn parse_type_line_h<'a>( text: &'a str)->IResult<&'a str,(Types, Subtypes, Supe
     let (text,supertypes)=Supertypes::parse(text)?;
     let (text,types)=Types::parse(text)?;
     let (text,_)=trim_spaces(text)?;
-    let (text,_)=complete::char('-')(text)?;
+    let (text,_)=complete::char('—')(text)?;
     let (text,subtypes)=Subtypes::parse(text)?;
     Ok((text,(types,subtypes,supertypes)))
 }

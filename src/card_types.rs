@@ -43,21 +43,21 @@ macro_rules! enumset{
                 pub fn get(&self,x:$name)->bool{
                     match x{
                         $(
-                            $e=>self.[<$e:lower>],
+                            $name::$e=>self.[<$e:lower>],
                         )*
                     }
                 }
                 pub fn add(&mut self,x:$name){
                     match x{
                         $(
-                            $e=>{self.[<$e:lower>]=true},
+                            $name::$e=>{self.[<$e:lower>]=true},
                         )*
                     }
                 }
                 pub fn remove(&mut self,x:$name){
                     match x{
                         $(
-                            $e=>{self.[<$e:lower>]=false},
+                            $name::$e=>{self.[<$e:lower>]=false},
                         )*
                     }
                 }
