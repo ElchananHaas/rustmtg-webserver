@@ -10,31 +10,25 @@ export default class HandCard extends Phaser.GameObjects.Container{
         this.x_len=x_len;
         this.y_len=y_len;
         this.card_scale=card_scale;
-        let card_background = scene.add.image(0,0, "artifact_card").setScale(card_scale,card_scale).setInteractive();
+        let card_background=null;
+        if(card==null){
+            card_background = scene.add.image(0,0, "card_back")
+        }else{
+            card_background = scene.add.image(0,0, "artifact_card")
+        }
+        card_background.setScale(card_scale,card_scale).setInteractive();
         this.add(card_background);
-        if ("name" in card){
-            this.add_text(23,card.name);
-        }
+        this.add_text(23,card.name);
         let type_line="";
-        if ("supertypes" in card){
-            for (let t of Object.keys(card.supertypes)){
-                if (card.supertypes[t]){
-                    type_line+=t.charAt(0).toUpperCase()+t.slice(1)+" ";
-                }
-            }
+        for (let t of card.supertypes){
+            type_line+=(t+" ")
         }
-        if ("types" in card){
-            for (let t of Object.keys(card.types)){
-                if (card.types[t]){
-                    type_line+=t.charAt(0).toUpperCase()+t.slice(1)+" ";
-                }
-            }
+        for (let t of card.types){
+            type_line+=(t+" ")
         }
-        if ("subtypes" in card){
-            type_line+="- "+card.subtypes.join(" ");
-        }
+        type_line+="- "+card.subtypes.join(" ");
         this.add_text(292,type_line);
-        if ("pt" in card){
+        if (card.pt!=null){
             let pt_backing=scene.add.image(-ul_x*(card_scale-.21),-ul_y*(card_scale-.05), "artifact_pt").setScale(card_scale,card_scale).setInteractive();
             this.add(pt_backing);
             let text=card.pt.power+"/"+card.pt.toughness;
@@ -47,7 +41,6 @@ export default class HandCard extends Phaser.GameObjects.Container{
 
         card_background.setInteractive();
         card_background.on('pointerover', function () {
-
         });
         scene.input.setDraggable(card_background);
         let t=this;

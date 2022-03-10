@@ -12,17 +12,24 @@ pub struct TriggeredAbility {}
 #[derive(Clone, Serialize)]
 pub struct StaticAbility {}
 #[derive(Clone, Serialize)]
-pub struct Ability {
+pub struct ActivatedAbility {
+    pub cost: Vec<Cost>,
+    pub effect: Vec<Clause>,
     pub mana_ability: bool,
     pub keyword: Option<KeywordAbility>,
-    pub abil: AbilityType,
 }
 #[derive(Clone, Serialize)]
-pub enum AbilityType {
-    Activated {
-        cost: Vec<Cost>,
-        effect: Vec<Clause>,
-    },
+pub enum Ability {
+    Activated(ActivatedAbility),
     Triggered(TriggeredAbility),
     Static(StaticAbility),
+}
+
+impl Ability {
+    pub fn keyword(&self) -> Option<KeywordAbility> {
+        match self {
+            Self::Activated(abil) => abil.keyword,
+            _ => None,
+        }
+    }
 }

@@ -1,6 +1,9 @@
+use crate::{
+    card_types::{Subtypes, Supertypes, Types},
+    game::Game,
+};
 use derivative::*;
 use serde_derive::Serialize;
-use crate::card_types::{Subtypes,Supertypes,Types};
 use std::{
     collections::{HashMap, HashSet},
     num::NonZeroU64,
@@ -28,7 +31,7 @@ pub struct CardEnt {
     pub name: &'static str,
     #[derivative(Default(value = "PlayerId::from(NonZeroU64::new(u64::MAX).unwrap())"))]
     pub owner: PlayerId,
-    pub printed_name: String,
+    pub printed_name: &'static str,
     pub token: bool,
     pub known_to: HashSet<PlayerId>,
     pub pt: Option<PT>,
@@ -43,7 +46,7 @@ pub struct CardEnt {
 impl CardEnt {
     pub fn has_keyword(&self, keyword: KeywordAbility) -> bool {
         for ability in &self.abilities {
-            if ability.keyword == Some(keyword) {
+            if ability.keyword() == Some(keyword) {
                 return true;
             }
         }

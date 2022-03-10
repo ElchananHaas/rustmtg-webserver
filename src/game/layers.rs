@@ -1,5 +1,5 @@
 use crate::ability_db::tap_for_mana;
-use crate::{game::*, spellabil::SpellAbilBuilder};
+use crate::{game::*};
 pub enum Layer {
     OneA, //Copiable effects (Copy, As ETB,)
     OneB, //Face down spells,permanents
@@ -22,9 +22,17 @@ impl Game {
     //Handles the printed charachteristics of cards
     //and sets their controller to be their owner
     fn layer_zero(&mut self) {
+        self.land_play_limit = 1;
         for (ent, zone) in self.ents_and_zones() {
             if let Some(card) = self.cards.get_mut(ent) {
-                todo!(); //Rebuild from database
+                let base = self.db.spawn_card(card.printed_name, card.owner);
+                card.types = base.types;
+                card.subtypes = base.subtypes;
+                card.supertypes = base.supertypes;
+                card.name = base.name;
+                card.abilities = base.abilities;
+                card.mana_cost = base.mana_cost;
+                card.additional_costs = base.additional_costs;
                 if zone == Zone::Battlefield || zone == Zone::Stack {
                     card.controller = Some(card.owner);
                 }
@@ -36,8 +44,24 @@ impl Game {
             if zone == Zone::Battlefield {
                 let _: Option<_> = try {
                     let card = self.cards.get_mut(ent)?;
-                    if card.subtypes.get(Subtype::Plains) {
-                        self.add_ability(ent, tap_for_mana(vec![ManaCostSymbol::White]));
+                    let mut abils = Vec::new();
+                    if card.subtypes.plains {
+                        abils.push(tap_for_mana(vec![ManaCostSymbol::White]));
+                    }
+                    if card.subtypes.mountain {
+                        abils.push(tap_for_mana(vec![ManaCostSymbol::Red]));
+                    }
+                    if card.subtypes.island {
+                        abils.push(tap_for_mana(vec![ManaCostSymbol::Blue]));
+                    }
+                    if card.subtypes.swamp {
+                        abils.push(tap_for_mana(vec![ManaCostSymbol::Black]));
+                    }
+                    if card.subtypes.forest {
+                        abils.push(tap_for_mana(vec![ManaCostSymbol::Green]));
+                    }
+                    for abil in abils {
+                        self.add_ability(ent, abil);
                     }
                 };
             }

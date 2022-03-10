@@ -1,7 +1,5 @@
 //A list of a large number of ability/clause creating functions
 
-use anyhow::Result;
-
 use crate::{
     ability::Ability,
     cost::Cost,

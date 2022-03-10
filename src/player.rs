@@ -34,7 +34,7 @@ pub struct PlayerView<'a> {
     pub name: &'a str,
     pub life: i64,
     pub library: Vec<Option<CardId>>,
-    pub hand: HashSet<Option<CardId>>,
+    pub hand: Vec<Option<CardId>>,
     pub graveyard: &'a Vec<CardId>,
     pub mana_pool: &'a EntMap<ManaId, Mana>,
     pub max_handsize: usize,
@@ -60,7 +60,7 @@ fn view_t<'a>(
 impl Player {
     pub fn view(&self, cards: &Cards, player: PlayerId) -> PlayerView {
         let libview = view_t(cards, self.library.iter(), player).collect::<Vec<_>>();
-        let handview = view_t(cards, self.hand.iter(), player).collect::<HashSet<_>>();
+        let handview = view_t(cards, self.hand.iter(), player).collect::<Vec<_>>();
         PlayerView {
             name: &self.name,
             life: self.life,
@@ -75,14 +75,14 @@ impl Player {
     pub async fn send_state(&self, buffer: Vec<u8>) -> Result<()> {
         self.player_con.send_state(buffer).await
     }
-    //Select n entities from a set
-    pub async fn ask_user_selectn<T: DeserializeOwned + Serialize + Hash + Eq + Clone>(
+    //Select n entities from a vector, returns selected indicies
+    pub async fn ask_user_selectn<T:  Serialize+ Clone>(
         &self,
-        ents: &HashSet<T>,
-        min: i32,
-        max: i32,
+        ents: &Vec<T>,
+        min: u32,
+        max: u32,
         reason: AskReason,
-    ) -> HashSet<T> {
+    ) -> Vec<usize> {
         let query = AskUser {
             asktype: AskType::SelectN {
                 ents: ents.clone(),
@@ -92,8 +92,12 @@ impl Player {
             reason,
         };
         loop {
-            let response = self.player_con.ask_user::<HashSet<T>, T>(&query).await;
-            if response.len() < min.try_into().unwrap() || response.len() > max.try_into().unwrap()
+            let response = self.player_con.ask_user::<Vec<usize>, T>(&query).await;
+            let response_unique: HashSet<usize> = response.iter().cloned().collect();
+            if response.len() < min.try_into().unwrap()
+                || response.len() > max.try_into().unwrap()
+                || response.len() != response_unique.len()
+                || response.iter().any(|&i|i>=ents.len())
             {
                 continue;
             }
@@ -145,16 +149,16 @@ impl Player {
 }
 
 #[derive(Clone, Debug, Serialize)]
-pub struct AskUser<T: Hash + Eq> {
+pub struct AskUser<T> {
     reason: AskReason,
     asktype: AskType<T>,
 }
 #[derive(Clone, Debug, Serialize)]
-pub enum AskType<T: Hash + Eq> {
+pub enum AskType<T> {
     SelectN {
-        ents: HashSet<T>,
-        min: i32,
-        max: i32,
+        ents: Vec<T>,
+        min: u32,
+        max: u32,
     },
     PairAB {
         a: Vec<CardId>,
@@ -167,6 +171,7 @@ pub enum AskReason {
     Attackers,
     Blockers,
     DiscardToHandSize,
+    Action,
 }
 #[derive(Clone)]
 pub struct PlayerCon {
@@ -180,8 +185,7 @@ impl PlayerCon {
         }
     }
 
-    //This function ensures the socket will be restored, even in the case of an error
-    pub async fn ask_user<T: DeserializeOwned, U: Serialize + Hash + Eq>(
+    pub async fn ask_user<T: DeserializeOwned, U: Serialize>(
         &self,
         query: &AskUser<U>,
     ) -> T {
@@ -189,7 +193,7 @@ impl PlayerCon {
         let res = self.ask_user_socket::<T, U>(query, &mut socket).await;
         res
     }
-    async fn ask_user_socket<T: DeserializeOwned, U: Serialize + Hash + Eq>(
+    async fn ask_user_socket<T: DeserializeOwned, U: Serialize>(
         &self,
         query: &AskUser<U>,
         socket: &mut WebSocket,

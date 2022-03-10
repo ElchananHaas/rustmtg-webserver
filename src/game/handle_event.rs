@@ -446,25 +446,27 @@ impl Game {
         }
     }
     async fn cleanup_phase(&mut self) {
-        let mut to_discard = HashSet::new();
         if let Some(player) = self.players.get_mut(self.active_player) {
             if player.hand.len() > player.max_handsize {
-                let diff = player.hand.len() - player.max_handsize;
-                let diff: i32 = diff.try_into().unwrap();
-                to_discard = player
-                    .ask_user_selectn(&player.hand, diff, diff, AskReason::DiscardToHandSize)
+                let diff = player.hand.len().saturating_sub(player.max_handsize);
+                let diff: u32 = diff.try_into().unwrap();
+                let hand: Vec<CardId> = player.hand.iter().cloned().collect();
+                let to_discard = player
+                    .ask_user_selectn(&hand, diff, diff, AskReason::DiscardToHandSize)
                     .await;
+                for i in to_discard {
+                    self.discard(self.active_player, hand[i], DiscardCause::GameInternal)
+                        .await;
+                }
             }
         }
-        for card in to_discard {
-            self.discard(self.active_player, card, DiscardCause::GameInternal)
-                .await;
-        }
+
         for &perm in &self.battlefield {
             if let Some(perm) = self.cards.get_mut(perm) {
                 perm.damaged = 0;
             }
         }
+        self.lands_played_this_turn = 0;
         //TODO handle priority being given in cleanup step by giving
         //another cleanup step afterwards
     }

@@ -46,7 +46,7 @@ where
     }
     fn get_newkey(&mut self) -> K {
         let newkey = K::from(self.count);
-        let val = self.count.get();
+        let val = self.count.get() + 1;
         self.count = NonZeroU64::new(val).unwrap();
         newkey
     }

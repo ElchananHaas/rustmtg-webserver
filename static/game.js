@@ -25,13 +25,13 @@ export default class Game extends Phaser.Scene {
     update_state(parsed){
         let me=parsed[1];
         let ecs=parsed[2];
+        let players=parsed[3];
         console.log(ecs);
-        let myplayer=ecs[me].player;
+        let myplayer=players[me];
         let hand=myplayer["hand"];
         console.log(hand);
         for (let i=0;i<hand.length;i++){
             let ent=ecs[hand[i]];
-            if (ent==null){ continue;}
             let hand_card = new HandCard(this,100 + (i * 150), 200, ent);
             this.add.existing(hand_card);
         }

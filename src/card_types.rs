@@ -5,6 +5,7 @@ use nom::error::{Error, ParseError};
 use nom::Err;
 use nom::IResult;
 use paste::paste;
+use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
 use serde_derive::Serialize;
 use std::convert::AsRef;
 use strum_macros::AsRefStr;
@@ -30,11 +31,25 @@ macro_rules! enumset{
         }
         paste!{
             #[derive(Default)]
-            #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize)]
+            #[derive(Clone, Copy, PartialEq, Eq, Debug)]
             pub struct [<$name s>]{
                 $(
                     pub [<$e:lower>]:bool,
                 )*
+            }
+            impl Serialize for [<$name s>]{
+                fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+                where
+                    S: Serializer,
+                {
+                    let mut seq = serializer.serialize_seq(None)?;
+                    $(
+                        if(self.[<$e:lower>]){
+                            seq.serialize_element(&$name::$e)?;
+                        }
+                    )*
+                    seq.end()
+                }
             }
             impl [<$name s>]{
                 pub fn new()->Self{

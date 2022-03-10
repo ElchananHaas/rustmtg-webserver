@@ -1,25 +1,25 @@
 use crate::ability::Ability;
-use crate::card_entities::{CardEnt, PT};
-use crate::card_types::Subtype;
+use crate::card_entities::{CardEnt};
 use crate::carddb::CardDB;
 use crate::ent_maps::EntMap;
 use crate::entities::{CardId, ManaId, PlayerId, TargetId};
 use crate::event::{DiscardCause, Event, EventResult, TagEvent};
 use crate::mana::{Color, Mana, ManaCostSymbol};
-use crate::player::{Player, PlayerCon};
+use crate::player::{Player, PlayerCon, AskReason};
 use crate::spellabil::KeywordAbility;
 use anyhow::{bail, Result};
 use futures::future;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
-use serde::ser::SerializeMap;
-use serde::{Serialize, Serializer};
+use serde::{Serialize};
 use serde_derive::Serialize;
 use serde_json;
-use std::cell::RefCell;
 use std::cmp::max;
 use std::collections::{HashMap, HashSet, VecDeque};
 use warp::ws::WebSocket;
+
+use self::actions::Action;
+mod actions;
 mod handle_event;
 mod layers;
 
@@ -50,6 +50,8 @@ pub struct Game {
     pub subphase: Option<Subphase>,
     pub active_player: PlayerId,
     pub outcome: GameOutcome,
+    pub lands_played_this_turn: u32,
+    pub land_play_limit: u32,
     #[serde(skip_serializing)]
     db: &'static CardDB,
     #[serde(skip_serializing)]
@@ -95,8 +97,8 @@ impl GameBuilder {
         };
         let (player_id, player) = self.players.insert(player);
         for cardname in card_names {
-            let card: CardEnt = db.spawn_card(&cardname, player_id);
-            let (card_id, card) = self.cards.insert(card);
+            let card: CardEnt = db.spawn_card(cardname, player_id);
+            let (card_id, _card) = self.cards.insert(card);
             cards.push(card_id);
         }
         //Now that the deck has been constructed, set the players deck
@@ -125,8 +127,10 @@ impl GameBuilder {
             command: HashSet::new(),
             stack: Vec::new(),
             turn_order: self.turn_order,
-            active_player: active_player,
-            db: db,
+            active_player,
+            db,
+            land_play_limit: 1,
+            lands_played_this_turn: 0,
             extra_turns: VecDeque::new(),
             phases: VecDeque::new(),
             subphases: VecDeque::new(),
@@ -362,7 +366,36 @@ impl Game {
     }
     pub async fn grant_priority(&mut self, player: PlayerId) {
         self.layers();
+        let actions = self.compute_actions(player);
+        if let Some(pl) = self.players.get(player) {
+            pl.ask_user_selectn(&actions, 0, 1, AskReason::Action).await;
+        }
         //TODO actually grant priority
+    }
+    pub fn compute_actions(&self, player: PlayerId) -> Vec<Action> {
+        let mut actions = Vec::new();
+        if let Some(pl) = self.players.get(player) {
+            for &card_id in &pl.hand {
+                if let Some(card) = self.cards.get(card_id) {
+                    actions.extend(self.card_actions(player, pl, card_id, card));
+                }
+            }
+        }
+        actions
+    }
+    fn card_actions(
+        &self,
+        player_id: PlayerId,
+        player: &Player,
+        card_id: CardId,
+        card: &CardEnt,
+    ) -> Vec<Action> {
+        let mut actions = Vec::new();
+        let play_sorcery = player_id == self.active_player && self.stack.is_empty();
+        if card.types.land && play_sorcery && self.land_play_limit > self.lands_played_this_turn {
+            actions.push(Action::PlayLand(card_id));
+        }
+        actions
     }
     //Places abilities on the stack
     pub async fn place_abilities(&mut self) {
