@@ -1,17 +1,17 @@
 use crate::ability::Ability;
-use crate::card_entities::{CardEnt};
+use crate::card_entities::CardEnt;
 use crate::carddb::CardDB;
 use crate::ent_maps::EntMap;
 use crate::entities::{CardId, ManaId, PlayerId, TargetId};
 use crate::event::{DiscardCause, Event, EventResult, TagEvent};
 use crate::mana::{Color, Mana, ManaCostSymbol};
-use crate::player::{Player, PlayerCon, AskReason};
+use crate::player::{AskReason, Player, PlayerCon};
 use crate::spellabil::KeywordAbility;
 use anyhow::{bail, Result};
 use futures::future;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
-use serde::{Serialize};
+use serde::Serialize;
 use serde_derive::Serialize;
 use serde_json;
 use std::cmp::max;
@@ -297,7 +297,7 @@ impl Game {
             .into_iter()
             .filter(move |&ent| self.get_controller(ent) == Some(player))
     }
-    pub fn ents_and_zones(&self) -> Vec<(CardId, Zone)> {
+    pub fn cards_and_zones(&self) -> Vec<(CardId, Zone)> {
         let mut res = Vec::new();
         res.extend(
             self.battlefield
@@ -322,6 +322,12 @@ impl Game {
             }
         }
         res
+    }
+    pub fn locate_zone(&self,id:CardId)->Option<Zone>{
+        for (ent_id,zone) in self.cards_and_zones(){
+            if ent_id==id {return Some(zone)}
+        }
+        None
     }
     pub fn players_permanents<'b>(&'b self, player: PlayerId) -> impl Iterator<Item = CardId> + 'b {
         self.battlefield
@@ -364,11 +370,30 @@ impl Game {
             self.grant_priority(player).await;
         }
     }
-    pub async fn grant_priority(&mut self, player: PlayerId) {
+    pub async fn grant_priority(&mut self, player: PlayerId) -> bool {
         self.layers();
         let actions = self.compute_actions(player);
+        let mut choice = Vec::new();
         if let Some(pl) = self.players.get(player) {
-            pl.ask_user_selectn(&actions, 0, 1, AskReason::Action).await;
+            choice = pl.ask_user_selectn(&actions, 0, 1, AskReason::Action).await;
+        }
+        if choice.len() == 0 {
+            return false;
+        } else {
+            let action = &actions[choice[0]];
+            match action {
+                Action::Cast(casting_option) => {
+                    todo!()
+                }
+                Action::PlayLand(card) => {
+                    self.handle_event(Event::PlayLand {
+                        player,
+                        land: *card,
+                    })
+                    .await;
+                }
+            }
+            return true;
         }
         //TODO actually grant priority
     }

@@ -75,6 +75,10 @@ pub enum Event {
     Subphase {
         subphase: Subphase,
     },
+    PlayLand {
+        player: PlayerId,
+        land: CardId,
+    },
     Phase {
         phase: Phase,
     },

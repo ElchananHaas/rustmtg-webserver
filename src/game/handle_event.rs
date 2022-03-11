@@ -54,6 +54,16 @@ impl Game {
                         },
                     );
                 }
+                Event::PlayLand { player, land } => {
+                    if let Some(zone)=self.locate_zone(land){
+                        self.lands_played_this_turn+=1;
+                        Game::add_event(&mut events, Event::MoveZones{
+                            ent:land,
+                            origin:zone,
+                            dest:Zone::Battlefield
+                        })
+                    }
+                }
                 Event::Turn { extra: _, player } => {
                     self.active_player = player;
                     println!("starting turn");

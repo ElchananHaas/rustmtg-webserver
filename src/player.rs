@@ -76,7 +76,7 @@ impl Player {
         self.player_con.send_state(buffer).await
     }
     //Select n entities from a vector, returns selected indicies
-    pub async fn ask_user_selectn<T:  Serialize+ Clone>(
+    pub async fn ask_user_selectn<T: Serialize + Clone>(
         &self,
         ents: &Vec<T>,
         min: u32,
@@ -97,7 +97,7 @@ impl Player {
             if response.len() < min.try_into().unwrap()
                 || response.len() > max.try_into().unwrap()
                 || response.len() != response_unique.len()
-                || response.iter().any(|&i|i>=ents.len())
+                || response.iter().any(|&i| i >= ents.len())
             {
                 continue;
             }
@@ -185,10 +185,7 @@ impl PlayerCon {
         }
     }
 
-    pub async fn ask_user<T: DeserializeOwned, U: Serialize>(
-        &self,
-        query: &AskUser<U>,
-    ) -> T {
+    pub async fn ask_user<T: DeserializeOwned, U: Serialize>(&self, query: &AskUser<U>) -> T {
         let mut socket = self.socket.lock().await;
         let res = self.ask_user_socket::<T, U>(query, &mut socket).await;
         res

@@ -1,5 +1,5 @@
 use crate::ability_db::tap_for_mana;
-use crate::{game::*};
+use crate::game::*;
 pub enum Layer {
     OneA, //Copiable effects (Copy, As ETB,)
     OneB, //Face down spells,permanents
@@ -23,7 +23,7 @@ impl Game {
     //and sets their controller to be their owner
     fn layer_zero(&mut self) {
         self.land_play_limit = 1;
-        for (ent, zone) in self.ents_and_zones() {
+        for (ent, zone) in self.cards_and_zones() {
             if let Some(card) = self.cards.get_mut(ent) {
                 let base = self.db.spawn_card(card.printed_name, card.owner);
                 card.types = base.types;
@@ -40,7 +40,7 @@ impl Game {
         }
     }
     fn layer_four(&mut self) {
-        for (ent, zone) in self.ents_and_zones() {
+        for (ent, zone) in self.cards_and_zones() {
             if zone == Zone::Battlefield {
                 let _: Option<_> = try {
                     let card = self.cards.get_mut(ent)?;

@@ -1,4 +1,4 @@
-use std::{collections::HashSet,  num::NonZeroU32, sync::Arc};
+use std::{collections::HashSet, num::NonZeroU32, sync::Arc};
 
 use serde_derive::Serialize;
 
@@ -7,7 +7,7 @@ use crate::{
     cost::Cost,
     entities::CardId,
     game::Game,
-    mana::{ ManaCostSymbol},
+    mana::ManaCostSymbol,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
