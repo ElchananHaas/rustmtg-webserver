@@ -1,4 +1,4 @@
-import HandCard from "./card.js";
+import DispCard from "./card.js";
 export default class Game extends Phaser.Scene {
     constructor() {
         super({
@@ -29,12 +29,51 @@ export default class Game extends Phaser.Scene {
         console.log(ecs);
         let myplayer=players[me];
         let hand=myplayer["hand"];
-        console.log(hand);
-        for (let i=0;i<hand.length;i++){
-            let ent=ecs[hand[i]];
-            let hand_card = new HandCard(this,100 + (i * 150), 200, ent);
-            this.add.existing(hand_card);
+        this.ecs=ecs;
+        for (let card in this.disp_cards){
+            this.disp_cards[card].destroy();
         }
+        this.disp_cards={};
+        for (let i=0;i<hand.length;i++){
+            this.add_disp_card(ecs,hand[i],150 + (i * 125), 500);
+        }
+        let gamestate=parsed[4];
+        let battlefield=gamestate.battlefield;
+        for(let i=0;i<battlefield.length;i++){
+            this.add_disp_card(ecs,battlefield[i],150 + (i * 125), 300);
+        }
+    }
+    add_disp_card(ecs,index,x,y){
+        let ent=ecs[index];
+        let hand_card = new DispCard(this,x,y, ent);
+        this.add.existing(hand_card);
+        this.disp_cards[index]=hand_card;
+    }
+    respond_action(parsed){
+        let choices=parsed[1].SelectN;
+        let ents=choices.ents;
+        this.action_ents=ents;
+        console.log(choices);
+        if(ents.length==0){
+            this.socket.send("[]");
+        }else{
+            for(let i=0;i<ents.length;i++){
+                let ent=ents[i];
+                console.log(ent);
+                if(ent.PlayLand!=null){
+                    let disp_card=this.disp_cards[ent.PlayLand];
+                    disp_card.click_actions.push(i);
+                }
+            }
+            this.space_response="send_empty"
+        }
+    }
+    clear_click_actions(){
+        console.log(this.disp_cards)
+        for(let card in this.disp_cards){
+            this.disp_cards[card].click_actions=[];
+        }
+        this.space_response="None"
     }
     create() {
         let self=this;
@@ -49,11 +88,21 @@ export default class Game extends Phaser.Scene {
                     if(parsed[0]==="GameState"){
                         self.update_state(parsed);
                     }   
+                    if(parsed[0]==="Action"){
+                        self.respond_action(parsed);
+                    }   
                 }
             )
         });
         this.socket=socket;
-    
+        this.space_response="None";
+        var spaceBar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+        spaceBar.on('down', function(event){
+            if(self.space_response=="send_empty"){
+                this.socket.send("[]");
+            }
+        });
+        this.disp_cards={};
     }
     
     update() {

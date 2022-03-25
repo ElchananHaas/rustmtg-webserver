@@ -28,8 +28,7 @@ pub type Cards = EntMap<CardId, CardEnt>;
 pub struct GameBuilder {
     players: Players,
     cards: Cards,
-    turn_order: Vec<PlayerId>,
-    active_player: Option<PlayerId>,
+    turn_order: VecDeque<PlayerId>,
 }
 //Implement debug trait!
 #[derive(Serialize, Clone)]
@@ -42,13 +41,12 @@ pub struct Game {
     pub exile: HashSet<CardId>,
     pub command: HashSet<CardId>,
     pub stack: Vec<CardId>,
-    pub turn_order: Vec<PlayerId>,
+    pub turn_order: VecDeque<PlayerId>,
     pub extra_turns: VecDeque<PlayerId>,
     pub phases: VecDeque<Phase>,
     pub subphases: VecDeque<Subphase>,
     pub phase: Option<Phase>,
     pub subphase: Option<Subphase>,
-    pub active_player: PlayerId,
     pub outcome: GameOutcome,
     pub lands_played_this_turn: u32,
     pub land_play_limit: u32,
@@ -72,8 +70,7 @@ impl GameBuilder {
         GameBuilder {
             players: Players::new(),
             cards: Cards::new(),
-            turn_order: Vec::new(),
-            active_player: None,
+            turn_order: VecDeque::new(),
         }
     }
     //If this function fails the game is corrupted
@@ -103,19 +100,10 @@ impl GameBuilder {
         }
         //Now that the deck has been constructed, set the players deck
         player.library = cards;
-        self.turn_order.push(player_id);
-        if self.active_player.is_none() {
-            self.active_player = Some(player_id);
-        }
+        self.turn_order.push_back(player_id);
         Ok(player_id)
     }
     pub fn build(self, db: &'static CardDB) -> Result<Game> {
-        let active_player = match self.active_player {
-            Some(player) => player,
-            None => {
-                bail!("Active player must be set in game initilization");
-            }
-        };
         if self.turn_order.len() < 2 {
             bail!("Game needs at least two players in initialization")
         };
@@ -127,7 +115,6 @@ impl GameBuilder {
             command: HashSet::new(),
             stack: Vec::new(),
             turn_order: self.turn_order,
-            active_player,
             db,
             land_play_limit: 1,
             lands_played_this_turn: 0,
@@ -162,28 +149,23 @@ impl Game {
             } else if let Some(phase) = self.phases.pop_front() {
                 self.handle_event(Event::Phase { phase }).await;
             } else if let Some(player) = self.extra_turns.pop_front() {
-                self.handle_event(Event::Turn {
-                    player,
-                    extra: true,
-                })
-                .await;
+                self.handle_event(Event::Turn { extra: true }).await;
             } else {
                 //Make sure the active player is updated properly if a player loses or leaves!
                 let order_spot = self
                     .turn_order
                     .iter()
-                    .position(|x| *x == self.active_player)
+                    .position(|x| *x == self.active_player())
                     .unwrap();
                 let new_spot = (order_spot + 1) % self.turn_order.len();
                 let player = self.turn_order[new_spot];
-                self.handle_event(Event::Turn {
-                    player,
-                    extra: false,
-                })
-                .await;
+                self.handle_event(Event::Turn { extra: false }).await;
             }
         }
         self.outcome
+    }
+    pub fn active_player(&self) -> PlayerId {
+        self.turn_order[0]
     }
     async fn send_state(&mut self) {
         let mut state_futures = Vec::new();
@@ -323,9 +305,11 @@ impl Game {
         }
         res
     }
-    pub fn locate_zone(&self,id:CardId)->Option<Zone>{
-        for (ent_id,zone) in self.cards_and_zones(){
-            if ent_id==id {return Some(zone)}
+    pub fn locate_zone(&self, id: CardId) -> Option<Zone> {
+        for (ent_id, zone) in self.cards_and_zones() {
+            if ent_id == id {
+                return Some(zone);
+            }
         }
         None
     }
@@ -365,12 +349,18 @@ impl Game {
             .and_then(|card| card.controller.or(Some(card.owner)))
     }
     pub async fn cycle_priority(&mut self) {
+        self.player_cycle_priority(self.turn_order.clone()).await;
+    }
+    pub async fn player_cycle_priority(&mut self, mut players: VecDeque<PlayerId>) {
         self.place_abilities().await;
-        for player in self.turn_order.clone() {
-            self.grant_priority(player).await;
+        for _ in 0..players.len() {
+            self.send_state().await;
+            self.grant_priority(&players).await;
+            players.rotate_left(1);
         }
     }
-    pub async fn grant_priority(&mut self, player: PlayerId) -> bool {
+    pub async fn grant_priority(&mut self, players: &VecDeque<PlayerId>) -> bool {
+        let player = players[0];
         self.layers();
         let actions = self.compute_actions(player);
         let mut choice = Vec::new();
@@ -392,6 +382,9 @@ impl Game {
                     })
                     .await;
                 }
+                Action::ActivateAbility { source, index } => {
+                    todo!()
+                }
             }
             return true;
         }
@@ -402,13 +395,23 @@ impl Game {
         if let Some(pl) = self.players.get(player) {
             for &card_id in &pl.hand {
                 if let Some(card) = self.cards.get(card_id) {
-                    actions.extend(self.card_actions(player, pl, card_id, card));
+                    actions.extend(self.play_land_actions(player, pl, card_id, card));
+                }
+            }
+            for (card_id, zone) in self.cards_and_zones() {
+                if let Some(card) = self.cards.get(card_id) {
+                    actions.extend(self.ability_actions(player, pl, card_id, card, zone));
                 }
             }
         }
         actions
     }
-    fn card_actions(
+    fn sorcery_speed(&self, player_id: PlayerId) -> bool {
+        player_id == self.active_player()
+            && self.stack.is_empty()
+            && (self.phase == Some(Phase::FirstMain) || self.phase == Some(Phase::SecondMain))
+    }
+    fn play_land_actions(
         &self,
         player_id: PlayerId,
         player: &Player,
@@ -416,15 +419,35 @@ impl Game {
         card: &CardEnt,
     ) -> Vec<Action> {
         let mut actions = Vec::new();
-        let play_sorcery = player_id == self.active_player && self.stack.is_empty();
+        let play_sorcery = self.sorcery_speed(player_id);
         if card.types.land && play_sorcery && self.land_play_limit > self.lands_played_this_turn {
             actions.push(Action::PlayLand(card_id));
         }
         actions
     }
+    fn ability_actions(
+        &self,
+        player_id: PlayerId,
+        player: &Player,
+        card_id: CardId,
+        card: &CardEnt,
+        zone: Zone,
+    ) -> Vec<Action> {
+        let mut actions = Vec::new();
+        let controller = card.controller.unwrap_or(card.owner);
+        for i in 0..card.abilities.len() {
+            if zone == Zone::Battlefield && controller == player_id {
+                actions.push(Action::ActivateAbility {
+                    source: card_id,
+                    index: i,
+                })
+            }
+        }
+        actions
+    }
     //Places abilities on the stack
     pub async fn place_abilities(&mut self) {
-        //TODO make this do something!
+        //TODO!
     }
     pub fn attack_targets(&self, player: PlayerId) -> Vec<TargetId> {
         self.opponents(player)

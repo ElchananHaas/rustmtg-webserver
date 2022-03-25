@@ -55,17 +55,20 @@ impl Game {
                     );
                 }
                 Event::PlayLand { player, land } => {
-                    if let Some(zone)=self.locate_zone(land){
-                        self.lands_played_this_turn+=1;
-                        Game::add_event(&mut events, Event::MoveZones{
-                            ent:land,
-                            origin:zone,
-                            dest:Zone::Battlefield
-                        })
+                    if let Some(zone) = self.locate_zone(land) {
+                        self.lands_played_this_turn += 1;
+                        Game::add_event(
+                            &mut events,
+                            Event::MoveZones {
+                                ent: land,
+                                origin: zone,
+                                dest: Zone::Battlefield,
+                            },
+                        )
                     }
                 }
-                Event::Turn { extra: _, player } => {
-                    self.active_player = player;
+                Event::Turn { extra: _ } => {
+                    self.turn_order.rotate_left(1);
                     println!("starting turn");
                     self.phases.extend(
                         [
@@ -285,7 +288,7 @@ impl Game {
         match subphase {
             Subphase::Untap => {
                 for perm in self
-                    .players_permanents(self.active_player)
+                    .players_permanents(self.active_player())
                     .collect::<Vec<_>>()
                 {
                     self.untap(perm).await;
@@ -296,7 +299,7 @@ impl Game {
                 self.cycle_priority().await;
             }
             Subphase::Draw => {
-                self.draw(self.active_player).await;
+                self.draw(self.active_player()).await;
                 self.cycle_priority().await;
             }
             Subphase::BeginCombat => {
@@ -306,17 +309,17 @@ impl Game {
                 self.backup();
                 //Only allow creatures that have haste or don't have summoning sickness to attack
                 let legal_attackers = self
-                    .players_creatures(self.active_player)
+                    .players_creatures(self.active_player())
                     .filter(|e| self.can_tap(*e))
                     .collect::<Vec<CardId>>();
-                let attack_targets = self.attack_targets(self.active_player);
+                let attack_targets = self.attack_targets(self.active_player());
 
                 loop {
                     println!("Asking player");
                     let attacks;
                     //Choice limits is inclusive on both bounds
                     let choice_limits = vec![(0, 1); legal_attackers.len()];
-                    if let Some(player) = self.players.get(self.active_player) {
+                    if let Some(player) = self.players.get(self.active_player()) {
                         attacks = player
                             .ask_user_pair(
                                 legal_attackers.clone(),
@@ -370,7 +373,7 @@ impl Game {
                 self.cycle_priority().await;
             }
             Subphase::Blockers => {
-                for opponent in self.opponents(self.active_player) {
+                for opponent in self.opponents(self.active_player()) {
                     self.backup();
                     //Filter only attacking creatures attacking that player
                     //Add in planeswalkers later
@@ -456,7 +459,7 @@ impl Game {
         }
     }
     async fn cleanup_phase(&mut self) {
-        if let Some(player) = self.players.get_mut(self.active_player) {
+        if let Some(player) = self.players.get_mut(self.active_player()) {
             if player.hand.len() > player.max_handsize {
                 let diff = player.hand.len().saturating_sub(player.max_handsize);
                 let diff: u32 = diff.try_into().unwrap();
@@ -465,7 +468,7 @@ impl Game {
                     .ask_user_selectn(&hand, diff, diff, AskReason::DiscardToHandSize)
                     .await;
                 for i in to_discard {
-                    self.discard(self.active_player, hand[i], DiscardCause::GameInternal)
+                    self.discard(self.active_player(), hand[i], DiscardCause::GameInternal)
                         .await;
                 }
             }
@@ -488,7 +491,7 @@ impl Game {
     ) {
         //Handle first strike and normal strike
         for attacker in self
-            .damage_phase_permanents(self.players_creatures(self.active_player), subphase)
+            .damage_phase_permanents(self.players_creatures(self.active_player()), subphase)
             .collect::<Vec<_>>()
         {
             let _: Option<_> = try {

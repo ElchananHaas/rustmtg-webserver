@@ -1,7 +1,7 @@
 use serde::Serialize;
 use serde_derive::Serialize;
 
-use crate::{cost::Cost, entities::CardId, spellabil::KeywordAbility};
+use crate::{ability::Ability, cost::Cost, entities::CardId, spellabil::KeywordAbility};
 
 use super::Zone;
 
@@ -9,20 +9,23 @@ use super::Zone;
 //The zone it can be cast from will implicitly be enabled by
 //the code generating casting options
 #[derive(Clone, Serialize)]
-pub struct CastFilter {}
+pub struct ActionFilter {}
 #[derive(Clone, Serialize)]
 pub struct CastingOption {
     card: CardId,
     costs: Vec<Cost>,
-    filter: CastFilter,
+    filter: ActionFilter,
     keyword: Option<KeywordAbility>,
 }
+#[derive(Clone, Serialize)]
 pub struct AbilityOption {
-    source: CardId,
+    pub source: CardId,
+    pub index: usize,
 }
 //Every action the player can take.
 #[derive(Clone, Serialize)]
 pub enum Action {
     Cast(CastingOption),
     PlayLand(CardId),
+    ActivateAbility { source: CardId, index: usize },
 }

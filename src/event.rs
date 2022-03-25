@@ -84,7 +84,6 @@ pub enum Event {
     },
     Turn {
         extra: bool,
-        player: PlayerId,
     },
     Untap {
         ent: CardId,
