@@ -31,8 +31,7 @@ impl Game {
                 card.supertypes = base.supertypes;
                 card.name = base.name;
                 card.abilities = base.abilities;
-                card.mana_cost = base.mana_cost;
-                card.additional_costs = base.additional_costs;
+                card.costs = base.costs;
                 if zone == Zone::Battlefield || zone == Zone::Stack {
                     card.controller = Some(card.owner);
                 }
@@ -63,6 +62,7 @@ impl Game {
                     for abil in abils {
                         self.add_ability(ent, abil);
                     }
+                    Some(())
                 };
             }
         }

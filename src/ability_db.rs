@@ -12,5 +12,5 @@ use crate::{
 pub fn tap_for_mana(mana: Vec<ManaCostSymbol>) -> Ability {
     let mut builder = SpellAbilBuilder::new();
     builder.clause(ClauseEffect::AddMana(mana));
-    builder.activated_ability(vec![Cost::Selftap], true)
+    builder.activated_ability(vec![Cost::Selftap])
 }

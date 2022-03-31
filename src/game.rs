@@ -1,13 +1,14 @@
 use crate::ability::Ability;
-use crate::card_entities::CardEnt;
+use crate::card_entities::{CardEnt, EntType};
 use crate::carddb::CardDB;
 use crate::ent_maps::EntMap;
 use crate::entities::{CardId, ManaId, PlayerId, TargetId};
 use crate::event::{DiscardCause, Event, EventResult, TagEvent};
 use crate::mana::{Color, Mana, ManaCostSymbol};
 use crate::player::{AskReason, Player, PlayerCon};
-use crate::spellabil::KeywordAbility;
+use crate::spellabil::{KeywordAbility, Clause, ClauseEffect};
 use anyhow::{bail, Result};
+use async_recursion::async_recursion;
 use futures::future;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
@@ -351,44 +352,106 @@ impl Game {
     pub async fn cycle_priority(&mut self) {
         self.player_cycle_priority(self.turn_order.clone()).await;
     }
+    #[async_recursion]
     pub async fn player_cycle_priority(&mut self, mut players: VecDeque<PlayerId>) {
         self.place_abilities().await;
         for _ in 0..players.len() {
             self.send_state().await;
-            self.grant_priority(&players).await;
+            let act_taken = self.grant_priority(&players).await;
+            if act_taken {
+                self.player_cycle_priority(players.clone()).await;
+            }
             players.rotate_left(1);
         }
     }
     pub async fn grant_priority(&mut self, players: &VecDeque<PlayerId>) -> bool {
         let player = players[0];
         self.layers();
-        let actions = self.compute_actions(player);
-        let mut choice = Vec::new();
-        if let Some(pl) = self.players.get(player) {
-            choice = pl.ask_user_selectn(&actions, 0, 1, AskReason::Action).await;
+        loop {
+            let actions = self.compute_actions(player);
+            let mut choice = Vec::new();
+            if let Some(pl) = self.players.get(player) {
+                choice = pl.ask_user_selectn(&actions, 0, 1, AskReason::Action).await;
+            }
+            if choice.len() == 0 {
+                return false;
+            } else {
+                let action = &actions[choice[0]];
+                match action {
+                    Action::Cast(casting_option) => {
+                        todo!()
+                    }
+                    Action::PlayLand(card) => {
+                        self.handle_event(Event::PlayLand {
+                            player,
+                            land: *card,
+                        })
+                        .await;
+                    }
+                    Action::ActivateAbility { source, index } => {
+                        self.backup();
+                        let id = self.construct_activated_ability(player, *source, *index);
+                        let id=if let Some(id)=id{
+                            id
+                        }else{
+                            self.restore();
+                            continue;
+                        };
+                        if self.is_mana_ability(id){
+                            self.resolve(id);
+                        }else{
+                            //TODO handle rest of spellcasting
+                        }
+                    }
+                }
+                return true;
+            }
         }
-        if choice.len() == 0 {
-            return false;
-        } else {
-            let action = &actions[choice[0]];
-            match action {
-                Action::Cast(casting_option) => {
-                    todo!()
-                }
-                Action::PlayLand(card) => {
-                    self.handle_event(Event::PlayLand {
-                        player,
-                        land: *card,
-                    })
-                    .await;
-                }
-                Action::ActivateAbility { source, index } => {
-                    todo!()
+    }
+    fn is_mana_ability(&self,id:CardId)->bool{
+        if let Some(card)=self.cards.get(id){
+            for cost in &card.costs{
+                //Check for loyalty abilities when implemented
+            }
+            let mut mana_abil=false;
+            for clause in &card.effect{
+                match clause{
+                    Clause::Target { targets: _, effect: _ }=>{ return false;}
+                    Clause::Effect { effect }=>{
+                        match effect{
+                            ClauseEffect::AddMana(_)=>{mana_abil=true;}
+                            _=>()
+                        }
+                    }
                 }
             }
-            return true;
+            mana_abil
+        }else{
+            false
         }
-        //TODO actually grant priority
+    }
+    fn construct_activated_ability(
+        &mut self,
+        player: PlayerId,
+        source: CardId,
+        index: usize,
+    ) -> Option<CardId> {
+        let card = self.cards.get(source)?;
+        if index >= card.abilities.len() {
+            return None;
+        }
+        let activated = match &card.abilities[index] {
+            Ability::Activated(x) => Some(x),
+            _ => None,
+        }?;
+        let mut abil = CardEnt::default();
+        abil.ent_type = EntType::ActivatedAbility;
+        abil.owner = player;
+        abil.controller = Some(player);
+        abil.costs = activated.costs.clone();
+        abil.effect = activated.effect.clone();
+        let (new_id, new_ent) = self.cards.insert(abil);
+        Some(new_id)
     }
     pub fn compute_actions(&self, player: PlayerId) -> Vec<Action> {
         let mut actions = Vec::new();

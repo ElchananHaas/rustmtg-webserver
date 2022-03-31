@@ -81,19 +81,18 @@ fn parse_pt<'a>(card: &mut CardEnt, entry: &'a ScryfallEntry) {
     let _: Option<_> = try {
         let power = entry.power.as_ref()?;
         let toughness = entry.toughness.as_ref()?;
-        let res: Result<(i64, i64), ParseIntError> = try {
-            let power = power.parse::<i64>()?;
-            let toughness = toughness.parse::<i64>()?;
-            (power, toughness)
-        };
-        if let Ok((power, toughness)) = res {
-            card.pt = Some(PT { power, toughness })
-        } else {
-            card.pt = Some(PT {
-                power: 0,
-                toughness: 0,
-            })
+        let res;
+        if let Ok(power)=power.parse::<i64>()
+        && let Ok(toughness)=toughness.parse::<i64>(){
+            res=(power,toughness)
+        }else{
+            res=(0,0)
         }
+        card.pt = Some(PT {
+            power: res.0,
+            toughness: res.1,
+        });
+        Some(())
     };
 }
 fn parse_cost_line<'a>(card: &mut CardEnt, entry: &'a ScryfallEntry) -> Result<(), ()> {
@@ -102,7 +101,9 @@ fn parse_cost_line<'a>(card: &mut CardEnt, entry: &'a ScryfallEntry) -> Result<(
         if rest.len() > 0 {
             panic!("parser error!");
         }
-        card.mana_cost = Some(Cost::Mana(manas));
+        for mana in manas {
+            card.costs.push(Cost::Mana(mana));
+        }
         Ok(())
     } else {
         Err(())

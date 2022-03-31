@@ -7,6 +7,6 @@ Allow the game to interactively ask for costs to be paid
 */
 #[derive(Clone, Debug, Serialize)]
 pub enum Cost {
-    Mana(Vec<ManaCostSymbol>),
+    Mana(ManaCostSymbol),
     Selftap,
 }

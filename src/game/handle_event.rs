@@ -1,11 +1,18 @@
 use std::cmp::min;
 
+use crate::card_entities::EntType;
 use crate::event::DamageReason;
 use crate::game::*;
 use crate::player::AskReason;
 use async_recursion::async_recursion;
 
 impl Game {
+    /*
+    This function should
+    be  refactored to have stages, starting with prevention effects and
+    going on to replacments, then finally
+    the event can be handled
+    */
     #[async_recursion]
     pub async fn handle_event(&mut self, event: Event) -> Vec<EventResult> {
         let mut results: Vec<EventResult> = Vec::new();
@@ -226,17 +233,19 @@ impl Game {
                     None => false,
                 },
             };
-            //Udate knowledge of new card on zonemove
-            if removed && !card.token {
+            //date knowledge of new card on zonemove
+            let real = card.ent_type == EntType::RealCard;
+            if removed && real {
                 props = Some((card.name, card.owner));
             };
-            if removed && card.token {
+            if removed && !real {
                 results.push(EventResult::MoveZones {
                     oldent: ent,
                     newent: None,
                     dest,
                 });
             }
+            Some(())
         };
         let _: Option<_> = try {
             let (name, owner_id) = props?;
@@ -276,6 +285,7 @@ impl Game {
                 newent: Some(newent),
                 dest,
             });
+            Some(())
         };
     }
     async fn subphase(
@@ -514,6 +524,7 @@ impl Game {
                         },
                     );
                 }
+                Some(())
             };
         }
         for blocker in self.all_creatures() {

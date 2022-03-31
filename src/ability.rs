@@ -13,9 +13,8 @@ pub struct TriggeredAbility {}
 pub struct StaticAbility {}
 #[derive(Clone, Serialize)]
 pub struct ActivatedAbility {
-    pub cost: Vec<Cost>,
+    pub costs: Vec<Cost>,
     pub effect: Vec<Clause>,
-    pub mana_ability: bool,
     pub keyword: Option<KeywordAbility>,
 }
 #[derive(Clone, Serialize)]

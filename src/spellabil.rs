@@ -43,12 +43,11 @@ impl SpellAbilBuilder {
         };
         res
     }
-    pub fn activated_ability(mut self, cost: Vec<Cost>, mana_ability: bool) -> Ability {
+    pub fn activated_ability(mut self, costs: Vec<Cost>) -> Ability {
         let activated = ActivatedAbility {
-            cost,
+            costs,
             keyword: self.keyword,
             effect: self.clauses,
-            mana_ability,
         };
         Ability::Activated(activated)
     }

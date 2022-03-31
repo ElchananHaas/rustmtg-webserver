@@ -1,4 +1,5 @@
 #![feature(try_blocks)]
+#![feature(let_chains)]
 use anyhow::Result;
 use once_cell::sync::OnceCell;
 use std::mem;

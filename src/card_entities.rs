@@ -1,6 +1,7 @@
 use crate::{
     card_types::{Subtypes, Supertypes, Types},
     game::Game,
+    spellabil::Clause,
 };
 use derivative::*;
 use serde_derive::Serialize;
@@ -16,6 +17,18 @@ use crate::{
     entities::{CardId, PlayerId, TargetId},
     spellabil::KeywordAbility,
 };
+#[derive(Clone, Serialize, PartialEq, Eq)]
+pub enum EntType {
+    RealCard,
+    TokenCard,
+    ActivatedAbility,
+    TriggeredAbility,
+}
+impl Default for EntType {
+    fn default() -> Self {
+        Self::RealCard
+    }
+}
 #[derive(Derivative)]
 #[derivative(Default)]
 #[derive(Serialize, Clone)]
@@ -28,11 +41,12 @@ pub struct CardEnt {
     pub attacking: Option<TargetId>, //Is this attacking a player of planeswalker
     pub blocked: Vec<CardId>,
     pub blocking: Vec<CardId>,
+    pub effect: Vec<Clause>, //Effect of card, for instant sorcery or ability
     pub name: &'static str,
     #[derivative(Default(value = "PlayerId::from(NonZeroU64::new(u64::MAX).unwrap())"))]
     pub owner: PlayerId,
     pub printed_name: &'static str,
-    pub token: bool,
+    pub ent_type: EntType,
     pub known_to: HashSet<PlayerId>,
     pub pt: Option<PT>,
     pub controller: Option<PlayerId>,
@@ -40,8 +54,7 @@ pub struct CardEnt {
     pub supertypes: Supertypes,
     pub subtypes: Subtypes,
     pub abilities: Vec<Ability>,
-    pub mana_cost: Option<Cost>,
-    pub additional_costs: Vec<Cost>,
+    pub costs: Vec<Cost>,
 }
 impl CardEnt {
     pub fn has_keyword(&self, keyword: KeywordAbility) -> bool {

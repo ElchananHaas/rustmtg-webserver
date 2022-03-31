@@ -14,7 +14,7 @@ macro_rules! enumset{
         #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize)]
         #[derive(AsRefStr)]
         #[allow(dead_code)] //allow dead code to reduce warnings noise on each variant
-        #[repr(C)]
+        #[repr(u32)]
         pub enum $name{
             $($e,)*
         }
