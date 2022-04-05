@@ -6,7 +6,7 @@ use crate::entities::{CardId, ManaId, PlayerId, TargetId};
 use crate::event::{DiscardCause, Event, EventResult, TagEvent};
 use crate::mana::{Color, Mana, ManaCostSymbol};
 use crate::player::{AskReason, Player, PlayerCon};
-use crate::spellabil::{KeywordAbility, Clause, ClauseEffect};
+use crate::spellabil::{Clause, ClauseEffect, KeywordAbility};
 use anyhow::{bail, Result};
 use async_recursion::async_recursion;
 use futures::future;
@@ -391,16 +391,17 @@ impl Game {
                     Action::ActivateAbility { source, index } => {
                         self.backup();
                         let id = self.construct_activated_ability(player, *source, *index);
-                        let id=if let Some(id)=id{
+                        let id = if let Some(id) = id {
                             id
-                        }else{
+                        } else {
                             self.restore();
                             continue;
                         };
-                        if self.is_mana_ability(id){
-                            self.resolve(id);
-                        }else{
+                        if self.is_mana_ability(id) {
+                            self.resolve(id).await;
+                        } else {
                             //TODO handle rest of spellcasting
+                            todo!();
                         }
                     }
                 }
@@ -408,25 +409,70 @@ impl Game {
             }
         }
     }
-    fn is_mana_ability(&self,id:CardId)->bool{
-        if let Some(card)=self.cards.get(id){
-            for cost in &card.costs{
+    async fn resolve(&mut self, id: CardId) {
+        let effects;
+        let controller;
+        let types;
+        if let Some(ent) = self.cards.get(id) {
+            effects = ent.effect.clone();
+            controller = ent.get_controller();
+            types = ent.types.clone();
+        } else {
+            return;
+        }
+        for effect in effects {
+            match effect {
+                Clause::Effect { effect } => {
+                    self.resolve_clause(effect, id, controller).await;
+                }
+                _ => todo!(),
+            }
+        }
+        let dest = if types.instant || types.sorcery {
+            Zone::Graveyard
+        } else {
+            Zone::Battlefield
+        };
+        self.handle_event(Event::MoveZones {
+            ent: id,
+            origin: Zone::Stack,
+            dest,
+        })
+        .await;
+    }
+    async fn resolve_clause(&mut self, effect: ClauseEffect, id: CardId, controller: PlayerId) {
+        match effect {
+            ClauseEffect::AddMana(manas) => {
+                for mana in manas {
+                    self.add_mana(controller, mana);
+                }
+            }
+        }
+    }
+    fn is_mana_ability(&self, id: CardId) -> bool {
+        if let Some(card) = self.cards.get(id) {
+            for cost in &card.costs {
                 //Check for loyalty abilities when implemented
             }
-            let mut mana_abil=false;
-            for clause in &card.effect{
-                match clause{
-                    Clause::Target { targets: _, effect: _ }=>{ return false;}
-                    Clause::Effect { effect }=>{
-                        match effect{
-                            ClauseEffect::AddMana(_)=>{mana_abil=true;}
-                            _=>()
-                        }
+            let mut mana_abil = false;
+            for clause in &card.effect {
+                match clause {
+                    Clause::Target {
+                        targets: _,
+                        effect: _,
+                    } => {
+                        return false;
                     }
+                    Clause::Effect { effect } => match effect {
+                        ClauseEffect::AddMana(_) => {
+                            mana_abil = true;
+                        }
+                        _ => (),
+                    },
                 }
             }
             mana_abil
-        }else{
+        } else {
             false
         }
     }

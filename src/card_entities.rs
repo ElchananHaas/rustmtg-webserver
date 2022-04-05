@@ -65,6 +65,13 @@ impl CardEnt {
         }
         false
     }
+    pub fn get_controller(&self) -> PlayerId {
+        if let Some(pl) = self.controller {
+            pl
+        } else {
+            self.owner
+        }
+    }
 }
 #[derive(Clone, Copy, Debug, Serialize)]
 pub struct PT {
