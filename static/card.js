@@ -40,6 +40,9 @@ export default class DispCard extends Phaser.GameObjects.Container{
             line.setColor('#000000');
             this.add(line);
         }
+        if (card.tapped){
+            this.add_text(320,"tapped");
+        }
         card_background.on('pointerover', function () {
         });
         scene.input.setDraggable(card_background);

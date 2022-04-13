@@ -1,6 +1,7 @@
 use crate::ability::Ability;
 use crate::card_entities::{CardEnt, EntType};
 use crate::carddb::CardDB;
+use crate::cost::Cost;
 use crate::ent_maps::EntMap;
 use crate::entities::{CardId, ManaId, PlayerId, TargetId};
 use crate::event::{DiscardCause, Event, EventResult, TagEvent};
@@ -397,6 +398,11 @@ impl Game {
                             self.restore();
                             continue;
                         };
+                        let cost_paid = self.request_cost_payment(id, *source).await;
+                        if !cost_paid {
+                            self.restore();
+                            continue;
+                        }
                         if self.is_mana_ability(id) {
                             self.resolve(id).await;
                         } else {
@@ -408,6 +414,29 @@ impl Game {
                 return true;
             }
         }
+    }
+    async fn request_cost_payment(&mut self, id: CardId, source: CardId) -> bool {
+        println!("on to cost payment");
+        let costs = if let Some(card) = self.cards.get(id) {
+            card.costs.clone()
+        } else {
+            return false;
+        };
+        for cost in costs {
+            match cost {
+                Cost::Selftap => {
+                    if !self.can_tap(source) {
+                        return false;
+                    }
+                    self.tap(source).await;
+                }
+                _ => {
+                    todo!()
+                }
+            }
+        }
+        println!("paid costs");
+        true
     }
     async fn resolve(&mut self, id: CardId) {
         let effects;
@@ -444,7 +473,7 @@ impl Game {
         match effect {
             ClauseEffect::AddMana(manas) => {
                 for mana in manas {
-                    self.add_mana(controller, mana);
+                    self.add_mana(controller, mana).await;
                 }
             }
         }
@@ -546,6 +575,16 @@ impl Game {
         let controller = card.controller.unwrap_or(card.owner);
         for i in 0..card.abilities.len() {
             if zone == Zone::Battlefield && controller == player_id {
+                let abil=&card.abilities[i];
+                let abil=match abil{
+                    Ability::Activated(abil)=>abil,
+                    _=>continue
+                };
+                for cost in &abil.costs{
+                    if !self.maybe_can_pay(card_id,card,cost,zone){
+                        continue;
+                    }
+                }
                 actions.push(Action::ActivateAbility {
                     source: card_id,
                     index: i,
@@ -553,6 +592,14 @@ impl Game {
             }
         }
         actions
+    }
+    pub fn maybe_can_pay(&self,card_id:CardId,card:&CardEnt,cost:&Cost,zone:Zone)->bool{
+        match cost{
+            Cost::Selftap=>{
+                zone==Zone::Battlefield && self.can_tap(card_id)
+            }
+            _=>true
+        }
     }
     //Places abilities on the stack
     pub async fn place_abilities(&mut self) {

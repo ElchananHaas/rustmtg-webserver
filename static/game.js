@@ -26,6 +26,7 @@ export default class Game extends Phaser.Scene {
         let me=parsed[1];
         let ecs=parsed[2];
         let players=parsed[3];
+        let game_globals=parsed[4];
         console.log(ecs);
         let myplayer=players[me];
         let hand=myplayer["hand"];
@@ -42,6 +43,16 @@ export default class Game extends Phaser.Scene {
         for(let i=0;i<battlefield.length;i++){
             this.add_disp_card(ecs,battlefield[i],150 + (i * 125), 300);
         }
+        let phase_text="";
+        if(game_globals.phase==null){
+            phase_text="game not started yet";
+        }else{
+            phase_text=game_globals.phase.toString();
+        }
+        if(game_globals.subphase!=null){
+            phase_text+=": "+game_globals.subphase.toString();
+        }
+        this.phase_text.setText(phase_text);
     }
     add_disp_card(ecs,index,x,y){
         let ent=ecs[index];
@@ -62,6 +73,10 @@ export default class Game extends Phaser.Scene {
                 console.log(ent);
                 if(ent.PlayLand!=null){
                     let disp_card=this.disp_cards[ent.PlayLand];
+                    disp_card.click_actions.push(i);
+                }
+                if(ent.ActivateAbility!=null){
+                    let disp_card=this.disp_cards[ent.ActivateAbility.source];
                     disp_card.click_actions.push(i);
                 }
             }
@@ -103,6 +118,7 @@ export default class Game extends Phaser.Scene {
             }
         });
         this.disp_cards={};
+        this.phase_text=this.add.text(500,50,"game not yet started");
     }
     
     update() {

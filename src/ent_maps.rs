@@ -9,6 +9,7 @@ where
     K: Copy + Hash + Eq + From<NonZeroU64>,
 {
     ents: HashMap<K, V>,
+    #[serde(skip_serializing)]
     count: NonZeroU64,
 }
 

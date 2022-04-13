@@ -223,7 +223,9 @@ impl PlayerCon {
             } else {
                 continue;
             };
+            println!("parsing:{}",text);
             if let Ok(parsed) = serde_json::from_str(text) {
+                println!("parsed!");
                 return parsed;
             } else {
                 continue;
