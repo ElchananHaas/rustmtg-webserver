@@ -3,7 +3,6 @@ use crate::entities::{CardId, ManaId, PlayerId};
 use crate::game::Cards;
 use crate::mana::Mana;
 use anyhow::Result;
-//derivative::Derivative, work around rust-analyzer bug for now
 use futures::{SinkExt, StreamExt};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -23,7 +22,7 @@ pub struct Player {
     pub life: i64,
     pub library: Vec<CardId>,
     pub hand: HashSet<CardId>,
-    pub mana_pool: EntMap<ManaId, Mana>,
+    pub mana_pool: HashSet<ManaId>,
     pub graveyard: Vec<CardId>,
     pub max_handsize: usize,
     pub player_con: PlayerCon,
@@ -36,7 +35,7 @@ pub struct PlayerView<'a> {
     pub library: Vec<Option<CardId>>,
     pub hand: Vec<Option<CardId>>,
     pub graveyard: &'a Vec<CardId>,
-    pub mana_pool: &'a EntMap<ManaId, Mana>,
+    pub mana_pool: &'a HashSet<ManaId>,
     pub max_handsize: usize,
 }
 fn view_t<'a>(
@@ -105,7 +104,7 @@ impl Player {
         }
     }
     //pair attackers with blockers/attacking targets
-    //Returns an adjacency matrix with either the
+    //Returns an adjacency list with either the
     //planeswalker/player each attacker is attacking,
     //or the list of creatures each blocker is blocking
     pub async fn ask_user_pair<T: Clone + Eq + DeserializeOwned + Hash + Copy + Serialize>(
@@ -205,7 +204,8 @@ impl PlayerCon {
         }
         let mut failures = 0;
         loop {
-            let sres = socket.send(Message::binary(buffer.clone())).await;
+            let msg=std::str::from_utf8(&buffer).expect("json is valid text");
+            let sres = socket.send(Message::text(msg)).await;
 
             if sres.is_err() {
                 PlayerCon::socket_error(&mut failures).await;
@@ -223,7 +223,7 @@ impl PlayerCon {
             } else {
                 continue;
             };
-            println!("parsing:{}",text);
+            println!("parsing:{}", text);
             if let Ok(parsed) = serde_json::from_str(text) {
                 println!("parsed!");
                 return parsed;
@@ -238,7 +238,8 @@ impl PlayerCon {
         res
     }
     async fn send_state_socket(&self, state: Vec<u8>, socket: &mut WebSocket) -> Result<()> {
-        socket.send(Message::binary(state)).await?;
+        let msg=std::str::from_utf8(&state).expect("json is valid text");
+        socket.send(Message::text(msg)).await?;
         Ok(())
     }
     async fn socket_error(failures: &mut u64) {

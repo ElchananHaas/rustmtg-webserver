@@ -161,9 +161,18 @@ impl Game {
             }
         }
     }
+    async fn drain_mana_pools(&mut self){
+        //TODO handle effects that keep mana pools from draining
+        for &player in &self.turn_order{
+            if let Some(pl)=self.players.get_mut(player){
+                pl.mana_pool=HashSet::new();
+            }
+        }
+    }
     async fn phase(&mut self, _events: &mut Vec<TagEvent>, phase: Phase) {
         self.phase = Some(phase);
         self.subphase = None;
+        self.send_state().await;
         match phase {
             Phase::Begin => {
                 self.subphases
@@ -193,6 +202,7 @@ impl Game {
                     .extend([Subphase::EndStep, Subphase::Cleanup].iter());
             }
         }
+        self.drain_mana_pools().await;
     }
     async fn zonemove(
         &mut self,
@@ -295,6 +305,7 @@ impl Game {
         subphase: Subphase,
     ) {
         self.subphase = Some(subphase);
+        self.send_state().await;
         match subphase {
             Subphase::Untap => {
                 for perm in self
@@ -323,7 +334,7 @@ impl Game {
                     .filter(|e| self.can_tap(*e))
                     .collect::<Vec<CardId>>();
                 let attack_targets = self.attack_targets(self.active_player());
-
+                let mut actual_attackers = Vec::new();
                 loop {
                     println!("Asking player");
                     let attacks;
@@ -341,7 +352,6 @@ impl Game {
                     } else {
                         return;
                     }
-                    let mut actual_attackers = Vec::new();
                     let mut attack_targets = Vec::new();
                     for (i, &attacker) in legal_attackers.iter().enumerate() {
                         let attacked = &attacks[i];
@@ -374,13 +384,19 @@ impl Game {
                     }
                     events.push(TagEvent {
                         event: Event::Attack {
-                            attackers: actual_attackers,
+                            attackers: actual_attackers.clone(),
                         },
                         replacements: Vec::new(),
                     });
                     break;
                 }
-                self.cycle_priority().await;
+                if actual_attackers.len()==0{
+                    self.subphases=vec![Subphase::EndCombat].into();
+                }
+                else{
+                    self.cycle_priority().await;
+                }
+                
             }
             Subphase::Blockers => {
                 for opponent in self.opponents(self.active_player()) {
@@ -398,7 +414,7 @@ impl Game {
                         .players_creatures(opponent)
                         .filter(|&creature| self.cards.is(creature, |card| !card.tapped))
                         .collect::<Vec<_>>();
-                    //This will be adjusted for creatres that can make multiple blocks
+                    //This will be adjusted for creatures that can make multiple blocks
                     let choice_limits = vec![(0, 1); potential_blockers.len()];
                     loop {
                         let blocks = if let Some(player) = self.players.get(opponent) {
@@ -467,6 +483,7 @@ impl Game {
                 self.cleanup_phase().await;
             }
         }
+        self.drain_mana_pools().await;
     }
     async fn cleanup_phase(&mut self) {
         if let Some(player) = self.players.get_mut(self.active_player()) {

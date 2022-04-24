@@ -39,6 +39,7 @@ pub struct Game {
     pub players: Players,
     #[serde(skip_serializing)]
     pub cards: Cards,
+    pub mana:EntMap<ManaId, Mana>,
     pub battlefield: HashSet<CardId>,
     pub exile: HashSet<CardId>,
     pub command: HashSet<CardId>,
@@ -88,7 +89,7 @@ impl GameBuilder {
             name: name.to_owned(),
             hand: HashSet::new(),
             life: 20,
-            mana_pool: EntMap::new(),
+            mana_pool: HashSet::new(),
             graveyard: Vec::new(),
             library: Vec::new(),
             max_handsize: 7,
@@ -112,6 +113,7 @@ impl GameBuilder {
         Ok(Game {
             players: self.players,
             cards: self.cards,
+            mana: EntMap::new(),
             battlefield: HashSet::new(),
             exile: HashSet::new(),
             command: HashSet::new(),
@@ -270,7 +272,8 @@ impl Game {
         if let Some(pl) = self.players.get_mut(player) {
             for color in colors {
                 let mana = Mana::new(color);
-                let (id, _) = pl.mana_pool.insert(mana);
+                let (id, _) = self.mana.insert(mana);
+                pl.mana_pool.insert(id);
                 ids.push(id);
             }
         }
@@ -411,6 +414,7 @@ impl Game {
                         }
                     }
                 }
+                println!("Exiting actions");
                 return true;
             }
         }
@@ -575,15 +579,17 @@ impl Game {
         let controller = card.controller.unwrap_or(card.owner);
         for i in 0..card.abilities.len() {
             if zone == Zone::Battlefield && controller == player_id {
-                let abil=&card.abilities[i];
-                let abil=match abil{
-                    Ability::Activated(abil)=>abil,
-                    _=>continue
+                let abil = &card.abilities[i];
+                let abil = match abil {
+                    Ability::Activated(abil) => abil,
+                    _ => continue,
                 };
-                for cost in &abil.costs{
-                    if !self.maybe_can_pay(card_id,card,cost,zone){
-                        continue;
-                    }
+                let maybe_pay = abil
+                    .costs
+                    .iter()
+                    .all(|cost| self.maybe_can_pay(card_id, card, cost, zone));
+                if !maybe_pay {
+                    continue;
                 }
                 actions.push(Action::ActivateAbility {
                     source: card_id,
@@ -593,12 +599,10 @@ impl Game {
         }
         actions
     }
-    pub fn maybe_can_pay(&self,card_id:CardId,card:&CardEnt,cost:&Cost,zone:Zone)->bool{
-        match cost{
-            Cost::Selftap=>{
-                zone==Zone::Battlefield && self.can_tap(card_id)
-            }
-            _=>true
+    pub fn maybe_can_pay(&self, card_id: CardId, card: &CardEnt, cost: &Cost, zone: Zone) -> bool {
+        match cost {
+            Cost::Selftap => zone == Zone::Battlefield && self.can_tap(card_id),
+            _ => true,
         }
     }
     //Places abilities on the stack
@@ -615,7 +619,7 @@ impl Game {
     pub fn opponents(&self, player: PlayerId) -> Vec<PlayerId> {
         self.turn_order
             .iter()
-            .filter_map(|x| if *x == player { Some(*x) } else { None })
+            .filter_map(|&x| if x == player { None } else { Some(x) })
             .collect()
     }
     //Checks if this attacking arragment is legal.
