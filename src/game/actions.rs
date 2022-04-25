@@ -9,13 +9,23 @@ use super::Zone;
 //The zone it can be cast from will implicitly be enabled by
 //the code generating casting options
 #[derive(Clone, Serialize)]
-pub struct ActionFilter {}
+pub enum ActionFilter {
+    None,
+}
+impl ActionFilter{
+    pub fn check(&self,)->bool{
+        match self{
+            ActionFilter::None=>true,
+            _=>todo!()
+        }
+    }
+}
 #[derive(Clone, Serialize)]
 pub struct CastingOption {
-    card: CardId,
-    costs: Vec<Cost>,
-    filter: ActionFilter,
-    keyword: Option<KeywordAbility>,
+    pub card: CardId,
+    pub costs: Vec<Cost>,
+    pub filter: ActionFilter,
+    pub keyword: Option<KeywordAbility>,
 }
 #[derive(Clone, Serialize)]
 pub struct AbilityOption {

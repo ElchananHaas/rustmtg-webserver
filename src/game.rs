@@ -20,7 +20,7 @@ use std::cmp::max;
 use std::collections::{HashMap, HashSet, VecDeque};
 use warp::ws::WebSocket;
 
-use self::actions::Action;
+use self::actions::{Action, CastingOption, ActionFilter};
 mod actions;
 mod handle_event;
 mod layers;
@@ -414,7 +414,6 @@ impl Game {
                         }
                     }
                 }
-                println!("Exiting actions");
                 return true;
             }
         }
@@ -543,6 +542,14 @@ impl Game {
             for (card_id, zone) in self.cards_and_zones() {
                 if let Some(card) = self.cards.get(card_id) {
                     actions.extend(self.ability_actions(player, pl, card_id, card, zone));
+                    if card.costs.len()>0{
+                        actions.push(Action::Cast(CastingOption{
+                            card:card_id,
+                            costs:card.costs.clone(),
+                            filter:ActionFilter::None,
+                            keyword:None
+                        }));
+                    }
                 }
             }
         }
