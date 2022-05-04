@@ -161,11 +161,11 @@ impl Game {
             }
         }
     }
-    async fn drain_mana_pools(&mut self){
+    async fn drain_mana_pools(&mut self) {
         //TODO handle effects that keep mana pools from draining
-        for &player in &self.turn_order{
-            if let Some(pl)=self.players.get_mut(player){
-                pl.mana_pool=HashSet::new();
+        for &player in &self.turn_order {
+            if let Some(pl) = self.players.get_mut(player) {
+                pl.mana_pool = HashSet::new();
             }
         }
     }
@@ -390,13 +390,11 @@ impl Game {
                     });
                     break;
                 }
-                if actual_attackers.len()==0{
-                    self.subphases=vec![Subphase::EndCombat].into();
-                }
-                else{
+                if actual_attackers.len() == 0 {
+                    self.subphases = vec![Subphase::EndCombat].into();
+                } else {
                     self.cycle_priority().await;
                 }
-                
             }
             Subphase::Blockers => {
                 for opponent in self.opponents(self.active_player()) {

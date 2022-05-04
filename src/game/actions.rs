@@ -12,17 +12,18 @@ use super::Zone;
 pub enum ActionFilter {
     None,
 }
-impl ActionFilter{
-    pub fn check(&self,)->bool{
-        match self{
-            ActionFilter::None=>true,
-            _=>todo!()
+impl ActionFilter {
+    pub fn check(&self) -> bool {
+        match self {
+            ActionFilter::None => true,
+            _ => todo!(),
         }
     }
 }
 #[derive(Clone, Serialize)]
 pub struct CastingOption {
     pub card: CardId,
+    pub zone: Zone,
     pub costs: Vec<Cost>,
     pub filter: ActionFilter,
     pub keyword: Option<KeywordAbility>,

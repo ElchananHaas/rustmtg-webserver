@@ -20,7 +20,7 @@ use std::cmp::max;
 use std::collections::{HashMap, HashSet, VecDeque};
 use warp::ws::WebSocket;
 
-use self::actions::{Action, CastingOption, ActionFilter};
+use self::actions::{Action, ActionFilter, CastingOption};
 mod actions;
 mod handle_event;
 mod layers;
@@ -39,7 +39,7 @@ pub struct Game {
     pub players: Players,
     #[serde(skip_serializing)]
     pub cards: Cards,
-    pub mana:EntMap<ManaId, Mana>,
+    pub mana: EntMap<ManaId, Mana>,
     pub battlefield: HashSet<CardId>,
     pub exile: HashSet<CardId>,
     pub command: HashSet<CardId>,
@@ -368,6 +368,27 @@ impl Game {
             players.rotate_left(1);
         }
     }
+    pub async fn move_zones(&mut self,ent:CardId,origin:Zone,dest:Zone)->Vec<CardId>{
+        let moved=self.handle_event(Event::MoveZones {
+            ent,
+            origin,
+            dest,
+        })
+        .await;
+        self.parse_zone_move(moved,dest)
+    }
+    fn parse_zone_move(&self,events:Vec<EventResult>,dest_zone:Zone)->Vec<CardId>{
+        let mut new_ents=Vec::new();
+        for event in events{
+            if let EventResult::MoveZones { oldent, newent, dest }=event
+            && let Some(newent)=newent
+            && dest==dest_zone{
+                new_ents.push(newent);
+            }
+        }
+        new_ents
+    }
+ 
     pub async fn grant_priority(&mut self, players: &VecDeque<PlayerId>) -> bool {
         let player = players[0];
         self.layers();
@@ -383,7 +404,19 @@ impl Game {
                 let action = &actions[choice[0]];
                 match action {
                     Action::Cast(casting_option) => {
-                        todo!()
+                        self.backup();
+                        let card = casting_option.card;
+                        let stackobj=self.move_zones(card, casting_option.zone, Zone::Stack).await;
+                        if stackobj.len()!=1{
+                            self.restore();
+                            continue;
+                        }
+                        let resolved=self.handle_cast(stackobj[0],casting_option.clone()).await;
+                        if !resolved {
+                            self.restore();
+                            continue;
+                        }
+                        todo!(); //Get spells on the stack, unite with abilities
                     }
                     Action::PlayLand(card) => {
                         self.handle_event(Event::PlayLand {
@@ -394,23 +427,29 @@ impl Game {
                     }
                     Action::ActivateAbility { source, index } => {
                         self.backup();
-                        let id = self.construct_activated_ability(player, *source, *index);
-                        let id = if let Some(id) = id {
-                            id
+                        let built = self.construct_activated_ability(player, *source, *index);
+                        let (id,keyword) = if let Some(built) = built {
+                            built
                         } else {
                             self.restore();
                             continue;
                         };
-                        let cost_paid = self.request_cost_payment(id, *source).await;
-                        if !cost_paid {
+                        let costs= if let Some(card) = self.cards.get(id) {
+                            card.costs.clone()
+                        } else {
+                            return false;
+                        };
+                        let castopt=CastingOption{
+                            card:id,
+                            zone:Zone::Stack,
+                            costs,
+                            filter:ActionFilter::None,
+                            keyword
+                        };
+                        let resolved=self.handle_cast(id,castopt).await;
+                        if !resolved {
                             self.restore();
                             continue;
-                        }
-                        if self.is_mana_ability(id) {
-                            self.resolve(id).await;
-                        } else {
-                            //TODO handle rest of spellcasting
-                            todo!();
                         }
                     }
                 }
@@ -418,13 +457,20 @@ impl Game {
             }
         }
     }
-    async fn request_cost_payment(&mut self, id: CardId, source: CardId) -> bool {
-        println!("on to cost payment");
-        let costs = if let Some(card) = self.cards.get(id) {
-            card.costs.clone()
-        } else {
+    async fn handle_cast(&mut self, id: CardId, castopt:CastingOption) -> bool {
+        let cost_paid = self.request_cost_payment(castopt.costs, id).await;
+        if !cost_paid {
             return false;
-        };
+        }
+        if self.is_mana_ability(id) {
+            self.resolve(id).await;
+        } else {
+            //TODO handle rest of spellcasting
+            todo!();
+        }
+        true
+    }
+    async fn request_cost_payment(&mut self, costs: Vec<Cost>, source: CardId) -> bool {
         for cost in costs {
             match cost {
                 Cost::Selftap => {
@@ -438,7 +484,6 @@ impl Game {
                 }
             }
         }
-        println!("paid costs");
         true
     }
     async fn resolve(&mut self, id: CardId) {
@@ -483,6 +528,11 @@ impl Game {
     }
     fn is_mana_ability(&self, id: CardId) -> bool {
         if let Some(card) = self.cards.get(id) {
+            if card.ent_type != EntType::ActivatedAbility
+                && card.ent_type != EntType::TriggeredAbility
+            {
+                return false;
+            }
             for cost in &card.costs {
                 //Check for loyalty abilities when implemented
             }
@@ -513,7 +563,7 @@ impl Game {
         player: PlayerId,
         source: CardId,
         index: usize,
-    ) -> Option<CardId> {
+    ) -> Option<(CardId,Option<KeywordAbility>)> {
         let card = self.cards.get(source)?;
         if index >= card.abilities.len() {
             return None;
@@ -523,13 +573,14 @@ impl Game {
             _ => None,
         }?;
         let mut abil = CardEnt::default();
+        let keyword=activated.keyword;
         abil.ent_type = EntType::ActivatedAbility;
         abil.owner = player;
         abil.controller = Some(player);
         abil.costs = activated.costs.clone();
         abil.effect = activated.effect.clone();
         let (new_id, new_ent) = self.cards.insert(abil);
-        Some(new_id)
+        Some((new_id,keyword))
     }
     pub fn compute_actions(&self, player: PlayerId) -> Vec<Action> {
         let mut actions = Vec::new();
@@ -542,12 +593,13 @@ impl Game {
             for (card_id, zone) in self.cards_and_zones() {
                 if let Some(card) = self.cards.get(card_id) {
                     actions.extend(self.ability_actions(player, pl, card_id, card, zone));
-                    if card.costs.len()>0{
-                        actions.push(Action::Cast(CastingOption{
-                            card:card_id,
-                            costs:card.costs.clone(),
-                            filter:ActionFilter::None,
-                            keyword:None
+                    if card.costs.len() > 0 {
+                        actions.push(Action::Cast(CastingOption {
+                            card: card_id,
+                            costs: card.costs.clone(),
+                            filter: ActionFilter::None,
+                            keyword: None,
+                            zone: Zone::Hand,
                         }));
                     }
                 }
@@ -676,7 +728,7 @@ pub enum Subphase {
     EndStep,
     Cleanup,
 }
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 #[allow(dead_code)] //allow dead code to reduce warnings noise on each variant
 pub enum Zone {
     Hand,

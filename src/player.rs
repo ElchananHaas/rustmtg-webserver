@@ -204,7 +204,7 @@ impl PlayerCon {
         }
         let mut failures = 0;
         loop {
-            let msg=std::str::from_utf8(&buffer).expect("json is valid text");
+            let msg = std::str::from_utf8(&buffer).expect("json is valid text");
             let sres = socket.send(Message::text(msg)).await;
 
             if sres.is_err() {
@@ -238,7 +238,7 @@ impl PlayerCon {
         res
     }
     async fn send_state_socket(&self, state: Vec<u8>, socket: &mut WebSocket) -> Result<()> {
-        let msg=std::str::from_utf8(&state).expect("json is valid text");
+        let msg = std::str::from_utf8(&state).expect("json is valid text");
         socket.send(Message::text(msg)).await?;
         Ok(())
     }
