@@ -14,6 +14,7 @@ impl Game {
     the event can be handled
     */
     #[async_recursion]
+    #[must_use]
     pub async fn handle_event(&mut self, event: Event) -> Vec<EventResult> {
         let mut results: Vec<EventResult> = Vec::new();
         let mut events: Vec<TagEvent> = Vec::new();

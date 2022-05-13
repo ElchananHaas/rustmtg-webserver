@@ -1,7 +1,13 @@
 use serde::Serialize;
 use serde_derive::Serialize;
 
-use crate::{ability::Ability, cost::Cost, entities::CardId, spellabil::KeywordAbility};
+use crate::{
+    ability::Ability,
+    cost::Cost,
+    entities::{CardId, PlayerId},
+    player::Player,
+    spellabil::KeywordAbility,
+};
 
 use super::Zone;
 
@@ -27,6 +33,7 @@ pub struct CastingOption {
     pub costs: Vec<Cost>,
     pub filter: ActionFilter,
     pub keyword: Option<KeywordAbility>,
+    pub player: PlayerId,
 }
 #[derive(Clone, Serialize)]
 pub struct AbilityOption {

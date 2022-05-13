@@ -68,25 +68,11 @@ pub enum Clause {
 #[derive(Clone, Serialize)]
 pub enum ClauseEffect {
     AddMana(Vec<ManaCostSymbol>),
+    DrawCard,
 }
-impl ClauseEffect {
-    pub async fn run(&self, game: &mut Game, ent: CardId) {
-        match self {
-            Self::AddMana(manas) => {
-                for mana in manas {
-                    if let Some(controller) = game.get_controller(ent) {
-                        let _ = game.add_mana(controller, *mana).await;
-                    }
-                }
-            }
-        }
-    }
-}
+
 #[derive(Clone, Serialize)]
 pub enum TargetClauseEffect {}
-impl TargetClauseEffect {
-    pub async fn run(&self, game: &mut Game, ent: CardId) {}
-}
 
 //TODO change this to an enum
 #[derive(Clone, Serialize)]

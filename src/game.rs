@@ -1,4 +1,4 @@
-use crate::ability::Ability;
+use crate::ability::{self, Ability};
 use crate::card_entities::{CardEnt, EntType};
 use crate::carddb::CardDB;
 use crate::cost::Cost;
@@ -6,7 +6,7 @@ use crate::ent_maps::EntMap;
 use crate::entities::{CardId, ManaId, PlayerId, TargetId};
 use crate::event::{DiscardCause, Event, EventResult, TagEvent};
 use crate::mana::{Color, Mana, ManaCostSymbol};
-use crate::player::{AskReason, Player, PlayerCon};
+use crate::player::{self, AskReason, Player, PlayerCon};
 use crate::spellabil::{Clause, ClauseEffect, KeywordAbility};
 use anyhow::{bail, Result};
 use async_recursion::async_recursion;
@@ -162,7 +162,6 @@ impl Game {
                     .position(|x| *x == self.active_player())
                     .unwrap();
                 let new_spot = (order_spot + 1) % self.turn_order.len();
-                let player = self.turn_order[new_spot];
                 self.handle_event(Event::Turn { extra: false }).await;
             }
         }
@@ -357,6 +356,7 @@ impl Game {
         self.player_cycle_priority(self.turn_order.clone()).await;
     }
     #[async_recursion]
+    #[must_use]
     pub async fn player_cycle_priority(&mut self, mut players: VecDeque<PlayerId>) {
         self.place_abilities().await;
         for _ in 0..players.len() {
@@ -368,18 +368,15 @@ impl Game {
             players.rotate_left(1);
         }
     }
-    pub async fn move_zones(&mut self,ent:CardId,origin:Zone,dest:Zone)->Vec<CardId>{
-        let moved=self.handle_event(Event::MoveZones {
-            ent,
-            origin,
-            dest,
-        })
-        .await;
-        self.parse_zone_move(moved,dest)
+    pub async fn move_zones(&mut self, ent: CardId, origin: Zone, dest: Zone) -> Vec<CardId> {
+        let moved = self
+            .handle_event(Event::MoveZones { ent, origin, dest })
+            .await;
+        self.parse_zone_move(moved, dest)
     }
-    fn parse_zone_move(&self,events:Vec<EventResult>,dest_zone:Zone)->Vec<CardId>{
-        let mut new_ents=Vec::new();
-        for event in events{
+    fn parse_zone_move(&self, events: Vec<EventResult>, dest_zone: Zone) -> Vec<CardId> {
+        let mut new_ents = Vec::new();
+        for event in events {
             if let EventResult::MoveZones { oldent, newent, dest }=event
             && let Some(newent)=newent
             && dest==dest_zone{
@@ -388,7 +385,7 @@ impl Game {
         }
         new_ents
     }
- 
+
     pub async fn grant_priority(&mut self, players: &VecDeque<PlayerId>) -> bool {
         let player = players[0];
         self.layers();
@@ -406,12 +403,14 @@ impl Game {
                     Action::Cast(casting_option) => {
                         self.backup();
                         let card = casting_option.card;
-                        let stackobj=self.move_zones(card, casting_option.zone, Zone::Stack).await;
-                        if stackobj.len()!=1{
+                        let stackobj = self
+                            .move_zones(card, casting_option.zone, Zone::Stack)
+                            .await;
+                        if stackobj.len() != 1 {
                             self.restore();
                             continue;
                         }
-                        let resolved=self.handle_cast(stackobj[0],casting_option.clone()).await;
+                        let resolved = self.handle_cast(stackobj[0], casting_option.clone()).await;
                         if !resolved {
                             self.restore();
                             continue;
@@ -428,25 +427,26 @@ impl Game {
                     Action::ActivateAbility { source, index } => {
                         self.backup();
                         let built = self.construct_activated_ability(player, *source, *index);
-                        let (id,keyword) = if let Some(built) = built {
+                        let (id, keyword) = if let Some(built) = built {
                             built
                         } else {
                             self.restore();
                             continue;
                         };
-                        let costs= if let Some(card) = self.cards.get(id) {
+                        let costs = if let Some(card) = self.cards.get(id) {
                             card.costs.clone()
                         } else {
                             return false;
                         };
-                        let castopt=CastingOption{
-                            card:id,
-                            zone:Zone::Stack,
+                        let castopt = CastingOption {
+                            card: id,
+                            zone: Zone::Stack,
                             costs,
-                            filter:ActionFilter::None,
-                            keyword
+                            filter: ActionFilter::None,
+                            keyword,
+                            player,
                         };
-                        let resolved=self.handle_cast(id,castopt).await;
+                        let resolved = self.handle_cast(id, castopt).await;
                         if !resolved {
                             self.restore();
                             continue;
@@ -457,7 +457,7 @@ impl Game {
             }
         }
     }
-    async fn handle_cast(&mut self, id: CardId, castopt:CastingOption) -> bool {
+    async fn handle_cast(&mut self, id: CardId, castopt: CastingOption) -> bool {
         let cost_paid = self.request_cost_payment(castopt.costs, id).await;
         if !cost_paid {
             return false;
@@ -466,7 +466,17 @@ impl Game {
             self.resolve(id).await;
         } else {
             //TODO handle rest of spellcasting
-            todo!();
+            let caster = castopt.player;
+            let mut order = self.turn_order.clone();
+            for _ in 0..order.len() {
+                if order[0] == caster {
+                    break;
+                } else {
+                    order.rotate_left(1);
+                }
+            }
+            self.player_cycle_priority(order).await;
+            self.resolve(id).await;
         }
         true
     }
@@ -480,7 +490,7 @@ impl Game {
                     self.tap(source).await;
                 }
                 _ => {
-                    todo!()
+                    todo!("Cost {:?} not implemented", cost)
                 }
             }
         }
@@ -510,12 +520,7 @@ impl Game {
         } else {
             Zone::Battlefield
         };
-        self.handle_event(Event::MoveZones {
-            ent: id,
-            origin: Zone::Stack,
-            dest,
-        })
-        .await;
+        self.move_zones(id, Zone::Stack, dest).await;
     }
     async fn resolve_clause(&mut self, effect: ClauseEffect, id: CardId, controller: PlayerId) {
         match effect {
@@ -524,12 +529,15 @@ impl Game {
                     self.add_mana(controller, mana).await;
                 }
             }
+            ClauseEffect::DrawCard => {
+                self.draw(controller).await;
+            }
         }
     }
     fn is_mana_ability(&self, id: CardId) -> bool {
         if let Some(card) = self.cards.get(id) {
-            if card.ent_type != EntType::ActivatedAbility
-                && card.ent_type != EntType::TriggeredAbility
+            if !(card.ent_type == EntType::ActivatedAbility
+                || card.ent_type == EntType::TriggeredAbility)
             {
                 return false;
             }
@@ -563,7 +571,7 @@ impl Game {
         player: PlayerId,
         source: CardId,
         index: usize,
-    ) -> Option<(CardId,Option<KeywordAbility>)> {
+    ) -> Option<(CardId, Option<KeywordAbility>)> {
         let card = self.cards.get(source)?;
         if index >= card.abilities.len() {
             return None;
@@ -573,14 +581,14 @@ impl Game {
             _ => None,
         }?;
         let mut abil = CardEnt::default();
-        let keyword=activated.keyword;
+        let keyword = activated.keyword;
         abil.ent_type = EntType::ActivatedAbility;
         abil.owner = player;
         abil.controller = Some(player);
         abil.costs = activated.costs.clone();
         abil.effect = activated.effect.clone();
         let (new_id, new_ent) = self.cards.insert(abil);
-        Some((new_id,keyword))
+        Some((new_id, keyword))
     }
     pub fn compute_actions(&self, player: PlayerId) -> Vec<Action> {
         let mut actions = Vec::new();
@@ -593,15 +601,25 @@ impl Game {
             for (card_id, zone) in self.cards_and_zones() {
                 if let Some(card) = self.cards.get(card_id) {
                     actions.extend(self.ability_actions(player, pl, card_id, card, zone));
-                    if card.costs.len() > 0 {
-                        actions.push(Action::Cast(CastingOption {
-                            card: card_id,
-                            costs: card.costs.clone(),
-                            filter: ActionFilter::None,
-                            keyword: None,
-                            zone: Zone::Hand,
-                        }));
-                    }
+                }
+            }
+            actions.extend(self.cast_actions(pl, player));
+        }
+        actions
+    }
+    pub fn cast_actions(&self, pl: &Player, player: PlayerId) -> Vec<Action> {
+        let mut actions = Vec::new();
+        for &card_id in pl.hand.iter() {
+            if let Some(card) = self.cards.get(card_id) {
+                if card.costs.len() > 0 && (card.types.instant || self.sorcery_speed(player)) {
+                    actions.push(Action::Cast(CastingOption {
+                        card: card_id,
+                        costs: card.costs.clone(),
+                        filter: ActionFilter::None,
+                        keyword: None,
+                        zone: Zone::Hand,
+                        player,
+                    }));
                 }
             }
         }
@@ -643,10 +661,8 @@ impl Game {
                     Ability::Activated(abil) => abil,
                     _ => continue,
                 };
-                let maybe_pay = abil
-                    .costs
-                    .iter()
-                    .all(|cost| self.maybe_can_pay(card_id, card, cost, zone));
+
+                let maybe_pay = self.maybe_can_pay(&abil.costs, player_id, card_id, zone);
                 if !maybe_pay {
                     continue;
                 }
@@ -658,11 +674,60 @@ impl Game {
         }
         actions
     }
-    pub fn maybe_can_pay(&self, card_id: CardId, card: &CardEnt, cost: &Cost, zone: Zone) -> bool {
-        match cost {
-            Cost::Selftap => zone == Zone::Battlefield && self.can_tap(card_id),
-            _ => true,
+    pub fn maybe_can_pay(
+        &self,
+        costs: &Vec<Cost>,
+        player_id: PlayerId,
+        card_id: CardId,
+        zone: Zone,
+    ) -> bool {
+        if let Some(player) = self.players.get(player_id) {
+            let mut available_mana: i64 = 0; //TODO make this take into account costs more accurately,
+                                             //including handling colors of available mana, no just the quanitity
+            for perm in self.players_permanents(player_id) {
+                available_mana += self.max_mana_produce(perm);
+            }
+            available_mana += player.mana_pool.len() as i64;
+            for cost in costs {
+                let can_pay = match cost {
+                    Cost::Selftap => zone == Zone::Battlefield && self.can_tap(card_id),
+                    Cost::Mana(mana) => {
+                        if available_mana <= 0 {
+                            false
+                        } else {
+                            available_mana -= 1;
+                            true
+                        }
+                    }
+                };
+                if !can_pay {
+                    return false;
+                }
+            }
+            true
+        } else {
+            false
         }
+    }
+    fn max_mana_produce(&self, ent: CardId) -> i64 {
+        //TODO get more fine grained color support
+        let mut mana_produce = 0;
+        if let Some(ent) = self.cards.get(ent) {
+            for ability in &ent.abilities {
+                if let Ability::Activated(abil) = ability {
+                    let mut abil_mana: i64 = 0;
+                    for clause in &abil.effect {
+                        if let Clause::Effect { effect } = clause {
+                            if let ClauseEffect::AddMana(manas) = effect {
+                                abil_mana += manas.len() as i64; //TODO handle replacement affacts adding mana
+                            }
+                        }
+                    }
+                    mana_produce = max(mana_produce, abil_mana);
+                }
+            }
+        }
+        return mana_produce;
     }
     //Places abilities on the stack
     pub async fn place_abilities(&mut self) {
