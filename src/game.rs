@@ -20,7 +20,7 @@ use std::cmp::max;
 use std::collections::{HashMap, HashSet, VecDeque};
 use warp::ws::WebSocket;
 
-use self::actions::{Action, ActionFilter, CastingOption};
+use self::actions::{Action, ActionFilter, CastingOption, StackCastingOption};
 mod actions;
 mod handle_event;
 mod layers;
@@ -211,6 +211,7 @@ impl Game {
         self.backup = Some(Box::new(self.clone()));
     }
     pub fn restore(&mut self) {
+        panic!("restoring is a bug for now!");
         let mut b = None;
         std::mem::swap(&mut b, &mut self.backup);
         *self = *b.unwrap();
@@ -402,7 +403,7 @@ impl Game {
                 match action {
                     Action::Cast(casting_option) => {
                         self.backup();
-                        let card = casting_option.card;
+                        let card = casting_option.source_card;
                         let stackobj = self
                             .move_zones(card, casting_option.zone, Zone::Stack)
                             .await;
@@ -410,7 +411,15 @@ impl Game {
                             self.restore();
                             continue;
                         }
-                        let resolved = self.handle_cast(stackobj[0], casting_option.clone()).await;
+                        let stack_opt=StackCastingOption{
+                            stack_ent: stackobj[0],
+                            ability_source: None,
+                            costs: casting_option.costs.clone(),
+                            filter: ActionFilter::None,
+                            keyword: None,
+                            player,
+                        };
+                        let resolved = self.handle_cast(stackobj[0], stack_opt).await;
                         if !resolved {
                             self.restore();
                             continue;
@@ -438,13 +447,13 @@ impl Game {
                         } else {
                             return false;
                         };
-                        let castopt = CastingOption {
-                            card: id,
-                            zone: Zone::Stack,
+                        let castopt = StackCastingOption {
                             costs,
                             filter: ActionFilter::None,
                             keyword,
                             player,
+                            stack_ent: id,
+                            ability_source: Some(*source),
                         };
                         let resolved = self.handle_cast(id, castopt).await;
                         if !resolved {
@@ -457,12 +466,14 @@ impl Game {
             }
         }
     }
-    async fn handle_cast(&mut self, id: CardId, castopt: CastingOption) -> bool {
+    async fn handle_cast(&mut self, id: CardId, castopt: StackCastingOption) -> bool {
+        println!("Handling cast {:?}",castopt);
         let cost_paid = self.request_cost_payment(castopt.costs, id).await;
+        println!("cost paid {}",cost_paid);
         if !cost_paid {
             return false;
         }
-        if self.is_mana_ability(id) {
+        if self.is_mana_ability(id){
             self.resolve(id).await;
         } else {
             //TODO handle rest of spellcasting
@@ -487,7 +498,9 @@ impl Game {
                     if !self.can_tap(source) {
                         return false;
                     }
-                    self.tap(source).await;
+                    let tapped=self.tap(source).await;
+                    println!("tapped {:?}, {}",source,tapped);
+                    println!("{:?}",self.cards.get(source).map(|card| card.tapped));
                 }
                 _ => {
                     todo!("Cost {:?} not implemented", cost)
@@ -613,10 +626,9 @@ impl Game {
             if let Some(card) = self.cards.get(card_id) {
                 if card.costs.len() > 0 && (card.types.instant || self.sorcery_speed(player)) {
                     actions.push(Action::Cast(CastingOption {
-                        card: card_id,
+                        source_card: card_id,
                         costs: card.costs.clone(),
                         filter: ActionFilter::None,
-                        keyword: None,
                         zone: Zone::Hand,
                         player,
                     }));
@@ -662,7 +674,7 @@ impl Game {
                     _ => continue,
                 };
 
-                let maybe_pay = self.maybe_can_pay(&abil.costs, player_id, card_id, zone);
+                let maybe_pay = self.maybe_can_pay(&abil.costs, player_id, card_id);
                 if !maybe_pay {
                     continue;
                 }
@@ -679,7 +691,6 @@ impl Game {
         costs: &Vec<Cost>,
         player_id: PlayerId,
         card_id: CardId,
-        zone: Zone,
     ) -> bool {
         if let Some(player) = self.players.get(player_id) {
             let mut available_mana: i64 = 0; //TODO make this take into account costs more accurately,
@@ -690,7 +701,7 @@ impl Game {
             available_mana += player.mana_pool.len() as i64;
             for cost in costs {
                 let can_pay = match cost {
-                    Cost::Selftap => zone == Zone::Battlefield && self.can_tap(card_id),
+                    Cost::Selftap => self.battlefield.contains(&card_id) && self.can_tap(card_id),
                     Cost::Mana(mana) => {
                         if available_mana <= 0 {
                             false

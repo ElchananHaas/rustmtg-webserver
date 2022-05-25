@@ -97,6 +97,7 @@ impl Game {
                 }
                 //Handle already being tapped as prevention effect
                 Event::Tap { ent } => {
+                    if !self.battlefield.contains(&ent){ continue;}
                     self.cards.get_mut(ent).map(|card| {
                         if !card.tapped {
                             results.push(EventResult::Tap(ent));
@@ -106,6 +107,7 @@ impl Game {
                 }
                 //Handle already being untapped as prevention effect
                 Event::Untap { ent } => {
+                    if !self.battlefield.contains(&ent){ continue;}
                     self.cards.get_mut(ent).map(|card| {
                         if card.tapped {
                             results.push(EventResult::Untap(ent));
