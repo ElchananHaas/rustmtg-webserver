@@ -1,4 +1,3 @@
-#![feature(try_blocks)]
 #![feature(let_chains)]
 #![deny(unused_must_use)]
 use anyhow::Result;

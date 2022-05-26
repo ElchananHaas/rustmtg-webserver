@@ -41,8 +41,7 @@ impl Game {
     fn layer_four(&mut self) {
         for (ent, zone) in self.cards_and_zones() {
             if zone == Zone::Battlefield {
-                let _: Option<_> = try {
-                    let card = self.cards.get_mut(ent)?;
+                if let Some(card)= self.cards.get_mut(ent){
                     let mut abils = Vec::new();
                     if card.subtypes.plains {
                         abils.push(tap_for_mana(vec![ManaCostSymbol::White]));
@@ -62,7 +61,6 @@ impl Game {
                     for abil in abils {
                         self.add_ability(ent, abil);
                     }
-                    Some(())
                 };
             }
         }

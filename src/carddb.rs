@@ -78,9 +78,8 @@ impl CardDB {
     }
 }
 fn parse_pt<'a>(card: &mut CardEnt, entry: &'a ScryfallEntry) {
-    let _: Option<_> = try {
-        let power = entry.power.as_ref()?;
-        let toughness = entry.toughness.as_ref()?;
+    if let Some(power)=entry.power.as_ref()
+    && let Some(toughness)=entry.toughness.as_ref(){
         let res;
         if let Ok(power)=power.parse::<i64>()
         && let Ok(toughness)=toughness.parse::<i64>(){
@@ -92,7 +91,6 @@ fn parse_pt<'a>(card: &mut CardEnt, entry: &'a ScryfallEntry) {
             power: res.0,
             toughness: res.1,
         });
-        Some(())
     };
 }
 fn parse_cost_line<'a>(card: &mut CardEnt, entry: &'a ScryfallEntry) -> Result<(), ()> {

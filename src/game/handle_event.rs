@@ -220,9 +220,8 @@ impl Game {
         dest: Zone,
     ) {
         let mut props = None;
-        let _: Option<_> = try {
-            let card = self.cards.get_mut(ent)?;
-            let owner = self.players.get_mut(card.owner)?;
+        if let Some(card)=self.cards.get_mut(ent)
+        && let Some(owner)= self.players.get_mut(card.owner) {
             let removed = match origin {
                 Zone::Exile => self.exile.remove(&ent),
                 Zone::Command => self.command.remove(&ent),
@@ -262,11 +261,9 @@ impl Game {
                     dest,
                 });
             }
-            Some(())
         };
-        let _: Option<_> = try {
-            let (name, owner_id) = props?;
-            let owner = self.players.get_mut(owner_id)?;
+        if let Some((name, owner_id))=props 
+        && let Some(owner)= self.players.get_mut(owner_id){
             let card = self.db.spawn_card(name, owner_id);
             let (newent, newcard) = self.cards.insert(card);
             match dest {
@@ -302,7 +299,6 @@ impl Game {
                 newent: Some(newent),
                 dest,
             });
-            Some(())
         };
     }
     async fn subphase(
@@ -526,27 +522,26 @@ impl Game {
             .damage_phase_permanents(self.players_creatures(self.active_player()), subphase)
             .collect::<Vec<_>>()
         {
-            let _: Option<_> = try {
-                {
-                    let attack = self.cards.get_mut(attacker)?;
-                    attack.already_attacked = true;
-                }
-                let attack = self.cards.get(attacker)?;
-                let target = attack.attacking?;
+            if let Some(attack)=self.cards.get_mut(attacker){
+                attack.already_attacked=true;
+            }
+            if let Some(attack)=self.cards.get(attacker)
+            && let Some(attacked)=attack.attacking{
                 if attack.blocked.len() > 0 {
                     self.spread_damage(events, attacker, &attack.blocked).await;
                 } else {
-                    Game::add_event(
-                        events,
-                        Event::Damage {
-                            amount: attack.pt?.power,
-                            target,
-                            source: attacker,
-                            reason: DamageReason::Combat,
-                        },
-                    );
+                    if let Some(pt)=attack.pt{
+                        Game::add_event(
+                            events,
+                            Event::Damage {
+                                amount: pt.power,
+                                target: attacked,
+                                source: attacker,
+                                reason: DamageReason::Combat,
+                            },
+                        );
+                    }
                 }
-                Some(())
             };
         }
         for blocker in self.all_creatures() {
