@@ -35,7 +35,7 @@ pub struct CastingOption {
     pub player: PlayerId,
 }
 #[derive(Clone, Serialize, Debug)]
-pub struct StackCastingOption{
+pub struct StackCastingOption {
     pub stack_ent: CardId,
     pub ability_source: Option<CardId>,
     pub costs: Vec<Cost>,

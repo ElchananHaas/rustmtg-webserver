@@ -411,7 +411,7 @@ impl Game {
                             self.restore();
                             continue;
                         }
-                        let stack_opt=StackCastingOption{
+                        let stack_opt = StackCastingOption {
                             stack_ent: stackobj[0],
                             ability_source: None,
                             costs: casting_option.costs.clone(),
@@ -419,7 +419,7 @@ impl Game {
                             keyword: None,
                             player,
                         };
-                        let resolved = self.handle_cast(stackobj[0], stack_opt).await;
+                        let resolved = self.handle_cast(stack_opt).await;
                         if !resolved {
                             self.restore();
                             continue;
@@ -455,7 +455,7 @@ impl Game {
                             stack_ent: id,
                             ability_source: Some(*source),
                         };
-                        let resolved = self.handle_cast(id, castopt).await;
+                        let resolved = self.handle_cast(castopt).await;
                         if !resolved {
                             self.restore();
                             continue;
@@ -466,15 +466,18 @@ impl Game {
             }
         }
     }
-    async fn handle_cast(&mut self, id: CardId, castopt: StackCastingOption) -> bool {
-        println!("Handling cast {:?}",castopt);
-        let cost_paid = self.request_cost_payment(castopt.costs, id).await;
-        println!("cost paid {}",cost_paid);
+    //The spell has already been moved to the stack for this operation
+    async fn handle_cast(&mut self, castopt: StackCastingOption) -> bool {
+        println!("Handling cast {:?}", castopt);
+        let cost_paid = self
+            .request_cost_payment(castopt.costs, castopt.ability_source, castopt.stack_ent)
+            .await;
+        println!("cost paid {}", cost_paid);
         if !cost_paid {
             return false;
         }
-        if self.is_mana_ability(id){
-            self.resolve(id).await;
+        if self.is_mana_ability(castopt.stack_ent) {
+            self.resolve(castopt.stack_ent).await;
         } else {
             //TODO handle rest of spellcasting
             let caster = castopt.player;
@@ -487,20 +490,32 @@ impl Game {
                 }
             }
             self.player_cycle_priority(order).await;
-            self.resolve(id).await;
+            self.resolve(castopt.stack_ent).await;
         }
         true
     }
-    async fn request_cost_payment(&mut self, costs: Vec<Cost>, source: CardId) -> bool {
+    async fn request_cost_payment(
+        &mut self,
+        costs: Vec<Cost>,
+        source_perm: Option<CardId>,
+        stack_obj: CardId,
+    ) -> bool {
         for cost in costs {
             match cost {
                 Cost::Selftap => {
-                    if !self.can_tap(source) {
-                        return false;
-                    }
-                    let tapped=self.tap(source).await;
-                    println!("tapped {:?}, {}",source,tapped);
-                    println!("{:?}",self.cards.get(source).map(|card| card.tapped));
+                    let tapped=if let Some(source_perm)=source_perm
+                        && self.can_tap(source_perm){
+                            self.tap(source_perm).await
+                    }else{
+                        false
+                    };
+                    println!("tapped {:?}, {}", source_perm, tapped);
+                    println!(
+                        "{:?}",
+                        source_perm
+                            .and_then(|source| self.cards.get(source))
+                            .map(|card| card.tapped)
+                    );
                 }
                 _ => {
                     todo!("Cost {:?} not implemented", cost)
@@ -686,12 +701,7 @@ impl Game {
         }
         actions
     }
-    pub fn maybe_can_pay(
-        &self,
-        costs: &Vec<Cost>,
-        player_id: PlayerId,
-        card_id: CardId,
-    ) -> bool {
+    pub fn maybe_can_pay(&self, costs: &Vec<Cost>, player_id: PlayerId, card_id: CardId) -> bool {
         if let Some(player) = self.players.get(player_id) {
             let mut available_mana: i64 = 0; //TODO make this take into account costs more accurately,
                                              //including handling colors of available mana, no just the quanitity
