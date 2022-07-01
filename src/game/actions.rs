@@ -1,5 +1,5 @@
 use serde::Serialize;
-use serde_derive::Serialize;
+//use serde_derive::Serialize;
 
 use crate::{
     ability::Ability,

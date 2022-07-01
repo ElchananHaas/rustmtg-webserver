@@ -18,6 +18,7 @@ mod carddb;
 mod cost;
 mod ent_maps;
 mod entities;
+mod errors;
 mod event;
 mod game;
 mod mana;

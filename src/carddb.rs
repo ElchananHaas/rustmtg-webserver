@@ -108,22 +108,30 @@ fn parse_cost_line<'a>(card: &mut CardEnt, entry: &'a ScryfallEntry) -> Result<(
     }
 }
 
-fn parse_manasymbol_contents(input: &str) -> IResult<&str, ManaCostSymbol> {
+fn parse_manasymbol_contents(input: &str) -> IResult<&str, Vec<ManaCostSymbol>> {
     if let Ok((rest, symbol)) = complete::one_of::<_, _, (&str, ErrorKind)>("WUBRG")(input) {
         let costsymbol = match symbol {
-            'W' => ManaCostSymbol::White,
-            'U' => ManaCostSymbol::Blue,
-            'B' => ManaCostSymbol::Black,
-            'R' => ManaCostSymbol::Red,
-            'G' => ManaCostSymbol::Green,
+            'W' => vec![ManaCostSymbol::White],
+            'U' => vec![ManaCostSymbol::Blue],
+            'B' => vec![ManaCostSymbol::Black],
+            'R' => vec![ManaCostSymbol::Red],
+            'G' => vec![ManaCostSymbol::Green],
             _ => unreachable!("Already checked symbol"),
         };
         Ok((rest, costsymbol))
     } else {
-        complete::u64(input).map(|(rest, x)| (rest, ManaCostSymbol::Generic(x)))
+        complete::u64(input).map(|(rest, x)| {
+            (rest, {
+                let v = Vec::new();
+                for _ in 0..x {
+                    v.push(ManaCostSymbol::Generic);
+                }
+                v
+            })
+        })
     }
 }
-fn parse_manasymbol(input: &str) -> IResult<&str, ManaCostSymbol> {
+fn parse_manasymbol(input: &str) -> IResult<&str, Vec<ManaCostSymbol>> {
     nom::sequence::delimited(
         complete::char('{'),
         parse_manasymbol_contents,
@@ -132,7 +140,7 @@ fn parse_manasymbol(input: &str) -> IResult<&str, ManaCostSymbol> {
 }
 
 fn parse_mana(input: &str) -> IResult<&str, Vec<ManaCostSymbol>> {
-    many0(parse_manasymbol)(input)
+    many0(parse_manasymbol)(input).map(|(rest, x)| (rest, x.into_iter().flatten().collect()))
 }
 
 pub fn trim_spaces(input: &str) -> IResult<&str, Vec<char>> {

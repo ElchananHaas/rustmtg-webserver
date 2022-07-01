@@ -522,8 +522,8 @@ impl Game {
             .damage_phase_permanents(self.players_creatures(self.active_player()), subphase)
             .collect::<Vec<_>>()
         {
-            if let Some(attack)=self.cards.get_mut(attacker){
-                attack.already_attacked=true;
+            if let Some(attack) = self.cards.get_mut(attacker) {
+                attack.already_attacked = true;
             }
             if let Some(attack)=self.cards.get(attacker)
             && let Some(attacked)=attack.attacking{

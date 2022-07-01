@@ -1,12 +1,13 @@
-use crate::ability::{self, Ability};
+use crate::ability::Ability;
 use crate::card_entities::{CardEnt, EntType};
 use crate::carddb::CardDB;
-use crate::cost::Cost;
+use crate::cost::{Cost, PaidCost};
 use crate::ent_maps::EntMap;
 use crate::entities::{CardId, ManaId, PlayerId, TargetId};
+use crate::errors::MTGError;
 use crate::event::{DiscardCause, Event, EventResult, TagEvent};
 use crate::mana::{Color, Mana, ManaCostSymbol};
-use crate::player::{self, AskReason, Player, PlayerCon};
+use crate::player::{AskReason, Player, PlayerCon};
 use crate::spellabil::{Clause, ClauseEffect, KeywordAbility};
 use anyhow::{bail, Result};
 use async_recursion::async_recursion;
@@ -14,10 +15,12 @@ use futures::future;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
 use serde::Serialize;
-use serde_derive::Serialize;
+//use serde_derive::Serialize;
 use serde_json;
 use std::cmp::max;
 use std::collections::{HashMap, HashSet, VecDeque};
+use varisat::{CnfFormula, ExtendFormula, Lit, Solver};
+use varisat_utils::{add_at_most_one, add_exactly_one};
 use warp::ws::WebSocket;
 
 use self::actions::{Action, ActionFilter, CastingOption, StackCastingOption};
@@ -265,7 +268,7 @@ impl Game {
             ManaCostSymbol::Green => vec![Color::Green],
             ManaCostSymbol::Red => vec![Color::Red],
             ManaCostSymbol::White => vec![Color::White],
-            ManaCostSymbol::Generic(x) => vec![Color::Colorless].repeat(x.try_into().unwrap()),
+            ManaCostSymbol::Generic => vec![Color::Colorless],
             ManaCostSymbol::Colorless => vec![Color::Colorless],
         };
         let mut ids = Vec::new();
@@ -419,12 +422,11 @@ impl Game {
                             keyword: None,
                             player,
                         };
-                        let resolved = self.handle_cast(stack_opt).await;
-                        if !resolved {
+                        if let Ok(_) = self.handle_cast(stack_opt).await {
+                        } else {
                             self.restore();
                             continue;
                         }
-                        todo!(); //Get spells on the stack, unite with abilities
                     }
                     Action::PlayLand(card) => {
                         self.handle_event(Event::PlayLand {
@@ -455,8 +457,8 @@ impl Game {
                             stack_ent: id,
                             ability_source: Some(*source),
                         };
-                        let resolved = self.handle_cast(castopt).await;
-                        if !resolved {
+                        if let Ok(_) = self.handle_cast(castopt).await {
+                        } else {
                             self.restore();
                             continue;
                         }
@@ -467,15 +469,10 @@ impl Game {
         }
     }
     //The spell has already been moved to the stack for this operation
-    async fn handle_cast(&mut self, castopt: StackCastingOption) -> bool {
+    async fn handle_cast(&mut self, castopt: StackCastingOption) -> Result<(), MTGError> {
         println!("Handling cast {:?}", castopt);
-        let cost_paid = self
-            .request_cost_payment(castopt.costs, castopt.ability_source, castopt.stack_ent)
-            .await;
-        println!("cost paid {}", cost_paid);
-        if !cost_paid {
-            return false;
-        }
+        let cost_paid = self.request_cost_payment(&castopt).await?;
+        println!("cost paid {:?}", cost_paid);
         if self.is_mana_ability(castopt.stack_ent) {
             self.resolve(castopt.stack_ent).await;
         } else {
@@ -492,37 +489,109 @@ impl Game {
             self.player_cycle_priority(order).await;
             self.resolve(castopt.stack_ent).await;
         }
-        true
+        Ok(())
+    }
+    async fn allow_mana_abils(&mut self, player: PlayerId) {
+        //TODO allow for activating mana sources while
+        //paying for a mana cost, not just before a spell
+    }
+    async fn request_mana_payment(
+        &mut self,
+        player: PlayerId,
+        source: Option<CardId>,
+        costs: Vec<ManaCostSymbol>,
+    ) -> Result<Vec<PaidCost>, MTGError> {
+        self.allow_mana_abils(player);
+        let mut cost_map=HashMap::new();
+        for cost in costs{
+            if let Some(val)=cost_map.get_mut(&cost){
+                *val+=1;
+            }else{
+                let _=cost_map.insert(cost, 1);
+            }
+        }
+        let payable_mana = Vec::new();
+        if let Some(player) = self.players.get(player) {
+            payable_mana = player.mana_pool.iter().collect();
+        }
+        let mut formula = CnfFormula::new();
+        let mut vars: Vec<Vec<Lit>> = Vec::new();
+        let source_card = source.and_then(|c| self.cards.get(c));
+        //All costs must have a mana spent on them
+        for i in 0..costs.len() {
+            vars.push(Vec::new());
+            for j in 0..payable_mana.len() {
+                let lit = formula.new_lit();
+                if !self.can_spend_mana_on_cost(payable_mana[j], costs[i], source_card) {
+                    formula.add_clause(&[!lit]); //ensure the var is false
+                                                 //if the mana cannot be spent on that cost
+                }
+                vars[i].push(lit);
+            }
+            add_exactly_one(&mut formula, &vars[i]);
+        }
+        //Each mana can only be spent on at most one cost
+        for j in 0..payable_mana.len() {
+            let mut sourced = Vec::new();
+            for i in 0..costs.len() {
+                sourced.push(vars[i][j]);
+            }
+            add_at_most_one(&mut formula, &sourced);
+        }
+        let mut solver = Solver::new();
+        solver.add_formula(&formula);
+        let solution = solver.solve().unwrap();
+        if solution {
+            let model = solver.model().unwrap();
+        } else {
+            Err(MTGError::CostNotPaid)
+        }
     }
     async fn request_cost_payment(
         &mut self,
-        costs: Vec<Cost>,
-        source_perm: Option<CardId>,
-        stack_obj: CardId,
-    ) -> bool {
-        for cost in costs {
-            match cost {
+        castopt: &StackCastingOption,
+    ) -> Result<Vec<PaidCost>, MTGError> {
+        let mut mana_costs = Vec::new();
+        let mut normal_costs = Vec::new();
+        for &cost in &castopt.costs {
+            if let Cost::Mana(color) = cost {
+                mana_costs.push(color);
+            } else {
+                normal_costs.push(cost);
+            }
+        }
+        let mut paid_costs = self
+            .request_mana_payment(castopt.player, Some(castopt.stack_ent), mana_costs)
+            .await?;
+        for cost in normal_costs {
+            let paid = match cost {
                 Cost::Selftap => {
-                    let tapped=if let Some(source_perm)=source_perm
+                    let tapped=if let Some(source_perm)=castopt.ability_source
                         && self.can_tap(source_perm){
+                            paid_costs.push(PaidCost::Tapped(source_perm));
                             self.tap(source_perm).await
                     }else{
                         false
                     };
-                    println!("tapped {:?}, {}", source_perm, tapped);
+                    println!("tapped {:?}, {}", castopt.ability_source, tapped);
                     println!(
                         "{:?}",
-                        source_perm
+                        castopt
+                            .ability_source
                             .and_then(|source| self.cards.get(source))
                             .map(|card| card.tapped)
                     );
+                    tapped
                 }
                 _ => {
                     todo!("Cost {:?} not implemented", cost)
                 }
+            };
+            if !paid {
+                return Err(MTGError::CostNotPaid);
             }
         }
-        true
+        Ok(paid_costs)
     }
     async fn resolve(&mut self, id: CardId) {
         let effects;
@@ -720,6 +789,7 @@ impl Game {
                             true
                         }
                     }
+                    _ => todo!(),
                 };
                 if !can_pay {
                     return false;

@@ -102,6 +102,10 @@ export default class Game extends Phaser.Scene {
                     let disp_card=this.disp_cards[ent.ActivateAbility.source];
                     disp_card.click_actions.push(i);
                 }
+                if(ent.Cast!=null){
+                    let disp_card=this.disp_cards[ent.Cast.source_card];
+                    disp_card.click_actions.push(i);
+                }
             }
             this.space_response="send_empty"
         }

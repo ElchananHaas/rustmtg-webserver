@@ -1,7 +1,6 @@
-use std::sync::Arc;
-
 use serde::ser::SerializeMap;
 use serde_derive::Serialize;
+use std::sync::Arc;
 
 use crate::{
     ent_maps::EntMap,
@@ -36,7 +35,7 @@ impl Mana {
 }
 
 //Add support for hybrid mana later
-#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Hash)]
 pub enum ManaCostSymbol {
     White,
     Blue,
@@ -44,7 +43,7 @@ pub enum ManaCostSymbol {
     Red,
     Green,
     Colorless,
-    Generic(u64),
+    Generic,
 }
 
 pub fn mana_cost_string(coststr: &str) -> Vec<ManaCostSymbol> {
@@ -72,6 +71,8 @@ pub fn mana_cost_string(coststr: &str) -> Vec<ManaCostSymbol> {
             res.push(ManaCostSymbol::Green);
         }
     }
-    res.push(ManaCostSymbol::Generic(generic));
+    for _ in 0..generic {
+        res.push(ManaCostSymbol::Generic);
+    }
     res
 }
