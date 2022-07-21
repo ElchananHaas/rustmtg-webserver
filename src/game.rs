@@ -11,20 +11,18 @@ use crate::player::{AskReason, Player, PlayerCon};
 use crate::spellabil::{Clause, ClauseEffect, KeywordAbility};
 use anyhow::{bail, Result};
 use async_recursion::async_recursion;
+use enum_map::EnumMap;
 use futures::future;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
 use serde::Serialize;
-//use serde_derive::Serialize;
+use serde_derive::Serialize;
 use serde_json;
 use std::cmp::max;
 use std::collections::{HashMap, HashSet, VecDeque};
-use varisat::{CnfFormula, ExtendFormula, Lit, Solver};
-use varisat_utils::{add_at_most_one, add_exactly_one};
 use warp::ws::WebSocket;
 
-use self::actions::{Action, ActionFilter, CastingOption, StackCastingOption};
-mod actions;
+use crate::actions::{Action, ActionFilter, CastingOption, StackActionOption};
 mod handle_event;
 mod layers;
 
@@ -414,7 +412,7 @@ impl Game {
                             self.restore();
                             continue;
                         }
-                        let stack_opt = StackCastingOption {
+                        let stack_opt = StackActionOption {
                             stack_ent: stackobj[0],
                             ability_source: None,
                             costs: casting_option.costs.clone(),
@@ -449,7 +447,7 @@ impl Game {
                         } else {
                             return false;
                         };
-                        let castopt = StackCastingOption {
+                        let castopt = StackActionOption {
                             costs,
                             filter: ActionFilter::None,
                             keyword,
@@ -469,7 +467,7 @@ impl Game {
         }
     }
     //The spell has already been moved to the stack for this operation
-    async fn handle_cast(&mut self, castopt: StackCastingOption) -> Result<(), MTGError> {
+    async fn handle_cast(&mut self, castopt: StackActionOption) -> Result<(), MTGError> {
         println!("Handling cast {:?}", castopt);
         let cost_paid = self.request_cost_payment(&castopt).await?;
         println!("cost paid {:?}", cost_paid);
@@ -495,61 +493,61 @@ impl Game {
         //TODO allow for activating mana sources while
         //paying for a mana cost, not just before a spell
     }
+    //This function is a stub, it will
+    //need to be expanded with real restrictions later
+    fn can_spend_mana_on_action(&self, action: &StackActionOption, mana: &Mana) -> bool {
+        if let Some(restriction) = &mana.restriction {
+            restriction.approve(self, action)
+        } else {
+            true
+        }
+    }
     async fn request_mana_payment(
         &mut self,
-        player: PlayerId,
-        source: Option<CardId>,
-        costs: Vec<ManaCostSymbol>,
+        action: &StackActionOption,
+        mut costs: Vec<ManaCostSymbol>,
     ) -> Result<Vec<PaidCost>, MTGError> {
-        self.allow_mana_abils(player);
-        let mut cost_map=HashMap::new();
-        for cost in costs{
-            if let Some(val)=cost_map.get_mut(&cost){
-                *val+=1;
-            }else{
-                let _=cost_map.insert(cost, 1);
-            }
-        }
-        let payable_mana = Vec::new();
+        let player = action.player;
+        self.allow_mana_abils(player).await;
+        let mut mana_map: EnumMap<_, Vec<ManaId>> = EnumMap::default();
         if let Some(player) = self.players.get(player) {
-            payable_mana = player.mana_pool.iter().collect();
-        }
-        let mut formula = CnfFormula::new();
-        let mut vars: Vec<Vec<Lit>> = Vec::new();
-        let source_card = source.and_then(|c| self.cards.get(c));
-        //All costs must have a mana spent on them
-        for i in 0..costs.len() {
-            vars.push(Vec::new());
-            for j in 0..payable_mana.len() {
-                let lit = formula.new_lit();
-                if !self.can_spend_mana_on_cost(payable_mana[j], costs[i], source_card) {
-                    formula.add_clause(&[!lit]); //ensure the var is false
-                                                 //if the mana cannot be spent on that cost
+            for &mana_id in player.mana_pool.iter() {
+                if let Some(mana) = self.mana.get(mana_id) {
+                    if self.can_spend_mana_on_action(action, mana) {
+                        mana_map[mana.color].push(mana_id);
+                    }
                 }
-                vars[i].push(lit);
             }
-            add_exactly_one(&mut formula, &vars[i]);
         }
-        //Each mana can only be spent on at most one cost
-        for j in 0..payable_mana.len() {
-            let mut sourced = Vec::new();
-            for i in 0..costs.len() {
-                sourced.push(vars[i][j]);
+        costs.sort();
+        let mut spent_mana = Vec::new();
+        'outer: for cost in costs {
+            for color in cost.spendable_colors() {
+                if let Some(mana) = mana_map[color].pop() {
+                    spent_mana.push(mana);
+                    continue 'outer;
+                }
             }
-            add_at_most_one(&mut formula, &sourced);
+            return Err(MTGError::CostNotPaid);
         }
-        let mut solver = Solver::new();
-        solver.add_formula(&formula);
-        let solution = solver.solve().unwrap();
-        if solution {
-            let model = solver.model().unwrap();
+        if let Some(player) = self.players.get_mut(player) {
+            for mana in &spent_mana {
+                player.mana_pool.remove(mana);
+                //Dont delete mana from game so we can use it later
+                //when cards need to know the mana spent on them
+            }
+            let res = spent_mana
+                .iter()
+                .map(|mana| PaidCost::PaidMana(*mana))
+                .collect();
+            Ok(res)
         } else {
             Err(MTGError::CostNotPaid)
         }
     }
     async fn request_cost_payment(
         &mut self,
-        castopt: &StackCastingOption,
+        castopt: &StackActionOption,
     ) -> Result<Vec<PaidCost>, MTGError> {
         let mut mana_costs = Vec::new();
         let mut normal_costs = Vec::new();
@@ -560,9 +558,7 @@ impl Game {
                 normal_costs.push(cost);
             }
         }
-        let mut paid_costs = self
-            .request_mana_payment(castopt.player, Some(castopt.stack_ent), mana_costs)
-            .await?;
+        let mut paid_costs = self.request_mana_payment(castopt, mana_costs).await?;
         for cost in normal_costs {
             let paid = match cost {
                 Cost::Selftap => {

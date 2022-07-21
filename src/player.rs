@@ -6,7 +6,7 @@ use anyhow::Result;
 use futures::{SinkExt, StreamExt};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-//use serde_derive::Serialize;
+use serde_derive::Serialize;
 use std::collections::HashSet;
 use std::hash::Hash;
 use std::sync::Arc;

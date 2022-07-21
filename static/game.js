@@ -19,6 +19,18 @@ export default class Game extends Phaser.Scene {
         this.load.image("Red","./mana-master/svg/r.svg");
         this.load.image("Green","./mana-master/svg/g.svg");
         this.load.image("Black","./mana-master/svg/b.svg");
+        this.load.image("Untap","./phases/untap.svg");
+        this.load.image("Upkeep","./phases/upkeep.svg");
+        this.load.image("Draw","./phases/draw.svg");
+        this.load.image("MainOne","./phases/main1.svg");
+        this.load.image("CombatStart","./phases/combat_start.svg");
+        this.load.image("CombatAttackers","./phases/combat_attackers.svg");
+        this.load.image("CombatBlockers","./phases/combat_blockers.svg");
+        this.load.image("CombatDamage","./phases/combat_damage.svg");
+        this.load.image("CombatEnd","./phases/combat_end.svg");
+        this.load.image("MainTwo","./phases/main2.svg");
+        this.load.image("EndStep","./phases/cleanup.svg");
+        this.load.image("Pass","./phases/pass.svg");
         //this.load.setBaseURL('http://labs.phaser.io');
     }
     width(){
@@ -71,9 +83,10 @@ export default class Game extends Phaser.Scene {
     }
     add_disp_card(ecs,index,x,y){
         let ent=ecs[index];
-        let hand_card = new DispCard(this,x,y, ent);
-        this.add.existing(hand_card);
-        this.disp_cards[index]=hand_card;
+        let disp_card = new DispCard(this,x,y, ent);
+        this.add.existing(disp_card);
+        this.disp_cards[index]=disp_card;
+        return disp_card;
     }
     choose_attackers(parsed){
         this.clear_click_actions();
@@ -119,8 +132,8 @@ export default class Game extends Phaser.Scene {
     }
     create() {
         let self=this;
-        let back=this.add.image(0,0, 'game_background');
-        back.setDepth(-10000);
+        //let back=this.add.image(0,0, 'game_background');
+        //back.setDepth(-10000);
         const socket = new WebSocket('ws://localhost:3030/gamesetup');
         socket.addEventListener('message', function (event) {
             let parsed=JSON.parse(event.data);

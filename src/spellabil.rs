@@ -74,11 +74,13 @@ pub enum ClauseEffect {
 #[derive(Clone, Serialize)]
 pub enum TargetClauseEffect {}
 
-//TODO change this to an enum
 #[derive(Clone, Serialize)]
 pub struct Targets {
     num: NonZeroU32, //Ensure there is always at least 1 target, or
     //this clause shouldn't be chosen
-    #[serde(skip_serializing)]
-    valid: Arc<dyn Fn(&Game, CardId) -> bool + Send + Sync>,
+    valid: TargetsFilter
+}
+#[derive(Clone, Serialize)]
+pub enum TargetsFilter{
+
 }

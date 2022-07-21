@@ -6,10 +6,8 @@ export default class DispCard extends Phaser.GameObjects.Container{
     constructor(scene, x, y, card) {
         super(scene, x, y); 
         this.scene=scene;
-        const card_scale=.33;
         this.x_len=x_len;
         this.y_len=y_len;
-        this.card_scale=card_scale;
         let card_background=null;
         this.click_actions=[];
         let self=this;
@@ -18,7 +16,7 @@ export default class DispCard extends Phaser.GameObjects.Container{
         }else{
             card_background = scene.add.image(0,0, "artifact_card")
         }
-        card_background.setScale(card_scale,card_scale).setInteractive();
+        card_background.setInteractive();
         this.add(card_background);
         this.add_text(23,card.name);
         let type_line="";
@@ -31,12 +29,12 @@ export default class DispCard extends Phaser.GameObjects.Container{
         type_line+="- "+card.subtypes.join(" ");
         this.add_text(292,type_line);
         if (card.pt!=null){
-            let pt_backing=scene.add.image(-ul_x*(card_scale-.21),-ul_y*(card_scale-.05), "artifact_pt").setScale(card_scale,card_scale).setInteractive();
+            let pt_backing=scene.add.image(-ul_x-10,-ul_y, "artifact_pt").setInteractive();
             this.add(pt_backing);
             let text=card.pt.power+"/"+card.pt.toughness;
-            let line=this.scene.add.text(-ul_x*(card_scale-.26),-ul_y*(card_scale-.10),text);
+            let line=this.scene.add.text(-ul_x-30,-ul_y-30,text);
             line.setAlign("center");
-            line.setStyle({ fontFamily: 'gothic', fontSize: 20});
+            line.setStyle({ fontFamily: 'gothic', fontSize: 40});
             line.setColor('#000000');
             this.add(line);
         }
@@ -61,15 +59,15 @@ export default class DispCard extends Phaser.GameObjects.Container{
                 console.error("Selecting action dialog not implemented yet");
             }
         });
+        this.setScale(.25,.25);
     }
     add_text(y,text){
-        let card_scale=this.card_scale;
-        let line=this.scene.add.text((ul_x+30)*card_scale,(ul_y+y)*card_scale,text);
-        line.setStyle({ fontFamily: 'gothic', fontSize: 12});
+        let line=this.scene.add.text((ul_x+30),(ul_y+y),text);
+        line.setStyle({ fontFamily: 'gothic', fontSize: 26});
         line.setColor('#000000');
-        let max_width=(345-30)*card_scale;
+        let max_width=(345-30);
         if(line.displayWidth>max_width ){
-            line.setDisplaySize(max_width,(25)*card_scale);
+            line.setDisplaySize(max_width,25);
         }
         this.add(line);
     }

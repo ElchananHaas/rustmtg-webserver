@@ -1,5 +1,5 @@
 use serde::Serialize;
-//use serde_derive::Serialize;
+use serde_derive::Serialize;
 
 use crate::{
     ability::Ability,
@@ -9,7 +9,7 @@ use crate::{
     spellabil::KeywordAbility,
 };
 
-use super::Zone;
+use crate::game::Zone;
 
 //Checks to see if casting option's rules were followed
 //The zone it can be cast from will implicitly be enabled by
@@ -35,7 +35,7 @@ pub struct CastingOption {
     pub player: PlayerId,
 }
 #[derive(Clone, Serialize, Debug)]
-pub struct StackCastingOption {
+pub struct StackActionOption {
     pub stack_ent: CardId,
     pub ability_source: Option<CardId>,
     pub costs: Vec<Cost>,

@@ -120,15 +120,7 @@ fn parse_manasymbol_contents(input: &str) -> IResult<&str, Vec<ManaCostSymbol>> 
         };
         Ok((rest, costsymbol))
     } else {
-        complete::u64(input).map(|(rest, x)| {
-            (rest, {
-                let v = Vec::new();
-                for _ in 0..x {
-                    v.push(ManaCostSymbol::Generic);
-                }
-                v
-            })
-        })
+        complete::u64(input).map(|(rest, x)| (rest, vec![ManaCostSymbol::Generic; x as usize]))
     }
 }
 fn parse_manasymbol(input: &str) -> IResult<&str, Vec<ManaCostSymbol>> {
