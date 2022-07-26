@@ -4,8 +4,11 @@ export default class Game extends Phaser.Scene {
         super({
             key: 'Game'
         });
+        this.PHASE_GREY=0x808080;
+        this.ICON_SIZE=25;
+        this.BOX_SIZE=75;
     }
-
+    
     preload() {
         this.self=this;
         this.canvas=this.sys.game.canvas;
@@ -22,64 +25,147 @@ export default class Game extends Phaser.Scene {
         this.load.image("Untap","./phases/untap.svg");
         this.load.image("Upkeep","./phases/upkeep.svg");
         this.load.image("Draw","./phases/draw.svg");
-        this.load.image("MainOne","./phases/main1.svg");
-        this.load.image("CombatStart","./phases/combat_start.svg");
-        this.load.image("CombatAttackers","./phases/combat_attackers.svg");
-        this.load.image("CombatBlockers","./phases/combat_blockers.svg");
-        this.load.image("CombatDamage","./phases/combat_damage.svg");
-        this.load.image("CombatEnd","./phases/combat_end.svg");
-        this.load.image("MainTwo","./phases/main2.svg");
+        this.load.image("FirstMain","./phases/main1.svg");
+        this.load.image("BeginCombat","./phases/combat_start.svg");
+        this.load.image("Attackers","./phases/combat_attackers.svg");
+        this.load.image("Blockers","./phases/combat_blockers.svg");
+        this.load.image("Damage","./phases/combat_damage.svg");
+        this.load.image("EndCombat","./phases/combat_end.svg");
+        this.load.image("SecondMain","./phases/main2.svg");
         this.load.image("EndStep","./phases/cleanup.svg");
         this.load.image("Pass","./phases/pass.svg");
         //this.load.setBaseURL('http://labs.phaser.io');
     }
+
+    create() {
+        let self=this;
+        let back=this.add.image(0,0, 'game_background');
+        back.setDepth(-10000);
+        const socket = new WebSocket('ws://localhost:3030/gamesetup');
+        socket.addEventListener('message', function (event) {
+            let parsed=JSON.parse(event.data);
+            if(parsed[0]==="GameState"){
+                self.update_state(parsed);
+            }   
+            if(parsed[0]==="Action"){
+                self.respond_action(parsed);
+            }
+            if(parsed[0]==="Attackers"){
+                self.choose_attackers(parsed);
+            } 
+        });
+        this.socket=socket;
+        this.space_response="None";
+        var spaceBar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+        spaceBar.on('down', function(event){
+            if(self.space_response=="send_empty"){
+                self.socket.send("[]");
+            }
+        });
+        this.disp_cards={};
+        const phase_images_key=[
+            "Untap",
+            "Upkeep",
+            "Draw",
+            "FirstMain",
+            "BeginCombat",
+            "Attackers",
+            "Blockers",
+            "Damage",
+            "EndCombat",
+            "SecondMain",
+            "EndStep",
+        ];
+        this.phase_images={}
+        for(let i=0;i<phase_images_key.length;i++){
+            const phase_image=phase_images_key[i];
+            const image=this.add.image(this.ICON_SIZE,
+                this.ICON_SIZE*(1+2*i),phase_image)
+            .setScale(.8)
+            .setTint(this.PHASE_GREY);
+            this.phase_images[phase_image]=image;
+        }
+    }
+
     width(){
         return this.canvas.width;
     }
     height(){
         return this.canvas.height;
     }
+    phase_image_key(game_globals){
+        const subphase=game_globals.subphase;
+        if(subphase!=null){
+            if(subphase=="FirstStrikeDamage"){
+                return "Damage";
+            }
+            if(subphase=="Cleanup"){
+                return "EndStep";
+            }
+            return subphase.toString();
+        }
+        if(game_globals.phase==null){
+            return "Game not started yet";
+        }
+        if(game_globals.phase=="Combat"){
+            return "BeginCombat";
+        }
+        return game_globals.phase.toString();
+    }
     update_state(parsed){
-        let me=parsed[1];
-        let ecs=parsed[2];
-        let players=parsed[3];
-        let game_globals=parsed[4];
+        const me=parsed[1];
+        const ecs=parsed[2];
+        const players=parsed[3];
+        const game_globals=parsed[4];
         console.log(ecs);
-        let myplayer=players[me];
-        let hand=myplayer["hand"];
-        let game_mana=game_globals.mana.ents;
+        const myplayer=players[me];
+        const hand=myplayer["hand"];
+        const game_mana=game_globals.mana.ents;
         this.ecs=ecs;
+        const this_phase_key=this.phase_image_key(game_globals);
+        for(const key in this.phase_images){
+            this.phase_images[key].setTint(this.PHASE_GREY);
+        }
+        this.phase_images[this_phase_key].setTint(0xFFFFFF);
         for (let card in this.disp_cards){
             this.disp_cards[card].destroy();
-        }
-        for (let mana in this.disp_manas){
-            this.disp_manas[mana].destroy();
         }
         this.disp_cards={};
         for (let i=0;i<hand.length;i++){
             this.add_disp_card(ecs,hand[i],150 + (i * 125), 500);
         }
-        let gamestate=parsed[4];
-        let battlefield=gamestate.battlefield;
+        const battlefield=game_globals.battlefield;
         for(let i=0;i<battlefield.length;i++){
             this.add_disp_card(ecs,battlefield[i],150 + (i * 125), 300);
         }
-        let phase_text="";
-        if(game_globals.phase==null){
-            phase_text="game not started yet";
-        }else{
-            phase_text=game_globals.phase.toString();
+        let i=0;
+        const num_players=Object.keys(players).length;
+        for(const player in players){
+            if(player==me){
+                continue;
+            }
+            const bounds={
+                x_min:2*this.ICON_SIZE,
+                x_max:this.width(),
+                y_min:this.height()*i/num_players,
+                y_max:(this.height()*(i+1))/num_players,
+            }
+            this.draw_player_board(player,bounds,game_globals);
+            i+=1;
         }
-        if(game_globals.subphase!=null){
-            phase_text+=": "+game_globals.subphase.toString();
+        const bounds={
+            x_min:2*this.ICON_SIZE,
+            x_max:this.width(),
+            y_min:this.height()*(num_players-1)/num_players,
+            y_max:this.height(),
         }
-        for(let i in myplayer.mana_pool){
-            let mana=myplayer.mana_pool[i];
-            let mana_unit=game_mana[mana];
-            let handle=this.add.image(500,300, mana_unit.color);
-            this.disp_manas[mana]=handle;
-        }
-        this.phase_text.setText(phase_text);
+        this.draw_player_board(me,bounds,game_globals);
+    }
+    draw_player_board(player,bounds,game_globals){
+        console.log("drawing player board at " + JSON.stringify(bounds));
+        let box_end=bounds.x_min+this.BOX_SIZE;
+        const box_back = this.add.rectangle(bounds.x_min, bounds.y_min, box_end, bounds.y_max, 0x909090)
+        .setDepth(-10).setOrigin(0,0).setStrokeStyle(4,0x000000);
     }
     add_disp_card(ecs,index,x,y){
         let ent=ecs[index];
@@ -124,41 +210,10 @@ export default class Game extends Phaser.Scene {
         }
     }
     clear_click_actions(){
-        console.log(this.disp_cards)
         for(let card in this.disp_cards){
             this.disp_cards[card].click_actions=[];
         }
         this.space_response="None"
-    }
-    create() {
-        let self=this;
-        //let back=this.add.image(0,0, 'game_background');
-        //back.setDepth(-10000);
-        const socket = new WebSocket('ws://localhost:3030/gamesetup');
-        socket.addEventListener('message', function (event) {
-            let parsed=JSON.parse(event.data);
-            console.log('parsed json is', parsed);
-            if(parsed[0]==="GameState"){
-                self.update_state(parsed);
-            }   
-            if(parsed[0]==="Action"){
-                self.respond_action(parsed);
-            }
-            if(parsed[0]==="Attackers"){
-                self.choose_attackers(parsed);
-            } 
-        });
-        this.socket=socket;
-        this.space_response="None";
-        var spaceBar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-        spaceBar.on('down', function(event){
-            if(self.space_response=="send_empty"){
-                self.socket.send("[]");
-            }
-        });
-        this.disp_cards={};
-        this.disp_manas={};
-        this.phase_text=this.add.text(500,50,"game not yet started");
     }
     
     update() {

@@ -379,7 +379,7 @@ impl Game {
     fn parse_zone_move(&self, events: Vec<EventResult>, dest_zone: Zone) -> Vec<CardId> {
         let mut new_ents = Vec::new();
         for event in events {
-            if let EventResult::MoveZones { oldent, newent, dest }=event
+            if let EventResult::MoveZones { oldent:_, newent, dest }=event
             && let Some(newent)=newent
             && dest==dest_zone{
                 new_ents.push(newent);
