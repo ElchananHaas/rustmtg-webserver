@@ -1,16 +1,30 @@
 use std::{collections::HashMap, hash::Hash, num::NonZeroU64};
 
-use serde_derive::Serialize;
+use serde::Serialize;
+use serde::ser::SerializeMap;
 
 use crate::{card_entities::CardEnt, entities::CardId, spellabil::KeywordAbility};
-#[derive(Serialize, Clone)]
+#[derive(Clone)]
 pub struct EntMap<K, V>
 where
     K: Copy + Hash + Eq + From<NonZeroU64>,
 {
     ents: HashMap<K, V>,
-    #[serde(skip_serializing)]
-    count: NonZeroU64,
+    count: NonZeroU64
+}
+
+impl<K: Serialize, V: Serialize> Serialize for EntMap<K,V>
+where
+    K: Copy + Hash + Eq + From<NonZeroU64>{
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer {
+                let mut map = serializer.serialize_map(Some(self.ents.len()))?;
+                for (k, v) in &self.ents {
+                    map.serialize_entry(k, v)?;
+                }
+                map.end()
+        }
 }
 
 impl<K, V> EntMap<K, V>

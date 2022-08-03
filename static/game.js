@@ -6,22 +6,26 @@ export default class Game extends Phaser.Scene {
         });
         this.PHASE_GREY=0x808080;
         this.ICON_SIZE=25;
-        this.BOX_SIZE=75;
+        this.BOX_SIZE=125;
+        this.BORDER_SIZE=5;
     }
     
     preload() {
         this.self=this;
         this.canvas=this.sys.game.canvas;
         this.canvas.imageSmoothingEnabled = true;
-        this.load.image('game_background', './background.jpg');
-        this.load.image('card_back',"https://c1.scryfall.com/file/scryfall-card-backs/large/59/597b79b3-7d77-4261-871a-60dd17403388.jpg?1561757061");
+        this.load.image('GameBackground', './background.jpg');
+        this.load.image('CardBack',"./cardback.svg");
+        this.load.image('PlayerHand',"./hand.svg");
+        this.load.image('heart',"./heart.svg");
         this.load.image('artifact_card',"./magic-m15-mse-style/acard.jpg")
         this.load.image('artifact_pt',"./magic-m15-mse-style/apt.png")
-        this.load.image("White","./mana-master/svg/w.svg");
-        this.load.image("Blue","./mana-master/svg/u.svg");
-        this.load.image("Red","./mana-master/svg/r.svg");
-        this.load.image("Green","./mana-master/svg/g.svg");
-        this.load.image("Black","./mana-master/svg/b.svg");
+        this.load.image("White","./counters/w.svg");
+        this.load.image("Blue","./counters/u.svg");
+        this.load.image("Red","./counters/r.svg");
+        this.load.image("Green","./counters/g.svg");
+        this.load.image("Black","./counters/b.svg");
+        this.load.image("Colorless","./counters/general.svg");
         this.load.image("Untap","./phases/untap.svg");
         this.load.image("Upkeep","./phases/upkeep.svg");
         this.load.image("Draw","./phases/draw.svg");
@@ -39,7 +43,7 @@ export default class Game extends Phaser.Scene {
 
     create() {
         let self=this;
-        let back=this.add.image(0,0, 'game_background');
+        let back=this.add.image(0,0, 'GameBackground');
         back.setDepth(-10000);
         const socket = new WebSocket('ws://localhost:3030/gamesetup');
         socket.addEventListener('message', function (event) {
@@ -63,6 +67,7 @@ export default class Game extends Phaser.Scene {
             }
         });
         this.disp_cards={};
+        this.player_ui={};
         const phase_images_key=[
             "Untap",
             "Upkeep",
@@ -105,24 +110,27 @@ export default class Game extends Phaser.Scene {
             return subphase.toString();
         }
         if(game_globals.phase==null){
-            return "Game not started yet";
+            return "Untap";
         }
         if(game_globals.phase=="Combat"){
             return "BeginCombat";
         }
+        if(game_globals.phase=="Begin"){
+            return "Untap";
+        }
         return game_globals.phase.toString();
     }
     update_state(parsed){
-        const me=parsed[1];
-        const ecs=parsed[2];
-        const players=parsed[3];
-        const game_globals=parsed[4];
-        console.log(ecs);
-        const myplayer=players[me];
+        console.log(parsed);
+        const state={
+            me:parsed[1],
+            ecs:parsed[2],
+            players:parsed[3],
+            globals:parsed[4],
+        };
+        const myplayer=state.players[state.me];
         const hand=myplayer["hand"];
-        const game_mana=game_globals.mana.ents;
-        this.ecs=ecs;
-        const this_phase_key=this.phase_image_key(game_globals);
+        const this_phase_key=this.phase_image_key(state.globals);
         for(const key in this.phase_images){
             this.phase_images[key].setTint(this.PHASE_GREY);
         }
@@ -132,40 +140,105 @@ export default class Game extends Phaser.Scene {
         }
         this.disp_cards={};
         for (let i=0;i<hand.length;i++){
-            this.add_disp_card(ecs,hand[i],150 + (i * 125), 500);
+            this.add_disp_card(state.ecs,hand[i],150 + (i * 125), 500);
         }
-        const battlefield=game_globals.battlefield;
+        const battlefield=state.globals.battlefield;
         for(let i=0;i<battlefield.length;i++){
-            this.add_disp_card(ecs,battlefield[i],150 + (i * 125), 300);
+            this.add_disp_card(state.ecs,battlefield[i],150 + (i * 125), 300);
         }
         let i=0;
-        const num_players=Object.keys(players).length;
-        for(const player in players){
-            if(player==me){
-                continue;
+        const num_players=Object.keys(state.players).length;
+        for(const player in state.players){
+            if(player!=state.me){    
+                const bounds={
+                    x:2*this.ICON_SIZE,
+                    y:this.height()*i/num_players,
+                    w:this.width()-2*this.ICON_SIZE,
+                    h:this.height()/num_players
+                }
+                this.draw_player_board(player,bounds,state);
+                i+=1;
             }
-            const bounds={
-                x_min:2*this.ICON_SIZE,
-                x_max:this.width(),
-                y_min:this.height()*i/num_players,
-                y_max:(this.height()*(i+1))/num_players,
-            }
-            this.draw_player_board(player,bounds,game_globals);
-            i+=1;
         }
         const bounds={
-            x_min:2*this.ICON_SIZE,
-            x_max:this.width(),
-            y_min:this.height()*(num_players-1)/num_players,
-            y_max:this.height(),
+            x:2*this.ICON_SIZE,
+            y:this.height()*(num_players-1)/num_players,
+            w:this.width()-2*this.ICON_SIZE,
+            h:this.height()/num_players
         }
-        this.draw_player_board(me,bounds,game_globals);
+        this.draw_player_board(state.me,bounds,state);
     }
-    draw_player_board(player,bounds,game_globals){
-        console.log("drawing player board at " + JSON.stringify(bounds));
-        let box_end=bounds.x_min+this.BOX_SIZE;
-        const box_back = this.add.rectangle(bounds.x_min, bounds.y_min, box_end, bounds.y_max, 0x909090)
+    draw_player_board(player_id,bounds,state){
+        const player=state.players[player_id];
+        if(this.player_ui[player_id]!=null){
+            for(const key in this.player_ui[player_id]){
+                this.player_ui[player_id][key].destroy();
+            }
+        }
+        this.player_ui[player_id]={};
+        const ui=this.player_ui[player_id];
+        ui.box_back = this.add.rectangle(bounds.x, bounds.y, this.BOX_SIZE, bounds.h, 0x909090)
         .setDepth(-10).setOrigin(0,0).setStrokeStyle(4,0x000000);
+        
+        ui.life_box= this.add.rectangle(bounds.x+this.BORDER_SIZE, 
+            bounds.y+this.BORDER_SIZE,
+             this.BOX_SIZE-2*this.BORDER_SIZE, 
+             1.5*this.ICON_SIZE)
+        .setDepth(-10).setOrigin(0,0).setStrokeStyle(2,0x000000);
+        const heart_loc={
+            x:bounds.x+this.BOX_SIZE/2,
+            y:bounds.y+this.BORDER_SIZE+.75*this.ICON_SIZE
+        };
+        ui.heart_icon=this.add.image(heart_loc.x,heart_loc.y,"heart").setScale(.1);
+        ui.life_text=this.add_text(heart_loc.x,heart_loc.y,player.life);
+        const right_center=bounds.x+this.BOX_SIZE*5/8;
+        const deck_y=heart_loc.y+this.ICON_SIZE*2;
+        const hand_y=deck_y+this.ICON_SIZE*2;
+        ui.deck=this.add.image(right_center,deck_y,"CardBack").setScale(.2).setAngle(90);
+        this.draw_mana_circles(player_id,bounds,state);
+        ui.deck_size=this.add_text(right_center,deck_y,player.library.length);
+        ui.hand=this.add.image(right_center,hand_y,"PlayerHand").setScale(.1);
+        ui.hand_back=this.add.circle(right_center,hand_y,this.ICON_SIZE/2,0xffffff).setDepth(1);
+        ui.hand_size=this.add_text(right_center,hand_y,player.hand.length);
+    }
+    draw_mana_circles(player_id,bounds,state){
+        const ui=this.player_ui[player_id];
+        const colors=[
+            "White",
+            "Blue",
+            "Black",
+            "Red",
+            "Green",
+            "Colorless"
+        ];
+        const color_quantities={};
+        for(const i in colors){
+            color_quantities[colors[i]]=0;
+        }
+        const mana_pool=state.players[player_id].mana_pool;
+        for(const i in mana_pool){
+            const mana_id=mana_pool[i];
+            const mana=state.globals.mana[mana_id];
+            const color=mana.color;
+            color_quantities[color]+=1;
+        }
+        const dot_size=this.BOX_SIZE/4;
+        for(const i in colors){
+            const color=colors[i];
+            const loc={
+                x:bounds.x+dot_size/2+5,
+                y:bounds.y+this.BORDER_SIZE+1.5*this.ICON_SIZE+(Number(i)+.5)*1.1*dot_size,
+            }
+            const key_id=player_id+""+i;
+            ui[key_id]=this.add.image(loc.x,loc.y,color).setDisplaySize(dot_size,dot_size);
+            const quantity=color_quantities[color];
+            ui[key_id+"text"]=this.add_text(loc.x,loc.y,quantity);
+        }
+        
+    }
+    add_text(x,y,text){
+        return this.add.text(x,y,""+text)
+        .setOrigin(0.5).setColor(0xFFFFFF).setDepth(10);
     }
     add_disp_card(ecs,index,x,y){
         let ent=ecs[index];

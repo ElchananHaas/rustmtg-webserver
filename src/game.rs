@@ -212,7 +212,6 @@ impl Game {
         self.backup = Some(Box::new(self.clone()));
     }
     pub fn restore(&mut self) {
-        panic!("restoring is a bug for now!");
         let mut b = None;
         std::mem::swap(&mut b, &mut self.backup);
         *self = *b.unwrap();
