@@ -202,20 +202,19 @@ impl PlayerCon {
                 .serialize(&mut json_serial)
                 .expect("State must be serializable");
         }
-        let mut failures = 0;
         loop {
             let msg = std::str::from_utf8(&buffer).expect("json is valid text");
             let sres = socket.send(Message::text(msg)).await;
 
             if sres.is_err() {
-                PlayerCon::socket_error(&mut failures).await;
+                PlayerCon::socket_error().await;
                 continue;
             };
             let recieved = socket.next().await.expect("Socket is still open");
             let message = if let Ok(msg) = recieved {
                 msg
             } else {
-                PlayerCon::socket_error(&mut failures).await;
+                PlayerCon::socket_error().await;
                 continue;
             };
             let text = if let Ok(txt) = message.to_str() {
@@ -242,14 +241,7 @@ impl PlayerCon {
         socket.send(Message::text(msg)).await?;
         Ok(())
     }
-    async fn socket_error(failures: &mut u64) {
-        let max_failures = 15;
-        if *failures > max_failures {
-            panic!("Connection to client broken"); //Give up after around 5 min
-        } else {
-            //Use exponential backoff
-            sleep(Duration::from_millis(10 * (*failures).pow(2))).await;
-            *failures += 1;
-        }
+    async fn socket_error() {
+        panic!("Connection to client broken"); //Give up after around 5 min
     }
 }

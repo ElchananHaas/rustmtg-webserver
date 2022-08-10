@@ -8,17 +8,18 @@ export default class Game extends Phaser.Scene {
         this.ICON_SIZE=25;
         this.BOX_SIZE=125;
         this.BORDER_SIZE=5;
+        this.CARD_WIDTH=100;
+        this.CARD_HEIGHT=1.25*this.CARD_WIDTH;
     }
     
     preload() {
         this.self=this;
         this.canvas=this.sys.game.canvas;
         this.canvas.imageSmoothingEnabled = true;
-        this.load.image('GameBackground', './background.jpg');
         this.load.image('CardBack',"./cardback.svg");
         this.load.image('PlayerHand',"./hand.svg");
         this.load.image('heart',"./heart.svg");
-        this.load.image('artifact_card',"./magic-m15-mse-style/acard.jpg")
+        this.load.image('ArtifactCard',"./magic-m15-mse-style/acard.jpg")
         this.load.image('artifact_pt',"./magic-m15-mse-style/apt.png")
         this.load.image("White","./counters/w.svg");
         this.load.image("Blue","./counters/u.svg");
@@ -43,8 +44,6 @@ export default class Game extends Phaser.Scene {
 
     create() {
         let self=this;
-        let back=this.add.image(0,0, 'GameBackground');
-        back.setDepth(-10000);
         const socket = new WebSocket('ws://localhost:3030/gamesetup');
         socket.addEventListener('message', function (event) {
             let parsed=JSON.parse(event.data);
@@ -90,6 +89,13 @@ export default class Game extends Phaser.Scene {
             .setTint(this.PHASE_GREY);
             this.phase_images[phase_image]=image;
         }
+        const stack_start=2*this.ICON_SIZE+this.BOX_SIZE;
+        this.add.rectangle(stack_start,0,this.CARD_WIDTH,this.height(),0x880000)
+        .setDepth(-100).setOrigin(0,0).setStrokeStyle(1,0x000000);
+        this.BATTLEFIELD_START=stack_start+this.CARD_WIDTH;
+        this.add.rectangle(this.BATTLEFIELD_START,0,this.width()-this.BATTLEFIELD_START,this.height(),0x12093a)
+        .setDepth(-1000).setOrigin(0,0);
+
     }
 
     width(){
@@ -139,9 +145,6 @@ export default class Game extends Phaser.Scene {
             this.disp_cards[card].destroy();
         }
         this.disp_cards={};
-        for (let i=0;i<hand.length;i++){
-            this.add_disp_card(state.ecs,hand[i],150 + (i * 125), 500);
-        }
         const battlefield=state.globals.battlefield;
         for(let i=0;i<battlefield.length;i++){
             this.add_disp_card(state.ecs,battlefield[i],150 + (i * 125), 300);
@@ -191,16 +194,46 @@ export default class Game extends Phaser.Scene {
         };
         ui.heart_icon=this.add.image(heart_loc.x,heart_loc.y,"heart").setScale(.1);
         ui.life_text=this.add_text(heart_loc.x,heart_loc.y,player.life);
+        const right_width=this.BOX_SIZE*3/4;
         const right_center=bounds.x+this.BOX_SIZE*5/8;
         const deck_y=heart_loc.y+this.ICON_SIZE*2;
-        const hand_y=deck_y+this.ICON_SIZE*2;
-        ui.deck=this.add.image(right_center,deck_y,"CardBack").setScale(.2).setAngle(90);
+        const hand_y=deck_y+right_width*.5;
+        ui.deck=this.add.image(right_center,deck_y,"CardBack").setAngle(90)
+        .setDisplaySize(right_width*.5, right_width*.8);
         this.draw_mana_circles(player_id,bounds,state);
         ui.deck_size=this.add_text(right_center,deck_y,player.library.length);
         ui.hand=this.add.image(right_center,hand_y,"PlayerHand").setScale(.1);
         ui.hand_back=this.add.circle(right_center,hand_y,this.ICON_SIZE/2,0xffffff).setDepth(1);
         ui.hand_size=this.add_text(right_center,hand_y,player.hand.length);
+        const graveyard_y=hand_y+right_width*.5+2;
+        ui.graveyard=this.add.rectangle(right_center,graveyard_y,right_width*.8, right_width*.5)
+        .setStrokeStyle(2,0x000000);
+        ui.graveyard_text=this.add_text(right_center,graveyard_y,player.graveyard.length);;
+        const owned_exile=[];
+        for(const card_id in state.globals.exile){
+            const card=ecs[card_id];
+            if(card.owner==player_id){
+                owned_exile.push(card_id);
+            }
+        }
+        const exile_y=graveyard_y+right_width*.5+10;
+        ui.exile=this.add.rectangle(right_center,exile_y,right_width*.8, right_width*.5)
+        .setStrokeStyle(2,0x000000);
+        ui.exile_text=this.add_text(right_center,exile_y,owned_exile.length);;
+        this.draw_hand(player_id,bounds,state);
     }
+    draw_hand(player_id,bounds,state){
+        const player=state.players[player_id];
+        const ui=this.player_ui[player_id];
+        const hand_start=bounds.y+bounds.h-this.CARD_HEIGHT;
+        ui.hand_background=this.add.rectangle(this.BATTLEFIELD_START,hand_start,
+            this.width()-this.BATTLEFIELD_START,this.CARD_HEIGHT,0x008800).setOrigin(0,0).setDepth(-10);
+        const hand=player.hand;
+        for(const i in hand){
+            this.add_disp_card(state.ecs,hand[i],this.BATTLEFIELD_START+this.CARD_WIDTH/2
+                + (Number(i) +.5) * this.CARD_WIDTH, hand_start+this.CARD_HEIGHT/2);
+            }
+        }
     draw_mana_circles(player_id,bounds,state){
         const ui=this.player_ui[player_id];
         const colors=[

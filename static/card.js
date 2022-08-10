@@ -12,12 +12,34 @@ export default class DispCard extends Phaser.GameObjects.Container{
         this.click_actions=[];
         let self=this;
         if(card==null){
-            card_background = scene.add.image(0,0, "card_back")
+            card_background = scene.add.image(0,0, "CardBack")
         }else{
-            card_background = scene.add.image(0,0, "artifact_card")
+            card_background = scene.add.image(0,0, "ArtifactCard")
         }
         card_background.setInteractive();
         this.add(card_background);
+        card_background.on('pointerover', function () {
+        });
+        scene.input.setDraggable(card_background);
+        card_background.on('drag', function (pointer, gameObject, dragX, dragY) {
+            self.x = pointer.position.x;
+            self.y = pointer.position.y;
+        });
+        card_background.on('pointerdown', function(pointer,gameObject){
+            if(self.click_actions.length==0){
+                //Do nothing, this card has no actions
+            }else if(self.click_actions.length==1){
+                let to_send=JSON.stringify([self.click_actions[0]]);
+                self.scene.socket.send(to_send);
+                self.scene.clear_click_actions();
+            }else{
+                console.error("Selecting action dialog not implemented yet");
+            }
+        });
+        this.setScale(.20,.20);
+        if(card==null){
+            return;
+        }            
         this.add_text(23,card.name);
         let type_line="";
         for (let t of card.supertypes){
@@ -41,25 +63,6 @@ export default class DispCard extends Phaser.GameObjects.Container{
         if (card.tapped){
             this.add_text(320,"tapped");
         }
-        card_background.on('pointerover', function () {
-        });
-        scene.input.setDraggable(card_background);
-        card_background.on('drag', function (pointer, gameObject, dragX, dragY) {
-            self.x = pointer.position.x;
-            self.y = pointer.position.y;
-        });
-        card_background.on('pointerdown', function(pointer,gameObject){
-            if(self.click_actions.length==0){
-                //Do nothing, this card has no actions
-            }else if(self.click_actions.length==1){
-                let to_send=JSON.stringify([self.click_actions[0]]);
-                self.scene.socket.send(to_send);
-                self.scene.clear_click_actions();
-            }else{
-                console.error("Selecting action dialog not implemented yet");
-            }
-        });
-        this.setScale(.25,.25);
     }
     add_text(y,text){
         let line=this.scene.add.text((ul_x+30),(ul_y+y),text);
