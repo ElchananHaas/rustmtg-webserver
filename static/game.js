@@ -145,10 +145,6 @@ export default class Game extends Phaser.Scene {
             this.disp_cards[card].destroy();
         }
         this.disp_cards={};
-        const battlefield=state.globals.battlefield;
-        for(let i=0;i<battlefield.length;i++){
-            this.add_disp_card(state.ecs,battlefield[i],150 + (i * 125), 300);
-        }
         let i=0;
         const num_players=Object.keys(state.players).length;
         for(const player in state.players){
@@ -221,6 +217,27 @@ export default class Game extends Phaser.Scene {
         .setStrokeStyle(2,0x000000);
         ui.exile_text=this.add_text(right_center,exile_y,owned_exile.length);;
         this.draw_hand(player_id,bounds,state);
+        this.draw_player_battlefield(player_id,bounds,state);
+    }
+    draw_player_battlefield(player_id,bounds,state){
+        const player=state.players[player_id];
+        const ui=this.player_ui[player_id];
+        const controlled=[];
+        for(const i in state.globals.battlefield){
+            const card_id=state.globals.battlefield[i];
+            let card=state.ecs[card_id];
+            if(card.controller==null){
+                card.controller=card.owner;
+            }
+            if(card.controller==player_id){
+                controlled.push(card_id);
+            }
+        }
+        for(const i in controlled){
+            this.add_disp_card(state.ecs,controlled[i],this.BATTLEFIELD_START+this.CARD_WIDTH/2
+                + (Number(i) +.5) * this.CARD_WIDTH, bounds.y+this.CARD_HEIGHT/2);
+        }
+    
     }
     draw_hand(player_id,bounds,state){
         const player=state.players[player_id];
