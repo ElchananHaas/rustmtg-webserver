@@ -162,7 +162,7 @@ impl Game {
                     todo!();
                 }
                 Event::MoveZones { ent, origin, dest } => {
-                    self.zonemove(&mut results, &mut events, ent, origin, dest)
+                    self.movezones(&mut results, &mut events, ent, origin, dest)
                         .await;
                 }
             }
@@ -211,7 +211,7 @@ impl Game {
         }
         self.drain_mana_pools().await;
     }
-    async fn zonemove(
+    async fn movezones(
         &mut self,
         results: &mut Vec<EventResult>,
         _events: &mut Vec<TagEvent>,
@@ -249,7 +249,6 @@ impl Game {
                     None => false,
                 },
             };
-            //date knowledge of new card on zonemove
             let real = card.ent_type == EntType::RealCard;
             if removed && real {
                 props = Some((card.name, card.owner));
@@ -266,6 +265,7 @@ impl Game {
         && let Some(owner)= self.players.get_mut(owner_id){
             let card = self.db.spawn_card(name, owner_id);
             let (newent, newcard) = self.cards.insert(card);
+            //update knowledge of new card on zonemove
             match dest {
                 Zone::Exile | Zone::Stack | Zone::Command | Zone::Battlefield | Zone::Graveyard => {
                     newcard.known_to.extend(self.turn_order.iter());
@@ -285,6 +285,7 @@ impl Game {
                 }
                 Zone::Battlefield => {
                     self.battlefield.insert(newent);
+                    newcard.summoning_sickness=true;
                 }
                 Zone::Hand => {
                     owner.hand.insert(newent);
@@ -301,6 +302,75 @@ impl Game {
             });
         };
     }
+    async fn attackers(&mut self, results: &mut Vec<EventResult>, events: &mut Vec<TagEvent>) {
+        self.backup();
+        //Only allow creatures that have haste or don't have summoning sickness to attack
+        let legal_attackers = self
+            .players_creatures(self.active_player())
+            .filter(|e| self.can_tap(*e))
+            .collect::<Vec<CardId>>();
+        let attack_targets = self.attack_targets(self.active_player());
+        let mut actual_attackers = Vec::new();
+        loop {
+            println!("Asking player");
+            let attacks;
+            //Choice limits is inclusive on both bounds
+            let choice_limits = vec![(0, 1); legal_attackers.len()];
+            if let Some(player) = self.players.get(self.active_player()) {
+                attacks = player
+                    .ask_user_pair(
+                        legal_attackers.clone(),
+                        attack_targets.clone(),
+                        choice_limits,
+                        AskReason::Attackers,
+                    )
+                    .await;
+            } else {
+                return;
+            }
+            let mut attack_targets = Vec::new();
+            for (i, &attacker) in legal_attackers.iter().enumerate() {
+                let attacked = &attacks[i];
+                if attacked.len() > 0 {
+                    actual_attackers.push(attacker);
+                    attack_targets.push(attacked[0]);
+                }
+            }
+            if !self.attackers_legal(&actual_attackers, &attack_targets) {
+                self.restore();
+                continue;
+            }
+            for &attacker in actual_attackers.iter() {
+                if !self
+                    .cards
+                    .is(attacker, |card| card.has_keyword(KeywordAbility::Vigilance))
+                {
+                    self.tap(attacker).await;
+                }
+            }
+
+            //Handle costs to attack here
+            //THis may led to a redeclaration of attackers
+            //Now declare them attackers and fire attacking events
+            for (&attacker, &attacked) in actual_attackers.iter().zip(attack_targets.iter()) {
+                self.cards
+                    .get_mut(attacker)
+                    .map(|card| card.attacking = Some(attacked));
+            }
+            events.push(TagEvent {
+                event: Event::Attack {
+                    attackers: actual_attackers.clone(),
+                },
+                replacements: Vec::new(),
+            });
+            break;
+        }
+        if actual_attackers.len() == 0 {
+            self.subphases = vec![Subphase::EndCombat].into();
+        } else {
+            self.cycle_priority().await;
+        }
+    }
     async fn subphase(
         &mut self,
         results: &mut Vec<EventResult>,
@@ -316,89 +386,19 @@ impl Game {
                     .collect::<Vec<_>>()
                 {
                     self.untap(perm).await;
+                    if let Some(card) = self.cards.get_mut(perm) {
+                        card.summoning_sickness = false;
+                    }
                 }
                 //Don't cycle priority in untap
             }
-            Subphase::Upkeep => {
-                self.cycle_priority().await;
-            }
+            Subphase::Upkeep => self.cycle_priority().await,
             Subphase::Draw => {
                 self.draw(self.active_player()).await;
-                self.cycle_priority().await;
+                self.cycle_priority().await
             }
-            Subphase::BeginCombat => {
-                self.cycle_priority().await;
-            }
-            Subphase::Attackers => {
-                self.backup();
-                //Only allow creatures that have haste or don't have summoning sickness to attack
-                let legal_attackers = self
-                    .players_creatures(self.active_player())
-                    .filter(|e| self.can_tap(*e))
-                    .collect::<Vec<CardId>>();
-                let attack_targets = self.attack_targets(self.active_player());
-                let mut actual_attackers = Vec::new();
-                loop {
-                    println!("Asking player");
-                    let attacks;
-                    //Choice limits is inclusive on both bounds
-                    let choice_limits = vec![(0, 1); legal_attackers.len()];
-                    if let Some(player) = self.players.get(self.active_player()) {
-                        attacks = player
-                            .ask_user_pair(
-                                legal_attackers.clone(),
-                                attack_targets.clone(),
-                                choice_limits,
-                                AskReason::Attackers,
-                            )
-                            .await;
-                    } else {
-                        return;
-                    }
-                    let mut attack_targets = Vec::new();
-                    for (i, &attacker) in legal_attackers.iter().enumerate() {
-                        let attacked = &attacks[i];
-                        if attacked.len() > 0 {
-                            actual_attackers.push(attacker);
-                            attack_targets.push(attacked[0]);
-                        }
-                    }
-                    if !self.attackers_legal(&actual_attackers, &attack_targets) {
-                        self.restore();
-                        continue;
-                    }
-                    for &attacker in actual_attackers.iter() {
-                        if !self
-                            .cards
-                            .is(attacker, |card| card.has_keyword(KeywordAbility::Vigilance))
-                        {
-                            self.tap(attacker).await;
-                        }
-                    }
-
-                    //Handle costs to attack here
-                    //THis may led to a redeclaration of attackers
-                    //Now declare them attackers and fire attacking events
-                    for (&attacker, &attacked) in actual_attackers.iter().zip(attack_targets.iter())
-                    {
-                        self.cards
-                            .get_mut(attacker)
-                            .map(|card| card.attacking = Some(attacked));
-                    }
-                    events.push(TagEvent {
-                        event: Event::Attack {
-                            attackers: actual_attackers.clone(),
-                        },
-                        replacements: Vec::new(),
-                    });
-                    break;
-                }
-                if actual_attackers.len() == 0 {
-                    self.subphases = vec![Subphase::EndCombat].into();
-                } else {
-                    self.cycle_priority().await;
-                }
-            }
+            Subphase::BeginCombat => self.cycle_priority().await,
+            Subphase::Attackers => self.attackers(results, events).await,
             Subphase::Blockers => {
                 for opponent in self.opponents(self.active_player()) {
                     self.backup();

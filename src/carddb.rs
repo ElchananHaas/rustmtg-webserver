@@ -49,7 +49,7 @@ struct ScryfallEntry {
 }
 impl CardDB {
     pub fn new() -> Self {
-        let path = "oracle-cards-20211212220409.json";
+        let path = "oracle-cards-20220820210234.json";
         let data = fs::read_to_string(path).expect("Couldn't find scryfall oracle database file");
         let desered: Vec<ScryfallEntry> = serde_json::from_str(&data).expect("failed to parse!");
         let mut byname = HashMap::new();

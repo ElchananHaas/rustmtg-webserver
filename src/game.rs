@@ -25,6 +25,7 @@ use warp::ws::WebSocket;
 use crate::actions::{Action, ActionFilter, CastingOption, StackActionOption};
 mod handle_event;
 mod layers;
+mod serialize_game;
 
 pub type Players = EntMap<PlayerId, Player>;
 pub type Cards = EntMap<CardId, CardEnt>;
@@ -54,6 +55,7 @@ pub struct Game {
     pub outcome: GameOutcome,
     pub lands_played_this_turn: u32,
     pub land_play_limit: u32,
+    pub priority: PlayerId,
     #[serde(skip_serializing)]
     db: &'static CardDB,
     #[serde(skip_serializing)]
@@ -111,6 +113,7 @@ impl GameBuilder {
         if self.turn_order.len() < 2 {
             bail!("Game needs at least two players in initialization")
         };
+        let start = self.turn_order[0];
         Ok(Game {
             players: self.players,
             cards: self.cards,
@@ -128,6 +131,7 @@ impl GameBuilder {
             subphases: VecDeque::new(),
             phase: None,
             subphase: None,
+            priority: start,
             outcome: GameOutcome::Ongoing,
             backup: None,
             rng: rand::rngs::StdRng::from_entropy(),
@@ -170,37 +174,6 @@ impl Game {
     }
     pub fn active_player(&self) -> PlayerId {
         self.turn_order[0]
-    }
-    async fn send_state(&mut self) {
-        let mut state_futures = Vec::new();
-        for player in self.turn_order.clone() {
-            state_futures.push(self.send_state_player(player));
-        }
-        let _results = future::join_all(state_futures).await;
-    }
-    async fn send_state_player(&self, player: PlayerId) -> Result<()> {
-        let mut card_views = HashMap::new();
-        for (card_id, card_ref) in self.cards.view() {
-            if card_ref.known_to.contains(&player) {
-                card_views.insert(card_id, card_ref);
-            }
-        }
-        let mut player_views = HashMap::new();
-        for (player_id, player_ref) in self.players.view() {
-            let view = player_ref.view(&self.cards, player);
-            player_views.insert(player_id, view);
-        }
-        let mut buffer = Vec::new();
-        {
-            let cursor = std::io::Cursor::new(&mut buffer);
-            let mut json_serial = serde_json::Serializer::new(cursor);
-            let added_context = ("GameState", player, card_views, player_views, self);
-            added_context.serialize(&mut json_serial)?;
-        }
-        if let Some(pl) = self.players.get(player) {
-            pl.send_state(buffer).await?;
-        }
-        Ok(())
     }
 
     //backs the game up in case a spell casting or attacker/blocker
@@ -360,13 +333,21 @@ impl Game {
     #[must_use]
     pub async fn player_cycle_priority(&mut self, mut players: VecDeque<PlayerId>) {
         self.place_abilities().await;
-        for _ in 0..players.len() {
+        let mut pass_count = 0;
+        while pass_count < players.len() {
+            self.priority = players[0];
             self.send_state().await;
             let act_taken = self.grant_priority(&players).await;
-            if act_taken {
-                self.player_cycle_priority(players.clone()).await;
+            match act_taken {
+                ActionPriorityType::Pass => {
+                    pass_count += 1;
+                    players.rotate_left(1);
+                }
+                ActionPriorityType::Keep => {
+                    //Do nothing, the player gains priority again.
+                    //This happens for mana abilities and special abiltiies
+                }
             }
-            players.rotate_left(1);
         }
     }
     pub async fn move_zones(&mut self, ent: CardId, origin: Zone, dest: Zone) -> Vec<CardId> {
@@ -387,7 +368,7 @@ impl Game {
         new_ents
     }
 
-    pub async fn grant_priority(&mut self, players: &VecDeque<PlayerId>) -> bool {
+    pub async fn grant_priority(&mut self, players: &VecDeque<PlayerId>) -> ActionPriorityType {
         let player = players[0];
         self.layers();
         loop {
@@ -397,10 +378,10 @@ impl Game {
                 choice = pl.ask_user_selectn(&actions, 0, 1, AskReason::Action).await;
             }
             if choice.len() == 0 {
-                return false;
+                return ActionPriorityType::Pass;
             } else {
                 let action = &actions[choice[0]];
-                match action {
+                let _: ! = match action {
                     Action::Cast(casting_option) => {
                         self.backup();
                         let card = casting_option.source_card;
@@ -424,6 +405,7 @@ impl Game {
                             self.restore();
                             continue;
                         }
+                        return ActionPriorityType::Keep;
                     }
                     Action::PlayLand(card) => {
                         self.handle_event(Event::PlayLand {
@@ -431,6 +413,7 @@ impl Game {
                             land: *card,
                         })
                         .await;
+                        return ActionPriorityType::Keep;
                     }
                     Action::ActivateAbility { source, index } => {
                         self.backup();
@@ -444,8 +427,9 @@ impl Game {
                         let costs = if let Some(card) = self.cards.get(id) {
                             card.costs.clone()
                         } else {
-                            return false;
+                            return ActionPriorityType::Pass;
                         };
+                        let mana_abil = self.is_mana_ability(id);
                         let castopt = StackActionOption {
                             costs,
                             filter: ActionFilter::None,
@@ -459,9 +443,13 @@ impl Game {
                             self.restore();
                             continue;
                         }
+                        if mana_abil {
+                            return ActionPriorityType::Keep;
+                        } else {
+                            return ActionPriorityType::Pass;
+                        }
                     }
-                }
-                return true;
+                };
             }
         }
     }
@@ -854,9 +842,11 @@ impl Game {
     }
 }
 
+pub enum ActionPriorityType {
+    Pass,
+    Keep,
+}
 #[derive(Clone, Copy, Debug, Serialize, PartialEq)]
-#[allow(dead_code)] //allow dead code to reduce warnings noise on each variant
-
 pub enum Phase {
     Begin,
     FirstMain,
@@ -865,7 +855,6 @@ pub enum Phase {
     Ending,
 }
 #[derive(Clone, Copy, Debug, Serialize, PartialEq)]
-#[allow(dead_code)]
 pub enum Subphase {
     Untap,
     Upkeep,
@@ -880,7 +869,6 @@ pub enum Subphase {
     Cleanup,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
-#[allow(dead_code)] //allow dead code to reduce warnings noise on each variant
 pub enum Zone {
     Hand,
     Library,

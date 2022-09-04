@@ -78,9 +78,7 @@ pub enum TargetClauseEffect {}
 pub struct Targets {
     num: NonZeroU32, //Ensure there is always at least 1 target, or
     //this clause shouldn't be chosen
-    valid: TargetsFilter
+    valid: TargetsFilter,
 }
 #[derive(Clone, Serialize)]
-pub enum TargetsFilter{
-
-}
+pub enum TargetsFilter {}

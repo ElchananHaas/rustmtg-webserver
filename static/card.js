@@ -25,17 +25,6 @@ export default class DispCard extends Phaser.GameObjects.Container{
             self.x = pointer.position.x;
             self.y = pointer.position.y;
         });
-        card_background.on('pointerdown', function(pointer,gameObject){
-            if(self.click_actions.length==0){
-                //Do nothing, this card has no actions
-            }else if(self.click_actions.length==1){
-                let to_send=JSON.stringify([self.click_actions[0]]);
-                self.scene.socket.send(to_send);
-                self.scene.clear_click_actions();
-            }else{
-                console.error("Selecting action dialog not implemented yet");
-            }
-        });
         this.setScale(.20,.20);
         if(card==null){
             return;
@@ -61,8 +50,29 @@ export default class DispCard extends Phaser.GameObjects.Container{
             this.add(line);
         }
         if (card.tapped){
-            this.add_text(320,"tapped");
+            this.rotation=.2;
         }
+        else{
+            this.rotation=0;
+        }
+        this.card_background=card_background
+    }
+    set_click_action_send(click_actions){
+        this.card_background.on('pointerdown', function(pointer,gameObject){
+            if(click_actions.length==0){
+                //Do nothing, this card has no actions
+            }else if(click_actions.length==1){
+                let to_send=JSON.stringify([click_actions[0]]);
+                this.scene.socket.send(to_send);
+                this.scene.clear_click_actions();
+            }else{
+                console.error("Selecting action dialog not implemented yet");
+            }
+        });
+    }
+    set_click_action_none(){
+        this.card_background.on('pointerdown', function(pointer,gameObject){
+        });
     }
     add_text(y,text){
         let line=this.scene.add.text((ul_x+30),(ul_y+y),text);

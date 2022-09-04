@@ -47,6 +47,7 @@ export default class Game extends Phaser.Scene {
         const socket = new WebSocket('ws://localhost:3030/gamesetup');
         socket.addEventListener('message', function (event) {
             let parsed=JSON.parse(event.data);
+            console.log(parsed);
             if(parsed[0]==="GameState"){
                 self.update_state(parsed);
             }   
@@ -124,22 +125,23 @@ export default class Game extends Phaser.Scene {
         if(game_globals.phase=="Begin"){
             return "Untap";
         }
+        if(game_globals.phase=="Ending"){
+            return "EndStep";
+        }
         return game_globals.phase.toString();
     }
     update_state(parsed){
-        console.log(parsed);
         const state={
             me:parsed[1],
             ecs:parsed[2],
             players:parsed[3],
             globals:parsed[4],
         };
-        const myplayer=state.players[state.me];
-        const hand=myplayer["hand"];
         const this_phase_key=this.phase_image_key(state.globals);
         for(const key in this.phase_images){
             this.phase_images[key].setTint(this.PHASE_GREY);
         }
+        console.log(this_phase_key);
         this.phase_images[this_phase_key].setTint(0xFFFFFF);
         for (let card in this.disp_cards){
             this.disp_cards[card].destroy();
@@ -176,7 +178,11 @@ export default class Game extends Phaser.Scene {
         }
         this.player_ui[player_id]={};
         const ui=this.player_ui[player_id];
-        ui.box_back = this.add.rectangle(bounds.x, bounds.y, this.BOX_SIZE, bounds.h, 0x909090)
+        let back_color=0x808080;
+        if(state.globals.priority==player_id && player_id==state.me){
+            back_color=0xA0A0A0;
+        }
+        ui.box_back = this.add.rectangle(bounds.x, bounds.y, this.BOX_SIZE, bounds.h, back_color)
         .setDepth(-10).setOrigin(0,0).setStrokeStyle(4,0x000000);
         
         ui.life_box= this.add.rectangle(bounds.x+this.BORDER_SIZE, 
@@ -309,24 +315,23 @@ export default class Game extends Phaser.Scene {
         let choices=parsed[1].SelectN;
         let ents=choices.ents;
         this.action_ents=ents;
-        console.log(choices);
         if(ents.length==0){
             this.socket.send("[]");
         }else{
             for(let i=0;i<ents.length;i++){
                 let ent=ents[i];
-                console.log(ent);
                 if(ent.PlayLand!=null){
                     let disp_card=this.disp_cards[ent.PlayLand];
+                    disp_card.set_click_action_send([i]);
                     disp_card.click_actions.push(i);
                 }
                 if(ent.ActivateAbility!=null){
                     let disp_card=this.disp_cards[ent.ActivateAbility.source];
-                    disp_card.click_actions.push(i);
+                    disp_card.set_click_action_send([i]);
                 }
                 if(ent.Cast!=null){
                     let disp_card=this.disp_cards[ent.Cast.source_card];
-                    disp_card.click_actions.push(i);
+                    disp_card.set_click_action_send([i]);
                 }
             }
             this.space_response="send_empty"
@@ -334,7 +339,8 @@ export default class Game extends Phaser.Scene {
     }
     clear_click_actions(){
         for(let card in this.disp_cards){
-            this.disp_cards[card].click_actions=[];
+            let disp_card=this.disp_cards[card];
+            disp_card.set_click_action_none();
         }
         this.space_response="None"
     }

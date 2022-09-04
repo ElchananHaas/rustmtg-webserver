@@ -7,7 +7,7 @@ use futures::{SinkExt, StreamExt};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_derive::Serialize;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -42,6 +42,7 @@ fn view_t<'a>(
     cards: &'a Cards,
     r: impl Iterator<Item = &'a CardId> + 'a,
     pl: PlayerId,
+    hidden_map: &'a HashMap<CardId, CardId>,
 ) -> impl Iterator<Item = Option<CardId>> + 'a {
     r.map(move |&id| {
         cards
@@ -50,16 +51,22 @@ fn view_t<'a>(
                 if ent.known_to.contains(&pl) {
                     Some(id)
                 } else {
-                    None
+                    hidden_map.get(&id).map(|x| *x)
                 }
             })
             .flatten()
     })
+    .filter(|x| x.is_some())
 }
 impl Player {
-    pub fn view(&self, cards: &Cards, player: PlayerId) -> PlayerView {
-        let libview = view_t(cards, self.library.iter(), player).collect::<Vec<_>>();
-        let handview = view_t(cards, self.hand.iter(), player).collect::<Vec<_>>();
+    pub fn view(
+        &self,
+        cards: &Cards,
+        player: PlayerId,
+        hidden_map: &HashMap<CardId, CardId>,
+    ) -> PlayerView {
+        let libview = view_t(cards, self.library.iter(), player, hidden_map).collect::<Vec<_>>();
+        let handview = view_t(cards, self.hand.iter(), player, hidden_map).collect::<Vec<_>>();
         PlayerView {
             name: &self.name,
             life: self.life,
