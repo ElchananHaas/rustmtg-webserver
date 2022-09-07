@@ -141,7 +141,6 @@ export default class Game extends Phaser.Scene {
         for(const key in this.phase_images){
             this.phase_images[key].setTint(this.PHASE_GREY);
         }
-        console.log(this_phase_key);
         this.phase_images[this_phase_key].setTint(0xFFFFFF);
         for (let card in this.disp_cards){
             this.disp_cards[card].destroy();
@@ -184,7 +183,13 @@ export default class Game extends Phaser.Scene {
         }
         ui.box_back = this.add.rectangle(bounds.x, bounds.y, this.BOX_SIZE, bounds.h, back_color)
         .setDepth(-10).setOrigin(0,0).setStrokeStyle(4,0x000000);
-        
+        ui.box_back.click_callback=function(pointer,gameObject){
+            console.log("clicked player box " + this);
+        };
+        ui.box_back.on('pointerdown', function(pointer,gameObject){
+            const bound_callback=bind(this.parentContainer,this.click_callback);
+            bound_callback(pointer,gameObject)
+        });
         ui.life_box= this.add.rectangle(bounds.x+this.BORDER_SIZE, 
             bounds.y+this.BORDER_SIZE,
              this.BOX_SIZE-2*this.BORDER_SIZE, 
@@ -323,7 +328,6 @@ export default class Game extends Phaser.Scene {
                 if(ent.PlayLand!=null){
                     let disp_card=this.disp_cards[ent.PlayLand];
                     disp_card.set_click_action_send([i]);
-                    disp_card.click_actions.push(i);
                 }
                 if(ent.ActivateAbility!=null){
                     let disp_card=this.disp_cards[ent.ActivateAbility.source];

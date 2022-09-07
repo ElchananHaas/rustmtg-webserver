@@ -9,7 +9,6 @@ export default class DispCard extends Phaser.GameObjects.Container{
         this.x_len=x_len;
         this.y_len=y_len;
         let card_background=null;
-        this.click_actions=[];
         let self=this;
         if(card==null){
             card_background = scene.add.image(0,0, "CardBack")
@@ -18,6 +17,8 @@ export default class DispCard extends Phaser.GameObjects.Container{
         }
         card_background.setInteractive();
         this.add(card_background);
+        this.attacking=[];
+        this.card_background=card_background  
         card_background.on('pointerover', function () {
         });
         scene.input.setDraggable(card_background);
@@ -26,9 +27,12 @@ export default class DispCard extends Phaser.GameObjects.Container{
             self.y = pointer.position.y;
         });
         this.setScale(.20,.20);
-        if(card==null){
-            return;
-        }            
+        if (card.tapped){
+            this.rotation=.2;
+        }
+        else{
+            this.rotation=0;
+        } 
         this.add_text(23,card.name);
         let type_line="";
         for (let t of card.supertypes){
@@ -49,16 +53,14 @@ export default class DispCard extends Phaser.GameObjects.Container{
             line.setColor('#000000');
             this.add(line);
         }
-        if (card.tapped){
-            this.rotation=.2;
-        }
-        else{
-            this.rotation=0;
-        }
-        this.card_background=card_background
+        this.click_callback=function(pointer,gameObject){
+        };
+        this.card_background.on('pointerdown', function(pointer,gameObject){
+            this.parentContainer.click_callback(pointer,gameObject);
+        });
     }
     set_click_action_send(click_actions){
-        this.card_background.on('pointerdown', function(pointer,gameObject){
+        this.click_callback=function(pointer,gameObject){
             if(click_actions.length==0){
                 //Do nothing, this card has no actions
             }else if(click_actions.length==1){
@@ -68,11 +70,34 @@ export default class DispCard extends Phaser.GameObjects.Container{
             }else{
                 console.error("Selecting action dialog not implemented yet");
             }
-        });
+        };
+        this.addOutline(0xFFFF00);
+    }
+    set_click_action_attackers(targets,min,max){
+        const scene=this.scene;
+        console.log("settign click to attackers");
+        for(const i in targets){
+            const target=targets[i];
+            if(target.Player){
+                const player_box=scene.player_ui[target.Player].box_back;
+                box_back.click_callback=function(pointer,gameObject){
+                    console.log("clicked player now!");
+                };
+            }
+        }
+    }
+    addOutline(color){
+        this.outline=this.scene.add.rectangle(0,0,x_len,y_len+5)
+        .setDepth(-10).setStrokeStyle(4,color);
+        this.add(this.outline);
     }
     set_click_action_none(){
-        this.card_background.on('pointerdown', function(pointer,gameObject){
-        });
+        this.click_callback=function(pointer,gameObject){
+        };
+        if(this.outline){
+            this.outline.destroy();
+            this.outline=null;
+        }
     }
     add_text(y,text){
         let line=this.scene.add.text((ul_x+30),(ul_y+y),text);
