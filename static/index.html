@@ -2,17 +2,13 @@
 <html>
 <head>
     <meta charset="utf-8"/>
-    <script src="/static/phaser.min.js"></script>
-    <link rel="preload" href='/static/beleren-bold_P1.01.woff2' as="font" type="font/woff" crossorigin>
-    <style>
-            @font-face {
-        font-family: "gothic"; 
-         src: url('/static/beleren-bold_P1.01.woff2');
-        }   
-    </style>
+    <script src="https://unpkg.com/react@16/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@16/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6.26.0/babel.js"></script>
+    <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <div id="phaser-game"></div>
-    <script src="/static/index.js" type="module"></script>
+    <div id="root" style="height: 98vh; width: 98vw;"></div>
+    <script src="/static/game.js" type="text/babel"></script>
 </body>
 </html>
