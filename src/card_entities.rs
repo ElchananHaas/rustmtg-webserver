@@ -55,6 +55,7 @@ pub struct CardEnt {
     pub subtypes: Subtypes,
     pub abilities: Vec<Ability>,
     pub costs: Vec<Cost>,
+    pub art_url: Option<String>,
 }
 impl CardEnt {
     pub fn has_keyword(&self, keyword: KeywordAbility) -> bool {

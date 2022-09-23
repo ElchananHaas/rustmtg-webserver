@@ -74,6 +74,10 @@ impl CardDB {
         parse_cost_line(&mut card, scryfall)?;
         parse_type_line(&mut card, scryfall)?;
         parse_pt(&mut card, scryfall);
+        card.art_url = (&scryfall.image_uris)
+            .as_ref()
+            .and_then(|x| x.small.as_ref().or(x.normal.as_ref()).or(x.large.as_ref()))
+            .cloned();
         Ok(card)
     }
 }
