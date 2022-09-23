@@ -144,7 +144,6 @@ function PlayerZoneBox(props){
     </div>
 }
 function PlayerZoneSizes(props){
-    console.log(props.player);
     return(
         <div className="player-zone-sizes">
             <PlayerZoneBox number={props.player.library.length} src={"./cardback.svg"} rotate={true} scale={127}/>
@@ -184,7 +183,12 @@ function Card(props){
         url=card.art_url;
     }
     
-    return(<img src={url} className="full-height-image"></img>)
+    return(
+        <div style={{height:"100%"}}>
+            <img src={url} className="full-height-image"></img>
+        </div>
+    
+    )
 }
 function HandAndBattlefield(props){
     return(
@@ -228,35 +232,70 @@ class Game extends React.Component{
     constructor(props) {    
         super(props);    
         const socket = new WebSocket("ws://localhost:3030/gamesetup");
+        this.socket=socket;
         socket.addEventListener('message', function (event) {
             let parsed=JSON.parse(event.data);
             console.log(parsed);
             if(parsed[0]==="GameState"){
                 this.update_state(parsed);
             }   
-            if(parsed[0]==="Action"){
+            if(["Action","Attackers"].includes(parsed[0])){
                 this.respond_action(parsed);
             }
-            if(parsed[0]==="Attackers"){
-                this.choose_attackers(parsed);
-            } 
         }.bind(this));
         this.state = {
             card_width:75,
             playerbox_width:125,
+            action_type:null,
+            action_data:null,
+            game:null,
         };  
     }
     update_state(parsed){
-        const state={
+        const structures={
             me:parsed[1],
             ecs:parsed[2],
-            players:parsed[3],
-            globals:parsed[4],
-        };
+            players:parsed[3]};
+        const state = Object.assign({}, structures, parsed[4]);
+        this.clear_actions();
         this.setState({game:state});
     }
     respond_action(parsed){
-
+        if(parsed[0]=="Action" && parsed[1].SelectN.ents.length==0){
+            this.socket.send("[]");
+        }
+        this.setState({
+            action_type:parsed[0],
+            actions_data:parsed[1]
+        });
+    }
+    clear_actions(){
+        this.setState({
+            action_type:null,
+            action_data:null}
+        );
+    }
+    card_clicked(card_id){
+        if(action_type=="Action"){
+            const card_actions=[];
+            this.action_data.SelectN.ents.map((action) =>
+                {
+                    if(action.PlayLand==card_id){
+                        card_actions.push([card_id,action]);
+                    }
+                    if(action.Cast && action.Cast.source_card==card_id){
+                        card_actions.push([card_id,action]);
+                    }
+                }
+            );
+            if(card_actions.length==1){
+                let to_send=JSON.stringify([card_actions[0][0]]);
+                this.scene.socket.send(to_send);
+            }
+            else{
+                throw "I don't know how to deal with multiple actions for one card yet!";
+            }
+        }
     }
     render() {
         if(this.state.game){
@@ -264,7 +303,7 @@ class Game extends React.Component{
             <div className="full-size">
                 <PhaseImages phase_image_map={phase_image_map} phase={this.state.game.phase} subphase={this.state.game.subphase}/>
                 <Stack card_width={this.state.card_width}/>
-                <PlayerBoxes game={this.state.game} width={this.state.playerbox_width} />
+                <PlayerBoxes game={this.state.game} width={this.state.playerbox_width}/>
             </div>
         );
         }else{
