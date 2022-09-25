@@ -103,6 +103,7 @@ impl Player {
             {
                 continue;
             }
+            println!("accepted {:?}",response);
             return response;
         }
     }

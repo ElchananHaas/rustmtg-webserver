@@ -182,9 +182,8 @@ function Card(props){
     } else{
         url=card.art_url;
     }
-    
     return(
-        <div style={{height:"100%"}}>
+        <div style={{height:"100%"}} onClick={() => props.handlers.click(props.id)}>
             <img src={url} className="full-height-image"></img>
         </div>
     
@@ -198,7 +197,9 @@ function HandAndBattlefield(props){
                     <Card 
                     game={props.game} 
                     id={card_id}
-                    key={card_id}/>
+                    key={card_id}
+                    actions={props.actions}
+                    handlers={props.handlers}/>
                 )}
             </div>
         </div>
@@ -222,11 +223,38 @@ function PlayerBoxes(props){
                             game={props.game}
                             player={player} 
                             player_id={player_id} 
-                            key={player_id}/>
+                            key={player_id}
+                            actions={props.actions}
+                            handlers={props.handlers}/>
                     </div>
                 )}
             </div>
     )
+}
+function process_actions(action_data){
+    const card_actions={};
+    action_data.SelectN.ents.map((action, index) =>
+    {
+        let id=null;
+        if(action.PlayLand){
+            id=action.PlayLand;
+        }
+        if(action.Cast){
+            id=action.Cast.source_card;
+        }
+        if(id==null){
+            console.log("action is");
+            console.log(action);
+        }
+        const data={card_id:id,action:action,index:index};
+        if(card_actions[id]){
+            card_actions[id].push(data);
+        }
+        else{
+            card_actions[id]=[data];
+        }
+    });
+    return card_actions;
 }
 class Game extends React.Component{
     constructor(props) {    
@@ -246,10 +274,15 @@ class Game extends React.Component{
         this.state = {
             card_width:75,
             playerbox_width:125,
-            action_type:null,
-            action_data:null,
             game:null,
-        };  
+            handlers:{
+                click:this.card_clicked.bind(this)
+            },
+            actions:{
+                type:null,
+                data:null,
+            }
+        }; 
     }
     update_state(parsed){
         const structures={
@@ -261,36 +294,36 @@ class Game extends React.Component{
         this.setState({game:state});
     }
     respond_action(parsed){
-        if(parsed[0]=="Action" && parsed[1].SelectN.ents.length==0){
-            this.socket.send("[]");
+        if(parsed[0]=="Action"){
+            if(parsed[1].SelectN.ents.length==0){
+                this.socket.send("[]");
+                return;
+            }
+            parsed[1]=process_actions(parsed[1]);
         }
-        this.setState({
-            action_type:parsed[0],
-            actions_data:parsed[1]
-        });
+        this.setState({actions:{
+            type:parsed[0],
+            data:parsed[1],
+        }});
     }
     clear_actions(){
         this.setState({
-            action_type:null,
-            action_data:null}
+            actions:{
+                type:null,
+                data:null,
+            }}
         );
     }
     card_clicked(card_id){
-        if(action_type=="Action"){
-            const card_actions=[];
-            this.action_data.SelectN.ents.map((action) =>
-                {
-                    if(action.PlayLand==card_id){
-                        card_actions.push([card_id,action]);
-                    }
-                    if(action.Cast && action.Cast.source_card==card_id){
-                        card_actions.push([card_id,action]);
-                    }
-                }
-            );
+        if(this.state.actions.type=="Action"){
+            const card_actions=this.state.actions.data[card_id];
+            if(!card_actions){
+                return;
+            }
             if(card_actions.length==1){
-                let to_send=JSON.stringify([card_actions[0][0]]);
-                this.scene.socket.send(to_send);
+                const to_send=JSON.stringify([card_actions[0].index]);
+                this.socket.send(to_send);
+                this.clear_actions();
             }
             else{
                 throw "I don't know how to deal with multiple actions for one card yet!";
@@ -303,7 +336,10 @@ class Game extends React.Component{
             <div className="full-size">
                 <PhaseImages phase_image_map={phase_image_map} phase={this.state.game.phase} subphase={this.state.game.subphase}/>
                 <Stack card_width={this.state.card_width}/>
-                <PlayerBoxes game={this.state.game} width={this.state.playerbox_width}/>
+                <PlayerBoxes game={this.state.game}
+                 width={this.state.playerbox_width} 
+                 actions={this.state.actions}
+                 handlers={this.state.handlers}/>
             </div>
         );
         }else{
