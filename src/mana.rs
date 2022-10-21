@@ -5,11 +5,12 @@ use crate::{
     game::Game,
 };
 use enum_map::Enum;
+use schemars::JsonSchema;
 use serde::ser::SerializeMap;
 use serde_derive::Serialize;
 use std::sync::Arc;
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Enum)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Enum, JsonSchema)]
 pub enum Color {
     White,
     Blue,
@@ -18,12 +19,12 @@ pub enum Color {
     Green,
     Colorless,
 }
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, JsonSchema)]
 pub struct Mana {
     pub color: Color,
     pub restriction: Option<ManaRestriction>,
 }
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, JsonSchema)]
 pub struct ManaRestriction {}
 impl ManaRestriction {
     pub fn approve(&self, game: &Game, action: &StackActionOption) -> bool {
@@ -45,7 +46,7 @@ impl Mana {
 //This ordering is significant,
 //because we want to sort generic mana to the bottom for
 //fulfilling with mana symbols last
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Hash, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Hash, PartialOrd, Ord, JsonSchema)]
 pub enum ManaCostSymbol {
     White,
     Blue,

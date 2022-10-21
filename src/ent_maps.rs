@@ -1,37 +1,25 @@
 use std::{collections::HashMap, hash::Hash, num::NonZeroU64};
 
+use schemars::JsonSchema;
 use serde::ser::SerializeMap;
 use serde::Serialize;
 
 use crate::{card_entities::CardEnt, entities::CardId, spellabil::KeywordAbility};
-#[derive(Clone)]
+#[derive(Clone, JsonSchema, Serialize)]
 pub struct EntMap<K, V>
 where
-    K: Copy + Hash + Eq + From<NonZeroU64>,
+    K: Copy + Hash + Eq + From<NonZeroU64> + JsonSchema,
+    V: JsonSchema,
 {
     ents: HashMap<K, V>,
+    #[serde(skip)]
     count: NonZeroU64,
-}
-
-impl<K: Serialize, V: Serialize> Serialize for EntMap<K, V>
-where
-    K: Copy + Hash + Eq + From<NonZeroU64>,
-{
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut map = serializer.serialize_map(Some(self.ents.len()))?;
-        for (k, v) in &self.ents {
-            map.serialize_entry(k, v)?;
-        }
-        map.end()
-    }
 }
 
 impl<K, V> EntMap<K, V>
 where
-    K: Copy + Hash + Eq + From<NonZeroU64>,
+    K: Copy + Hash + Eq + From<NonZeroU64> + JsonSchema,
+    V: JsonSchema,
 {
     pub fn new() -> Self {
         Self {
@@ -74,6 +62,10 @@ where
         let newkey = self.get_newkey();
         self.ents.insert(newkey, value);
         (newkey, self.ents.get_mut(&newkey).unwrap())
+    }
+    pub fn skip_count(&mut self, n: u64) {
+        let val = self.count.get() + n;
+        self.count = NonZeroU64::new(val).unwrap();
     }
 }
 impl EntMap<CardId, CardEnt> {

@@ -1,17 +1,3 @@
-const phase_image_map={
-    "Untap":"./phases/untap.svg",
-    "Upkeep":"./phases/upkeep.svg",
-    "Draw":"./phases/draw.svg",
-    "FirstMain":"./phases/main1.svg",
-    "BeginCombat":"./phases/combat_start.svg",
-    "Attackers":"./phases/combat_attackers.svg",
-    "Blockers":"./phases/combat_blockers.svg",
-    "Damage":"./phases/combat_damage.svg",
-    "EndCombat":"./phases/combat_end.svg",
-    "SecondMain":"./phases/main2.svg",
-    "EndStep":"./phases/cleanup.svg",
-    "Pass":"./phases/nextturn.svg",
-};
 
 const colors_map={
     "White":"./counters/w.svg",
@@ -103,7 +89,14 @@ function ImageCircledText(props){
     </div>)
 }
 function LifeTotalBox(props){
-    return <div className="life-total-box">
+    let style={};
+    const attacked=props.actions.type=="Attackers" && props.actions.data.PairAB.b.filter((attackee) =>{
+        return attackee.Player==props.player_id;
+    }).length>0;
+    if(attacked){
+        style.borderColor="#AA0000";
+    }
+    return <div className="life-total-box" style={style} onClick={() => props.handlers.click(props.player_id)}>
         <ImageCircledText src="./heart.svg" number={props.life}/>
     </div>
 }
@@ -130,7 +123,7 @@ function ManaSymbols(props){
     colors.map(color => {color_quantities[color]=0;});
     const mana_pool=props.player.mana_pool;
     mana_pool.map(function(mana_id){
-        color_quantities[props.game.globals.mana[mana_id].color]+=1;
+        color_quantities[props.game.mana[mana_id].color]+=1;
     });
     return(
         colors.map(color =>
@@ -155,7 +148,11 @@ function PlayerZoneSizes(props){
 function PlayerBox(props){
     return(
         <div className="custom-height-flexbox" style={{height:"100%",background:"lightgrey"}}>
-            <LifeTotalBox life={props.player.life } name={props.player.name}/>
+            <LifeTotalBox   life={props.player.life} 
+                            name={props.player.name}
+                            player_id={props.player_id} 
+                            actions={props.actions}
+                            handlers={props.handlers} />
             <div className="player-ui-bottom">
                 <div className="mana-symbols">
                     <ManaSymbols
@@ -182,18 +179,59 @@ function Card(props){
     } else{
         url=card.art_url;
     }
+    let style={};
+    if(card.tapped){
+        style = {
+            transform: `rotate(15deg)`,
+        };
+    }
+    if(props.actions.type=="Action"){
+        if(props.actions.data[props.id] && props.actions.data[props.id].length>0){
+            style.borderColor="#AAAA00";
+        }
+    }
+    if(props.actions.type=="Attackers"){
+        const pairing=props.actions.data.PairAB;
+        const index=pairing.a.indexOf(props.id);
+        if(index!=-1){
+            style.borderColor="#AA0000";
+            if(props.actions.data.response[index].length>0){
+                style.borderColor="#FF0000";
+            }
+            if(props.actions.data.selected_attacker==props.id){
+                style.borderColor="#FF0000";
+            }
+        }
+    }
     return(
-        <div style={{height:"100%"}} onClick={() => props.handlers.click(props.id)}>
+        <div className="card-div" style={style} onClick={() => props.handlers.click(props.id)}>
             <img src={url} className="full-height-image"></img>
         </div>
     
     )
 }
 function HandAndBattlefield(props){
+    const controlled=props.game.battlefield.filter((card_id) =>{
+        const card=props.game.ecs[card_id];
+        if(!card){
+            return false;
+        }
+        return card.controller==props.player_id;
+    });
     return(
         <div className="hand-and-battlefield">
             <div className="hand">
                 {props.player.hand.map((card_id)=>
+                    <Card 
+                    game={props.game} 
+                    id={card_id}
+                    key={card_id}
+                    actions={props.actions}
+                    handlers={props.handlers}/>
+                )}
+            </div>
+            <div className="battlefield">
+                {controlled.map((card_id)=>
                     <Card 
                     game={props.game} 
                     id={card_id}
@@ -217,7 +255,9 @@ function PlayerBoxes(props){
                             game={props.game}
                             player={player} 
                             player_id={player_id} 
-                            key={player_id}/>
+                            key={player_id}
+                            actions={props.actions}
+                            handlers={props.handlers}/>
                         </div>
                         <HandAndBattlefield
                             game={props.game}
@@ -241,6 +281,9 @@ function process_actions(action_data){
         }
         if(action.Cast){
             id=action.Cast.source_card;
+        }
+        if(action.ActivateAbility){
+            id=action.ActivateAbility.source;
         }
         if(id==null){
             console.log("action is");
@@ -267,8 +310,10 @@ class Game extends React.Component{
             if(parsed[0]==="GameState"){
                 this.update_state(parsed);
             }   
-            if(["Action","Attackers"].includes(parsed[0])){
+            else if(["Action","Attackers"].includes(parsed[0])){
                 this.respond_action(parsed);
+            } else{
+                console.log("UNKNOWN ACTION: "+parsed);
             }
         }.bind(this));
         this.state = {
@@ -276,13 +321,32 @@ class Game extends React.Component{
             playerbox_width:125,
             game:null,
             handlers:{
-                click:this.card_clicked.bind(this)
+                click:this.item_clicked.bind(this)
             },
             actions:{
                 type:null,
                 data:null,
             }
         }; 
+    }
+    keyPressed(e){
+        console.log("key pressed: "+e.keyCode);
+        if(this.state.actions.type=="Action"){
+            this.socket.send("[]");
+            this.clear_actions();
+        }
+        if(this.state.actions.type=="Attackers"){
+            const response=JSON.stringify(this.state.actions.data.response);
+            this.socket.send(response);
+            this.clear_actions();
+        }
+
+    }
+    componentDidMount(){
+        document.addEventListener("keydown", this.keyPressed.bind(this), false);
+    }
+    componentWillUnmount(){
+        document.removeEventListener("keydown", this.keyPressed.bind(this), false);
     }
     update_state(parsed){
         const structures={
@@ -301,6 +365,14 @@ class Game extends React.Component{
             }
             parsed[1]=process_actions(parsed[1]);
         }
+        if(parsed[0]=="Attackers"){
+            const attackers=parsed[1].PairAB.a;
+            if(attackers.length==0){
+                this.socket.send("[]")
+            }else{
+                parsed[1].response=attackers.map((i)=> []);
+            }
+        }
         this.setState({actions:{
             type:parsed[0],
             data:parsed[1],
@@ -314,9 +386,9 @@ class Game extends React.Component{
             }}
         );
     }
-    card_clicked(card_id){
+    item_clicked(ent_id){
         if(this.state.actions.type=="Action"){
-            const card_actions=this.state.actions.data[card_id];
+            const card_actions=this.state.actions.data[ent_id];
             if(!card_actions){
                 return;
             }
@@ -327,6 +399,36 @@ class Game extends React.Component{
             }
             else{
                 throw "I don't know how to deal with multiple actions for one card yet!";
+            }
+        }
+        if(this.state.actions.type=="Attackers"){
+            console.log("clicked attacker thing: "+ent_id);
+            const action_data=this.state.actions.data;
+            console.log("action data is: "+JSON.stringify(action_data));
+            const pairing=action_data.PairAB;
+            const a_index=pairing.a.indexOf(ent_id);
+            if(a_index!=-1){
+                if(action_data.selected_attacker){
+                    action_data.selected_attacker=null;
+                }else{
+                    action_data.selected_attacker=a_index;
+                }
+            }
+            const selected=action_data.selected_attacker;
+            if(selected != null){
+                pairing.b.map((attackee,i) =>{
+                    if(attackee.Player == ent_id){
+                        const act_index=action_data.response[selected].indexOf(i);
+                        console.log("at "+i+" act index is "+act_index);
+                        if(act_index != -1){
+                            action_data.response[selected].pop(act_index)
+                        }else{
+                            action_data.response[selected].push(i);
+                        }
+                    }
+                });
+            }else{
+
             }
         }
     }

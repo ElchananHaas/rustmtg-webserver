@@ -1,13 +1,14 @@
 use crate::ability::Ability;
 use crate::card_entities::{CardEnt, EntType};
 use crate::carddb::CardDB;
+use crate::client_message::{Ask, AskSelectN};
 use crate::cost::{Cost, PaidCost};
 use crate::ent_maps::EntMap;
-use crate::entities::{CardId, ManaId, PlayerId, TargetId};
+use crate::entities::{CardId, ManaId, PlayerId, TargetId, MIN_CARDID};
 use crate::errors::MTGError;
 use crate::event::{DiscardCause, Event, EventResult, TagEvent};
 use crate::mana::{Color, Mana, ManaCostSymbol};
-use crate::player::{AskReason, Player, PlayerCon};
+use crate::player::{Player, PlayerCon};
 use crate::spellabil::{Clause, ClauseEffect, KeywordAbility};
 use anyhow::{bail, Result};
 use async_recursion::async_recursion;
@@ -15,8 +16,8 @@ use enum_map::EnumMap;
 use futures::future;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
+use schemars::JsonSchema;
 use serde::Serialize;
-use serde_derive::Serialize;
 use serde_json;
 use std::cmp::max;
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -35,11 +36,11 @@ pub struct GameBuilder {
     turn_order: VecDeque<PlayerId>,
 }
 //Implement debug trait!
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Clone, JsonSchema)]
 pub struct Game {
-    #[serde(skip_serializing)]
+    #[serde(skip)]
     pub players: Players,
-    #[serde(skip_serializing)]
+    #[serde(skip)]
     pub cards: Cards,
     pub mana: EntMap<ManaId, Mana>,
     pub battlefield: HashSet<CardId>,
@@ -56,16 +57,16 @@ pub struct Game {
     pub lands_played_this_turn: u32,
     pub land_play_limit: u32,
     pub priority: PlayerId,
-    #[serde(skip_serializing)]
+    #[serde(skip)]
     db: &'static CardDB,
-    #[serde(skip_serializing)]
+    #[serde(skip)]
     backup: Option<Box<Game>>,
-    #[serde(skip_serializing)]
+    #[serde(skip)]
     rng: rand::rngs::StdRng, //Store the RNG to allow for deterministic replay
                              //if I choose to implement it
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, JsonSchema)]
 pub enum GameOutcome {
     Ongoing,
     Tie,
@@ -73,9 +74,11 @@ pub enum GameOutcome {
 }
 impl GameBuilder {
     pub fn new() -> Self {
+        let mut cards = Cards::new();
+        cards.skip_count(MIN_CARDID); //make sure they don't overlap with players in JavaScript
         GameBuilder {
             players: Players::new(),
-            cards: Cards::new(),
+            cards,
             turn_order: VecDeque::new(),
         }
     }
@@ -313,9 +316,7 @@ impl Game {
             if card.tapped {
                 return false;
             }
-            !card.types.creature
-                || card.has_keyword(KeywordAbility::Haste)
-                || !card.summoning_sickness
+            !card.types.creature || card.has_keyword(KeywordAbility::Haste) || !card.etb_this_cycle
         } else {
             false
         }
@@ -337,6 +338,7 @@ impl Game {
         let mut pass_count = 0;
         while pass_count < players.len() {
             self.priority = players[0];
+            self.layers();
             self.send_state().await;
             let act_taken = self.grant_priority(&players).await;
             match act_taken {
@@ -371,12 +373,18 @@ impl Game {
 
     pub async fn grant_priority(&mut self, players: &VecDeque<PlayerId>) -> ActionPriorityType {
         let player = players[0];
-        self.layers();
         loop {
             let actions = self.compute_actions(player);
             let mut choice = Vec::new();
             if let Some(pl) = self.players.get(player) {
-                choice = pl.ask_user_selectn(&actions, 0, 1, AskReason::Action).await;
+                let select = AskSelectN {
+                    ents: actions.clone(),
+                    min: 0,
+                    max: 1,
+                };
+                choice = pl
+                    .ask_user_selectn(&Ask::Action(select.clone()), &select)
+                    .await;
             }
             if choice.len() == 0 {
                 return ActionPriorityType::Pass;
@@ -847,7 +855,7 @@ pub enum ActionPriorityType {
     Pass,
     Keep,
 }
-#[derive(Clone, Copy, Debug, Serialize, PartialEq)]
+#[derive(Clone, Copy, Debug, Serialize, PartialEq, JsonSchema)]
 pub enum Phase {
     Begin,
     FirstMain,
@@ -855,7 +863,7 @@ pub enum Phase {
     SecondMain,
     Ending,
 }
-#[derive(Clone, Copy, Debug, Serialize, PartialEq)]
+#[derive(Clone, Copy, Debug, Serialize, PartialEq, JsonSchema)]
 pub enum Subphase {
     Untap,
     Upkeep,
@@ -869,7 +877,7 @@ pub enum Subphase {
     EndStep,
     Cleanup,
 }
-#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, JsonSchema)]
 pub enum Zone {
     Hand,
     Library,

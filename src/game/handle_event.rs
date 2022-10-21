@@ -1,9 +1,9 @@
 use std::cmp::min;
 
 use crate::card_entities::EntType;
+use crate::client_message::AskPairAB;
 use crate::event::DamageReason;
 use crate::game::*;
-use crate::player::AskReason;
 use async_recursion::async_recursion;
 
 impl Game {
@@ -285,7 +285,7 @@ impl Game {
                 }
                 Zone::Battlefield => {
                     self.battlefield.insert(newent);
-                    newcard.summoning_sickness=true;
+                    newcard.etb_this_cycle=true;
                 }
                 Zone::Hand => {
                     owner.hand.insert(newent);
@@ -317,13 +317,14 @@ impl Game {
             //Choice limits is inclusive on both bounds
             let choice_limits = vec![(0, 1); legal_attackers.len()];
             if let Some(player) = self.players.get(self.active_player()) {
+                let pairing = AskPairAB {
+                    a: legal_attackers.clone(),
+                    b: attack_targets.clone(),
+                    num_choices: choice_limits,
+                };
+
                 attacks = player
-                    .ask_user_pair(
-                        legal_attackers.clone(),
-                        attack_targets.clone(),
-                        choice_limits,
-                        AskReason::Attackers,
-                    )
+                    .ask_user_pair(&Ask::Attackers(pairing.clone()), &pairing)
                     .await;
             } else {
                 return;
@@ -387,7 +388,7 @@ impl Game {
                 {
                     self.untap(perm).await;
                     if let Some(card) = self.cards.get_mut(perm) {
-                        card.summoning_sickness = false;
+                        card.etb_this_cycle = false;
                     }
                 }
                 //Don't cycle priority in untap
@@ -419,13 +420,13 @@ impl Game {
                     let choice_limits = vec![(0, 1); potential_blockers.len()];
                     loop {
                         let blocks = if let Some(player) = self.players.get(opponent) {
+                            let pairing = AskPairAB {
+                                a: potential_blockers.clone(),
+                                b: attacking.clone(),
+                                num_choices: choice_limits.clone(),
+                            };
                             player
-                                .ask_user_pair(
-                                    potential_blockers.clone(),
-                                    attacking.clone(),
-                                    choice_limits.clone(),
-                                    AskReason::Blockers,
-                                )
+                                .ask_user_pair(&Ask::Blockers(pairing.clone()), &pairing)
                                 .await
                         } else {
                             return;
@@ -492,8 +493,13 @@ impl Game {
                 let diff = player.hand.len().saturating_sub(player.max_handsize);
                 let diff: u32 = diff.try_into().unwrap();
                 let hand: Vec<CardId> = player.hand.iter().cloned().collect();
+                let ask = AskSelectN {
+                    ents: hand.clone(),
+                    min: diff,
+                    max: diff,
+                };
                 let to_discard = player
-                    .ask_user_selectn(&hand, diff, diff, AskReason::DiscardToHandSize)
+                    .ask_user_selectn(&Ask::DiscardToHandSize(ask.clone()), &ask)
                     .await;
                 for i in to_discard {
                     self.discard(self.active_player(), hand[i], DiscardCause::GameInternal)

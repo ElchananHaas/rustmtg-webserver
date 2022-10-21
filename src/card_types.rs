@@ -5,13 +5,15 @@ use nom::error::{Error, ParseError};
 use nom::Err;
 use nom::IResult;
 use paste::paste;
+use schemars::JsonSchema;
 use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
 use serde_derive::Serialize;
 use std::convert::AsRef;
 use strum_macros::AsRefStr;
+
 macro_rules! enumset{
     ($name:ident, $($e:ident),*) => {
-        #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize)]
+        #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize, JsonSchema)]
         #[derive(AsRefStr)]
         #[allow(dead_code)] //allow dead code to reduce warnings noise on each variant
         #[repr(u32)]
@@ -31,7 +33,7 @@ macro_rules! enumset{
         }
         paste!{
             #[derive(Default)]
-            #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+            #[derive(Clone, Copy, PartialEq, Eq, Debug, JsonSchema )]
             pub struct [<$name s>]{
                 $(
                     pub [<$e:lower>]:bool,

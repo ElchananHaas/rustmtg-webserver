@@ -1,5 +1,5 @@
+use schemars::JsonSchema;
 use serde::Serialize;
-use serde_derive::Serialize;
 
 use crate::{
     ability::Ability,
@@ -14,7 +14,7 @@ use crate::game::Zone;
 //Checks to see if casting option's rules were followed
 //The zone it can be cast from will implicitly be enabled by
 //the code generating casting options
-#[derive(Clone, Serialize, Debug)]
+#[derive(Clone, Serialize, Debug, JsonSchema)]
 pub enum ActionFilter {
     None,
 }
@@ -26,7 +26,7 @@ impl ActionFilter {
         }
     }
 }
-#[derive(Clone, Serialize, Debug)]
+#[derive(Clone, Serialize, Debug, JsonSchema)]
 pub struct CastingOption {
     pub source_card: CardId,
     pub zone: Zone,
@@ -50,7 +50,7 @@ pub struct AbilityOption {
     pub index: usize,
 }
 //Every action the player can take.
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, JsonSchema, Debug)]
 pub enum Action {
     Cast(CastingOption),
     PlayLand(CardId),

@@ -1,10 +1,9 @@
-use crate::game::*;
-use rand::prelude::*;
-use std::{
-    hash::Hash,
-    num::{NonZeroU32, NonZeroU64},
+use crate::{
+    client_message::{ClientMessage, GameState},
+    game::*,
 };
-
+use rand::prelude::*;
+use std::num::NonZeroU64;
 impl Game {
     pub async fn send_state(&mut self) {
         let mut state_futures = Vec::new();
@@ -44,15 +43,14 @@ impl Game {
             let view = player_ref.view(&self.cards, player, &hidden_map);
             player_views.insert(player_id, view);
         }
-        let mut buffer = Vec::new();
-        {
-            let cursor = std::io::Cursor::new(&mut buffer);
-            let mut json_serial = serde_json::Serializer::new(cursor);
-            let added_context = ("GameState", player, card_views, player_views, self);
-            added_context.serialize(&mut json_serial)?;
-        }
         if let Some(pl) = self.players.get(player) {
-            pl.send_state(buffer).await?;
+            let message: ClientMessage = ClientMessage::GameState(GameState {
+                player,
+                cards: card_views,
+                players: player_views,
+                game: self,
+            });
+            pl.send_data(message).await?;
         }
         Ok(())
     }

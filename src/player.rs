@@ -1,18 +1,20 @@
+use crate::client_message::{Ask, AskPairAB, AskSelectN, ClientMessage};
 use crate::entities::{CardId, ManaId, PlayerId};
 use crate::game::Cards;
-use anyhow::Result;
+use anyhow::{bail, Result};
 use futures::{SinkExt, StreamExt};
+use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-use serde_derive::Serialize;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use warp::hyper::Response;
 
 use warp::filters::ws::Message;
 use warp::ws::WebSocket;
-#[derive(Clone)]
+#[derive(Clone, JsonSchema)]
 pub struct Player {
     pub name: String,
     pub life: i64,
@@ -21,15 +23,16 @@ pub struct Player {
     pub mana_pool: HashSet<ManaId>,
     pub graveyard: Vec<CardId>,
     pub max_handsize: usize,
+    #[serde(skip)]
     pub player_con: PlayerCon,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 pub struct PlayerView<'a> {
     pub name: &'a str,
     pub life: i64,
-    pub library: Vec<Option<CardId>>,
-    pub hand: Vec<Option<CardId>>,
+    pub library: Vec<CardId>,
+    pub hand: Vec<CardId>,
     pub graveyard: &'a Vec<CardId>,
     pub mana_pool: &'a HashSet<ManaId>,
     pub max_handsize: usize,
@@ -39,7 +42,7 @@ fn view_t<'a>(
     r: impl Iterator<Item = &'a CardId> + 'a,
     pl: PlayerId,
     hidden_map: &'a HashMap<CardId, CardId>,
-) -> impl Iterator<Item = Option<CardId>> + 'a {
+) -> impl Iterator<Item = CardId> + 'a {
     r.map(move |&id| {
         cards
             .get(id)
@@ -47,12 +50,13 @@ fn view_t<'a>(
                 if ent.known_to.contains(&pl) {
                     Some(id)
                 } else {
-                    hidden_map.get(&id).map(|x| *x)
+                    hidden_map.get(&id).map(|x| *x) //If the player's hand contains a card not in the game
+                                                    //don't send it to the client because it will confuse the javascript
                 }
             })
             .flatten()
     })
-    .filter(|x| x.is_some())
+    .filter_map(|x| x)
 }
 impl Player {
     pub fn view(
@@ -74,36 +78,30 @@ impl Player {
         }
     }
 
-    pub async fn send_state(&self, buffer: Vec<u8>) -> Result<()> {
-        self.player_con.send_state(buffer).await
+    pub async fn send_data(&self, data: ClientMessage<'_, '_, '_>) -> Result<()> {
+        let mut buffer = Vec::new();
+        {
+            let cursor = std::io::Cursor::new(&mut buffer);
+            let mut json_serial = serde_json::Serializer::new(cursor);
+            data.serialize(&mut json_serial)?;
+        }
+        self.player_con.send_data(buffer).await
     }
+
     //Select n entities from a vector, returns selected indicies
-    pub async fn ask_user_selectn<T: Serialize + Clone>(
-        &self,
-        ents: &Vec<T>,
-        min: u32,
-        max: u32,
-        reason: AskReason,
-    ) -> Vec<usize> {
-        let query = AskUser {
-            asktype: AskType::SelectN {
-                ents: ents.clone(),
-                min,
-                max,
-            },
-            reason,
-        };
+    pub async fn ask_user_selectn<T>(&self, query: &Ask, ask: &AskSelectN<T>) -> Vec<usize> {
         loop {
-            let response = self.player_con.ask_user::<Vec<usize>, T>(&query).await;
+            self.send_data(ClientMessage::AskUser(query)).await.expect("Failed to send data");
+            let response = self.player_con.receive::<Vec<usize>>().await;
             let response_unique: HashSet<usize> = response.iter().cloned().collect();
-            if response.len() < min.try_into().unwrap()
-                || response.len() > max.try_into().unwrap()
+            if response.len() < ask.min.try_into().unwrap()
+                || response.len() > ask.max.try_into().unwrap()
                 || response.len() != response_unique.len()
-                || response.iter().any(|&i| i >= ents.len())
+                || response.iter().any(|&i| i >= ask.ents.len())
             {
                 continue;
             }
-            println!("accepted {:?}",response);
+            println!("accepted {:?}", response);
             return response;
         }
     }
@@ -111,34 +109,19 @@ impl Player {
     //Returns an adjacency list with either the
     //planeswalker/player each attacker is attacking,
     //or the list of creatures each blocker is blocking
-    pub async fn ask_user_pair<T: Clone + Eq + DeserializeOwned + Hash + Copy + Serialize>(
+    pub async fn ask_user_pair<T: DeserializeOwned + Hash + Eq + Copy + Clone>(
         &self,
-        a: Vec<CardId>,
-        b: Vec<T>,
-        //Min and max number of choices
-        num_choices: Vec<(usize, usize)>,
-        reason: AskReason,
+        query: &Ask,
+        ask: &AskPairAB<T>,
     ) -> Vec<Vec<T>> {
-        let query = AskUser {
-            asktype: AskType::PairAB {
-                a: a.clone(),
-                b: b.clone(),
-                num_choices: num_choices.clone(),
-            },
-            reason,
-        };
         'outer: loop {
-            let response = self.player_con.ask_user::<Vec<Vec<T>>, T>(&query).await;
-            if response.len() != a.len() {
+            self.send_data(ClientMessage::AskUser(query)).await.expect("Failed to send data");
+            let response = self.player_con.receive::<Vec<Vec<T>>>().await;
+            if response.len() != ask.a.len() {
                 continue 'outer;
             }
-            for item in response.iter().flatten() {
-                if !b.contains(item) {
-                    continue 'outer;
-                }
-            }
             for (i, row) in response.iter().enumerate() {
-                if row.len() < num_choices[i].0 || row.len() > num_choices[i].1 {
+                if row.len() < ask.num_choices[i].0 || row.len() > ask.num_choices[i].1 {
                     continue 'outer;
                 }
                 let as_set = row.iter().map(|x| *x).collect::<HashSet<T>>();
@@ -151,31 +134,6 @@ impl Player {
     }
 }
 
-#[derive(Clone, Debug, Serialize)]
-pub struct AskUser<T> {
-    reason: AskReason,
-    asktype: AskType<T>,
-}
-#[derive(Clone, Debug, Serialize)]
-pub enum AskType<T> {
-    SelectN {
-        ents: Vec<T>,
-        min: u32,
-        max: u32,
-    },
-    PairAB {
-        a: Vec<CardId>,
-        b: Vec<T>,
-        num_choices: Vec<(usize, usize)>,
-    },
-}
-#[derive(Copy, Clone, Debug, Serialize)]
-pub enum AskReason {
-    Attackers,
-    Blockers,
-    DiscardToHandSize,
-    Action,
-}
 #[derive(Clone)]
 pub struct PlayerCon {
     socket: Arc<Mutex<WebSocket>>,
@@ -188,34 +146,12 @@ impl PlayerCon {
         }
     }
 
-    pub async fn ask_user<T: DeserializeOwned, U: Serialize>(&self, query: &AskUser<U>) -> T {
+    pub async fn receive<T: DeserializeOwned>(&self) -> T {
         let mut socket = self.socket.lock().await;
-        let res = self.ask_user_socket::<T, U>(query, &mut socket).await;
-        res
-    }
-    async fn ask_user_socket<T: DeserializeOwned, U: Serialize>(
-        &self,
-        query: &AskUser<U>,
-        socket: &mut WebSocket,
-    ) -> T {
-        let mut buffer = Vec::<u8>::new();
-        {
-            let cursor = std::io::Cursor::new(&mut buffer);
-            let mut json_serial = serde_json::Serializer::new(cursor);
-            (&query.reason, &query.asktype)
-                .serialize(&mut json_serial)
-                .expect("State must be serializable");
-        }
         loop {
-            let msg = std::str::from_utf8(&buffer).expect("json is valid text");
-            let sres = socket.send(Message::text(msg)).await;
-
-            if sres.is_err() {
-                PlayerCon::socket_error().await;
-                continue;
-            };
             let recieved = socket.next().await.expect("Socket is still open");
             let message = if let Ok(msg) = recieved {
+                println!("Recieved message {:?}",msg);
                 msg
             } else {
                 PlayerCon::socket_error().await;
@@ -235,17 +171,15 @@ impl PlayerCon {
             }
         }
     }
-    pub async fn send_state(&self, state: Vec<u8>) -> Result<()> {
+    pub async fn send_data(&self, state: Vec<u8>) -> Result<()> {
         let mut socket = self.socket.lock().await;
-        let res = self.send_state_socket(state, &mut socket).await;
-        res
-    }
-    async fn send_state_socket(&self, state: Vec<u8>, socket: &mut WebSocket) -> Result<()> {
         let msg = std::str::from_utf8(&state).expect("json is valid text");
-        socket.send(Message::text(msg)).await?;
-        Ok(())
+        socket
+            .send(Message::text(msg))
+            .await
+            .map_err(|x| anyhow::Error::msg("Connection broke on send"))
     }
     async fn socket_error() {
-        panic!("Connection to client broken"); //Give up after around 5 min
+        panic!("Connection broke on read");
     }
 }

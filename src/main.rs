@@ -1,24 +1,22 @@
-#![feature(let_chains)]
 #![feature(never_type)]
+#![feature(const_option)]
 #![deny(unused_must_use)]
 use anyhow::Result;
-use futures::SinkExt;
 use once_cell::sync::OnceCell;
-use serde::Serialize;
 use std::mem;
 use std::sync::{Arc, Mutex};
-use warp::ws::{Message, WebSocket};
+use warp::ws::WebSocket;
 use warp::Filter;
 
 use crate::entities::PlayerId;
-//use actix_files::NamedFile;
-//use actix_web::{HttpRequest, Result};
+use crate::write_schema::write_types;
 mod ability;
 mod ability_db;
 mod actions;
 mod card_entities;
 mod card_types;
 mod carddb;
+mod client_message;
 mod cost;
 mod ent_maps;
 mod entities;
@@ -28,11 +26,13 @@ mod game;
 mod mana;
 mod player;
 mod spellabil;
+mod write_schema;
 static CARDDB: OnceCell<carddb::CardDB> = OnceCell::new();
 
 type Pairing = Arc<Mutex<Option<WebSocket>>>;
 #[tokio::main]
 async fn main() {
+    write_types();
     CARDDB.set(carddb::CardDB::new()).unwrap();
     let pairer = Pairing::default();
     let pairer = warp::any().map(move || pairer.clone());

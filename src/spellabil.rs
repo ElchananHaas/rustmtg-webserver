@@ -1,5 +1,6 @@
 use std::{collections::HashSet, num::NonZeroU32, sync::Arc};
 
+use schemars::JsonSchema;
 use serde_derive::Serialize;
 
 use crate::{
@@ -10,7 +11,7 @@ use crate::{
     mana::ManaCostSymbol,
 };
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, JsonSchema)]
 pub enum KeywordAbility {
     FirstStrike,
     Haste,
@@ -55,7 +56,7 @@ impl SpellAbilBuilder {
         self.clauses
     }
 }
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, JsonSchema)]
 pub enum Clause {
     Effect {
         effect: ClauseEffect,
@@ -65,20 +66,24 @@ pub enum Clause {
         effect: TargetClauseEffect,
     },
 }
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, JsonSchema)]
 pub enum ClauseEffect {
     AddMana(Vec<ManaCostSymbol>),
     DrawCard,
 }
 
-#[derive(Clone, Serialize)]
-pub enum TargetClauseEffect {}
+#[derive(Clone, Serialize, JsonSchema)]
+pub enum TargetClauseEffect {
+    DummyField, //For Typescript purposes
+}
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, JsonSchema)]
 pub struct Targets {
     num: NonZeroU32, //Ensure there is always at least 1 target, or
     //this clause shouldn't be chosen
     valid: TargetsFilter,
 }
-#[derive(Clone, Serialize)]
-pub enum TargetsFilter {}
+#[derive(Clone, Serialize, JsonSchema)]
+pub enum TargetsFilter {
+    DummyField, //For Typescript purposes
+}

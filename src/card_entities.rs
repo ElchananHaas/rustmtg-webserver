@@ -1,23 +1,20 @@
 use crate::{
     card_types::{Subtypes, Supertypes, Types},
-    game::Game,
+    entities::MIN_CARDID,
     spellabil::Clause,
 };
 use derivative::*;
+use schemars::JsonSchema;
 use serde_derive::Serialize;
-use std::{
-    collections::{HashMap, HashSet},
-    num::NonZeroU64,
-};
+use std::{collections::HashSet, num::NonZeroU64};
 
 use crate::{
     ability::Ability,
-    card_types::Subtype,
     cost::Cost,
     entities::{CardId, PlayerId, TargetId},
     spellabil::KeywordAbility,
 };
-#[derive(Clone, Serialize, PartialEq, Eq)]
+#[derive(Clone, Serialize, PartialEq, Eq, JsonSchema)]
 pub enum EntType {
     RealCard,
     TokenCard,
@@ -31,10 +28,10 @@ impl Default for EntType {
 }
 #[derive(Derivative)]
 #[derivative(Default)]
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Clone, JsonSchema)]
 pub struct CardEnt {
     //Holds a card, token or embalem
-    pub summoning_sickness: bool,
+    pub etb_this_cycle: bool,
     pub damaged: i64,
     pub tapped: bool,
     pub already_attacked: bool, //Has this dealt combat damage this turn (First strike, double strike)
@@ -43,7 +40,7 @@ pub struct CardEnt {
     pub blocking: Vec<CardId>,
     pub effect: Vec<Clause>, //Effect of card, for instant sorcery or ability
     pub name: &'static str,
-    #[derivative(Default(value = "PlayerId::from(NonZeroU64::new(u64::MAX).unwrap())"))]
+    #[derivative(Default(value = "PlayerId::from(NonZeroU64::new(MIN_CARDID-1).unwrap())"))]
     pub owner: PlayerId,
     pub printed_name: &'static str,
     pub ent_type: EntType,
@@ -74,7 +71,7 @@ impl CardEnt {
         }
     }
 }
-#[derive(Clone, Copy, Debug, Serialize)]
+#[derive(Clone, Copy, Debug, Serialize, JsonSchema)]
 pub struct PT {
     pub power: i64,
     pub toughness: i64,
