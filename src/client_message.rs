@@ -7,7 +7,10 @@ use crate::{
 };
 use schemars::JsonSchema;
 use serde::Serialize;
-use std::{collections::{HashMap, HashSet}, hash::Hash};
+use std::{
+    collections::{HashMap, HashSet},
+    hash::Hash,
+};
 #[derive(Serialize, JsonSchema)]
 pub struct GameState<'a, 'b, 'c> {
     pub player: PlayerId,
@@ -29,8 +32,8 @@ pub struct AskSelectN<T> {
     pub max: u32,
 }
 #[derive(Clone, Debug, Serialize, JsonSchema)]
-pub struct AskPairAB<T:Hash+Eq> {
-    pub a: HashMap<CardId,(usize, usize)>,
+pub struct AskPairAB<T: Hash + Eq> {
+    pub a: HashMap<CardId, (usize, usize)>,
     pub b: HashSet<T>,
 }
 #[derive(Clone, Debug, Serialize, JsonSchema)]

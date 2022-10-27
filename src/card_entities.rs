@@ -32,11 +32,11 @@ impl Default for EntType {
 //Holds a card, token or embalem, or triggered/activated ability
 pub struct CardEnt {
     pub etb_this_cycle: bool,
-    pub damaged: i64, 
+    pub damaged: i64,
     pub tapped: bool,
-    pub already_attacked: bool, //Has this dealt combat damage this turn (First strike, Double strike)
+    pub already_dealt_damage: bool, //Has this dealt combat damage this turn (First strike, Double strike)
     pub attacking: Option<TargetId>, //Is this attacking a player of planeswalker
-    pub blocked: Vec<CardId>, //What creatues is this blocked by?
+    pub blocked: Vec<CardId>,   //What creatues is this blocked by?
     pub blocking: Vec<CardId>,
     pub effect: Vec<Clause>, //Effect of card, for instant sorcery or ability
     pub name: &'static str,

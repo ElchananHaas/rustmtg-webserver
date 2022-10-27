@@ -57,7 +57,7 @@ pub enum Event {
         spell: CardId,
     },
     Attack {
-        attacks: HashMap<CardId,TargetId>,
+        attacks: HashMap<CardId, TargetId>,
     },
     Activate {
         controller: PlayerId,
@@ -100,6 +100,7 @@ pub enum EventResult {
     MoveZones {
         oldent: CardId,
         newent: Option<CardId>,
+        source: Zone,
         dest: Zone,
     },
     Tap(CardId),

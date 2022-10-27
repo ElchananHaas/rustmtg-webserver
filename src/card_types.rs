@@ -11,6 +11,7 @@ use serde_derive::Serialize;
 use std::convert::AsRef;
 use strum_macros::AsRefStr;
 
+
 macro_rules! enumset{
     ($name:ident, $($e:ident),*) => {
         #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize, JsonSchema)]
@@ -20,6 +21,7 @@ macro_rules! enumset{
         pub enum $name{
             $($e,)*
         }
+        #[allow(dead_code)]
         impl $name{
             pub fn parse(x:&str)->IResult<&str, Self>{
                 $(
@@ -53,6 +55,7 @@ macro_rules! enumset{
                     seq.end()
                 }
             }
+            #[allow(dead_code)]
             impl [<$name s>]{
                 pub fn new()->Self{
                     Self::default()

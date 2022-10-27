@@ -339,7 +339,7 @@
       "type": "object",
       "required": [
         "abilities",
-        "already_attacked",
+        "already_dealt_damage",
         "blocked",
         "blocking",
         "costs",
@@ -363,7 +363,7 @@
             "$ref": "#/definitions/Ability"
           }
         },
-        "already_attacked": {
+        "already_dealt_damage": {
           "type": "boolean"
         },
         "art_url": {

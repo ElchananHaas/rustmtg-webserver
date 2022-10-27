@@ -35,11 +35,12 @@ impl Ability {
     }
 }
 
-impl Ability{
+impl Ability {
     pub fn tap_for_mana(mana: Vec<ManaCostSymbol>) -> Self {
-        Ability::Activated(
-            ActivatedAbility { costs: vec![Cost::Selftap], effect: vec![Clause::AddMana(mana)], keyword: None }
-        )
+        Ability::Activated(ActivatedAbility {
+            costs: vec![Cost::Selftap],
+            effect: vec![Clause::AddMana(mana)],
+            keyword: None,
+        })
     }
-    
 }

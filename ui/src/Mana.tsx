@@ -25,7 +25,7 @@ function ManaSymbol(props: ManaSymbolProps) {
     </div>);
 }
 export function ManaSymbols(props: {
-    player:PlayerView,
+    player: PlayerView,
     game: GameState
 }) {
     const colors = [
@@ -49,7 +49,7 @@ export function ManaSymbols(props: {
     return (
         <div className="mana-symbols">
             {colors.map(color =>
-            <ManaSymbol key={color} color={color} quantity={color_quantities[color]} height={100 / colors.length} />
+                <ManaSymbol key={color} color={color} quantity={color_quantities[color]} height={100 / colors.length} />
             )}
         </div>
     )

@@ -162,10 +162,18 @@ impl Game {
             } else if let Some(phase) = self.phases.pop_front() {
                 self.handle_event(Event::Phase { phase }).await;
             } else if let Some(player) = self.extra_turns.pop_front() {
-                self.handle_event(Event::Turn { player, extra: true }).await;
+                self.handle_event(Event::Turn {
+                    player,
+                    extra: true,
+                })
+                .await;
             } else {
                 self.turn_order.rotate_left(1);
-                self.handle_event(Event::Turn { player:self.turn_order[0], extra: false }).await;
+                self.handle_event(Event::Turn {
+                    player: self.turn_order[0],
+                    extra: false,
+                })
+                .await;
             }
         }
         self.outcome
@@ -201,7 +209,16 @@ impl Game {
     //draws a card, returns the entities drawn
     pub async fn draw(&mut self, player: PlayerId) -> Vec<CardId> {
         let res = self.handle_event(Event::Draw { player }).await;
-        let drawn = Vec::new();
+        let mut drawn = Vec::new();
+        for event in res {
+            if let EventResult::Draw(cardid) = event {
+                if let Some(card) = self.cards.get(cardid) {
+                    if card.owner == player {
+                        drawn.push(cardid);
+                    }
+                }
+            }
+        }
         drawn
         //TODO figure out which cards were drawn!
     }
@@ -224,7 +241,12 @@ impl Game {
                 cause,
             })
             .await;
-        let discarded = Vec::new();
+        let mut discarded = Vec::new();
+        for event in res{
+            if let EventResult::MoveZones { oldent:_, newent:Some(newent),source:Zone::Hand, dest:Zone::Graveyard }=event{
+                discarded.push(newent);
+            }
+        }
         discarded
         //TODO figure out which cards were discarded!
     }
@@ -346,22 +368,10 @@ impl Game {
             }
         }
     }
-    pub async fn move_zones(&mut self, ent: CardId, origin: Zone, dest: Zone) -> Vec<CardId> {
-        let moved = self
+    pub async fn move_zones(&mut self, ent: CardId, origin: Zone, dest: Zone) -> Vec<EventResult> {
+        self
             .handle_event(Event::MoveZones { ent, origin, dest })
-            .await;
-        self.parse_zone_move(moved, dest)
-    }
-    fn parse_zone_move(&self, events: Vec<EventResult>, dest_zone: Zone) -> Vec<CardId> {
-        let mut new_ents = Vec::new();
-        for event in events {
-            if let EventResult::MoveZones { oldent:_, newent, dest }=event
-            && let Some(newent)=newent
-            && dest==dest_zone{
-                new_ents.push(newent);
-            }
-        }
-        new_ents
+            .await
     }
 
     pub async fn grant_priority(&mut self, players: &VecDeque<PlayerId>) -> ActionPriorityType {
@@ -387,15 +397,23 @@ impl Game {
                     Action::Cast(casting_option) => {
                         self.backup();
                         let card = casting_option.source_card;
-                        let stackobj = self
+                        let stackobjs = self
                             .move_zones(card, casting_option.zone, Zone::Stack)
                             .await;
-                        if stackobj.len() != 1 {
+                        let stack_ent;
+                        if stackobjs.len()==1{ 
+                            if let EventResult::MoveZones { oldent:_, newent:Some(newent), source:_, dest:_ }=stackobjs[0]{
+                                stack_ent=newent
+                            }else{
+                                self.restore();
+                                continue;
+                            }
+                        }else{
                             self.restore();
                             continue;
                         }
                         let stack_opt = StackActionOption {
-                            stack_ent: stackobj[0],
+                            stack_ent,
                             ability_source: None,
                             costs: casting_option.costs.clone(),
                             filter: ActionFilter::None,
@@ -458,8 +476,8 @@ impl Game {
     //The spell has already been moved to the stack for this operation
     async fn handle_cast(&mut self, castopt: StackActionOption) -> Result<(), MTGError> {
         println!("Handling cast {:?}", castopt);
-        if !castopt.filter.check(){
-            return Err(MTGError::CantCast)
+        if !castopt.filter.check() {
+            return Err(MTGError::CantCast);
         }
         let cost_paid = self.request_cost_payment(&castopt).await?;
         println!("cost paid {:?}", cost_paid);
@@ -602,7 +620,7 @@ impl Game {
         };
         self.move_zones(id, Zone::Stack, dest).await;
     }
-    async fn resolve_clause(&mut self, clause:Clause, id: CardId, controller: PlayerId) {
+    async fn resolve_clause(&mut self, clause: Clause, id: CardId, controller: PlayerId) {
         match clause {
             Clause::AddMana(manas) => {
                 for mana in manas {
@@ -627,10 +645,12 @@ impl Game {
             let mut mana_abil = false;
             for clause in &card.effect {
                 match clause {
-                    Clause::AddMana(_)=>{
+                    Clause::AddMana(_) => {
                         mana_abil = true;
                     }
-                    _=> {mana_abil=false;}
+                    _ => {
+                        mana_abil = false;
+                    }
                 }
             }
             mana_abil
@@ -756,7 +776,7 @@ impl Game {
             for cost in costs {
                 let can_pay = match cost {
                     Cost::Selftap => self.battlefield.contains(&card_id) && self.can_tap(card_id),
-                    Cost::Mana(mana) => {
+                    Cost::Mana(_mana) => {
                         if available_mana <= 0 {
                             false
                         } else {
@@ -782,7 +802,7 @@ impl Game {
                 if let Ability::Activated(abil) = ability {
                     let mut abil_mana: i64 = 0;
                     for clause in &abil.effect {
-                        if let Clause::AddMana(mana)=clause{
+                        if let Clause::AddMana(mana) = clause {
                             abil_mana += mana.len() as i64;
                         }
                     }
@@ -812,9 +832,9 @@ impl Game {
     //Checks if this attacking arragment is legal.
     //Does nothing for now, will need to implement legality
     //checking before I can make any progress on that
-    //This will need to loop over ALL creatures, not just the ones 
+    //This will need to loop over ALL creatures, not just the ones
     //in attacks to handle creatues that must attack
-    pub fn attackers_legal(&self, attacks:&HashMap<CardId,TargetId>) -> bool {
+    pub fn attackers_legal(&self, attacks: &HashMap<CardId, TargetId>) -> bool {
         true
     }
     pub fn blocks_legal(&self, blockers: &Vec<CardId>, blocked: &Vec<Vec<CardId>>) -> bool {

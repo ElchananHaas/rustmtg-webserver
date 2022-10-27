@@ -3,17 +3,16 @@ import React from 'react';
 import { ArcherContainer } from 'react-archer';
 import { phase_image_map, PhaseImages } from './Phases';
 import {
-    Action,
     Ask,
     AskSelectNFor_Action,
     ClientMessage,
     GameState,
 } from './rustTypes';
-import {CardActions,ActionsUnion} from './actions'
+import { CardActions, ActionsUnion } from './actions'
 import { PlayerBoxes } from './PlayerBox';
 
-function Stack(props:{
-    card_width:number
+function Stack(props: {
+    card_width: number
 }) {
     return (
         <div className="stack" style={{ width: props.card_width + "px" }}>
@@ -24,10 +23,8 @@ function Stack(props:{
 
 function process_actions(action_data: AskSelectNFor_Action): CardActions {
     const card_actions: CardActions = {};
-    action_data.ents.map((action_in, index) => {
+    action_data.ents.map((action, index) => {
         let id = null;
-        let action: Action=(action_in as unknown as Action);//This is an action,
-        //but due to how 
         if ("PlayLand" in action) {
             id = action.PlayLand;
         }
@@ -64,20 +61,21 @@ interface IState {
     handlers: any,
     actions: ActionsUnion
 }
-function objMap(obj:any, func:any) {
-return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, func(v)]));
+function objMap(obj: any, func: any) {
+    return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, func(v)]));
 }
 
+function exhaustiveCheck(param: never) { }
 class Game extends React.Component<IProps, IState>{
     socket: WebSocket;
-    keypresshandler:any;
+    keypresshandler: any;
     constructor(props: {}) {
         super(props);
         const socket = new WebSocket("ws://localhost:3030/gamesetup");
         this.socket = socket;
-        this.keypresshandler=this.keyPressed.bind(this);
+        this.keypresshandler = this.keyPressed.bind(this);
         socket.addEventListener('message', (event: { data: string; }) => {
-            let parsed: ClientMessage= JSON.parse(event.data);
+            let parsed: ClientMessage = JSON.parse(event.data);
             console.log(parsed);
             if ("GameState" in parsed) {
                 this.update_state(parsed.GameState);
@@ -103,23 +101,34 @@ class Game extends React.Component<IProps, IState>{
         if (e.keyCode !== 32) {
             return;
         }
+        if (this.state.actions.type === "none") {
+            return;
+        }
         if (this.state.actions.type === "action") {
             this.socket.send("[]");
             this.clear_actions();
+            return;
         }
         if (this.state.actions.type === "attackers") {
-            const resp = objMap(this.state.actions.response,(x:number|null)=>{
-                if(x===null){
+            const resp = objMap(this.state.actions.response, (x: number | null) => {
+                if (x === null) {
                     return []
-                }else{
+                } else {
                     return [x]
                 }
             });
             const response = JSON.stringify(resp);
             this.socket.send(response);
             this.clear_actions();
+            return;
         }
-
+        if (this.state.actions.type === "blockers") {
+            const resp = JSON.stringify(this.state.actions.response);
+            this.socket.send(resp);
+            this.clear_actions();
+            return;
+        }
+        exhaustiveCheck(this.state.actions);
     }
     componentDidMount() {
         document.addEventListener("keydown", this.keypresshandler, false);
@@ -136,7 +145,7 @@ class Game extends React.Component<IProps, IState>{
             type: "none"
         };
         if ("Action" in parsed) {
-            const parsed_actions:AskSelectNFor_Action=parsed.Action;
+            const parsed_actions: AskSelectNFor_Action = parsed.Action;
             if (parsed_actions.ents.length === 0) {
                 this.socket.send("[]");
                 return;
@@ -155,9 +164,23 @@ class Game extends React.Component<IProps, IState>{
             actions = {
                 type: "attackers",
                 attackers: attackers,
-                response: objMap(attackers,(_i:any)=>null),
-                selected_attacker: null, 
+                response: objMap(attackers, (_i: any) => null),
+                selected_attacker: null,
                 targets: parsed.Attackers.b
+            }
+        }
+        if ("Blockers" in parsed) {
+            const blockers = parsed.Blockers.a;
+            if (Object.entries(blockers).length === 0) {
+                this.socket.send("{}");
+                return;
+            }
+            actions = {
+                type: "blockers",
+                blockers: blockers,
+                response: objMap(blockers, (_i: any) => []),
+                attackers: parsed.Blockers.b,
+                selected_blocker: null,
             }
         }
         this.setState({ actions: actions });
@@ -171,6 +194,7 @@ class Game extends React.Component<IProps, IState>{
         );
     }
     item_clicked(ent_id: number) { //This number is a CardId or PlayerId
+        console.log("clicked "+ent_id);
         if (this.state.actions.type === "action") {
             const actions: CardActions = this.state.actions.actions;
             const card_actions = actions[ent_id];
@@ -188,7 +212,6 @@ class Game extends React.Component<IProps, IState>{
         }
         if (this.state.actions.type === "attackers") {
             const actions = { ...this.state.actions }
-            console.log("actions are: "+JSON.stringify(actions))
             if (ent_id in actions.attackers) {
                 if (actions.selected_attacker !== null) {
                     actions.selected_attacker = null;
@@ -197,7 +220,7 @@ class Game extends React.Component<IProps, IState>{
                 }
             }
             else if (actions.selected_attacker !== null) {
-                const selected=actions.selected_attacker;
+                const selected = actions.selected_attacker;
                 if (actions.targets.includes(ent_id)) {
                     if (actions.response[selected] === ent_id) {
                         actions.response[selected] = null;
@@ -209,11 +232,36 @@ class Game extends React.Component<IProps, IState>{
             }
             this.setState({ actions: actions });
         }
+        if (this.state.actions.type === "blockers") {
+            const actions = { ...this.state.actions }
+            if (ent_id in actions.blockers) {
+                if (actions.selected_blocker !== null) {
+                    actions.selected_blocker = null;
+                } else {
+                    actions.selected_blocker = ent_id;
+                }
+            }
+            else if (actions.selected_blocker !== null) {
+                const selected = actions.selected_blocker;
+                if (actions.attackers.includes(ent_id)) {
+                    const idx = actions.response[selected].indexOf(ent_id);
+                    if (idx !== -1) {
+                        actions.response[selected].splice(idx, 1);
+                    } else {
+                        if (actions.response[selected].length < actions.blockers[selected][1]) {
+                            actions.response[selected].push(ent_id);
+                        }
+                    }
+                    actions.selected_blocker = null;
+                }
+            }
+            this.setState({ actions: actions });
+        }
     }
     render() {
         if (this.state.game) {
             return (
-                <ArcherContainer strokeColor="red" svgContainerStyle={{zIndex:"10"}}>
+                <ArcherContainer strokeColor="red" svgContainerStyle={{ zIndex: "10" }}>
                     <div className="full-size" style={{ height: "98vh" }}>
                         <PhaseImages phase_image_map={phase_image_map} phase={this.state.game.phase} subphase={this.state.game.subphase} />
                         <Stack card_width={this.state.card_width} />

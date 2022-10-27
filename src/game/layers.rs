@@ -35,7 +35,7 @@ impl Game {
                 card.costs = base.costs;
                 if zone == Zone::Battlefield || zone == Zone::Stack {
                     card.controller = Some(card.owner);
-                }else{
+                } else {
                     card.controller = None;
                 }
             }

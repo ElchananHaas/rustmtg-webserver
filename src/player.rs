@@ -7,6 +7,7 @@ use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
+use std::fmt::Debug;
 use std::hash::Hash;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -90,11 +91,13 @@ impl Player {
     //Select n entities from a vector, returns selected indicies
     pub async fn ask_user_selectn<T>(&self, query: &Ask, ask: &AskSelectN<T>) -> Vec<usize> {
         loop {
-            self.send_data(ClientMessage::AskUser(query)).await.expect("Failed to send data");
+            self.send_data(ClientMessage::AskUser(query))
+                .await
+                .expect("Failed to send data");
             let response = self.player_con.receive::<Vec<usize>>().await;
-            let response=if let Ok(resp)=response{
+            let response = if let Ok(resp) = response {
                 resp
-            }else{
+            } else {
                 continue;
             };
             let response_unique: HashSet<usize> = response.iter().cloned().collect();
@@ -113,32 +116,35 @@ impl Player {
     //Returns an adjacency list with either the
     //planeswalker/player each attacker is attacking,
     //or the list of creatures each blocker is blocking
-    pub async fn ask_user_pair<T: DeserializeOwned + Hash + Eq + Copy + Clone>(
+    pub async fn ask_user_pair<T: DeserializeOwned + Hash + Eq + Copy + Clone + Debug>(
         &self,
         query: &Ask,
         ask: &AskPairAB<T>,
-    ) -> HashMap<CardId,Vec<T>> {
+    ) -> HashMap<CardId, Vec<T>> {
         'outer: loop {
-            self.send_data(ClientMessage::AskUser(query)).await.expect("Failed to send data");
-            let response = self.player_con.receive::<HashMap<CardId,Vec<T>>>().await;
-            let response=if let Ok(resp)=response{
+            self.send_data(ClientMessage::AskUser(query))
+                .await
+                .expect("Failed to send data");
+            let response = self.player_con.receive::<HashMap<CardId, Vec<T>>>().await;
+            let response = if let Ok(resp) = response {
                 resp
-            }else{
+            } else {
                 continue 'outer;
             };
-            for (card,pairing) in response.iter(){
-                let bounds=if let Some(bound)=ask.a.get(card){
+            for (card, pairing) in response.iter() {
+                let bounds = if let Some(bound) = ask.a.get(card) {
                     bound
-                }else{
-                    continue 'outer; 
-                };    
-                if pairing.len()<bounds.0 || pairing.len() >bounds.1{
+                } else {
+                    continue 'outer;
+                };
+                if pairing.len() < bounds.0 || pairing.len() > bounds.1 {
                     continue 'outer;
                 }
                 if pairing.len() != pairing.iter().map(|x| *x).collect::<HashSet<T>>().len() {
                     continue 'outer;
                 }
             }
+            println!("accepted {:?}", response);
             return response;
         }
     }
@@ -166,9 +172,12 @@ impl PlayerCon {
                 PlayerCon::socket_error().await;
                 continue;
             };
-            let text = message.to_str().map_err(|err|anyhow::Error::msg("Didn't recieve a string"))?;
+            let text = message
+                .to_str()
+                .map_err(|_| anyhow::Error::msg("Didn't recieve a string"))?;
             println!("parsing:{}", text);
-            return serde_json::from_str(text).map_err(|err|anyhow::Error::msg("Message failed to parse correctly"));
+            return serde_json::from_str(text)
+                .map_err(|_| anyhow::Error::msg("Message failed to parse correctly"));
         }
     }
     pub async fn send_data(&self, state: Vec<u8>) -> Result<()> {
@@ -177,7 +186,7 @@ impl PlayerCon {
         socket
             .send(Message::text(msg))
             .await
-            .map_err(|x| anyhow::Error::msg("Connection broke on send"))
+            .map_err(|_| anyhow::Error::msg("Connection broke on send"))
     }
     async fn socket_error() {
         panic!("Connection broke on read");

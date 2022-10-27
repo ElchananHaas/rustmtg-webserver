@@ -12,6 +12,7 @@ export type ClientMessage =
   | {
       AskUser: Ask;
     };
+export type PlayerId = number;
 export type CardId = number;
 export type Ability =
   | {
@@ -30,29 +31,12 @@ export type Cost =
     };
 export type ManaCostSymbol = "White" | "Blue" | "Black" | "Red" | "Green" | "Colorless" | "Generic";
 export type Clause =
-  | {
-      Effect: {
-        effect: ClauseEffect;
-        [k: string]: unknown;
-      };
-    }
-  | {
-      Target: {
-        effect: TargetClauseEffect;
-        targets: Targets;
-        [k: string]: unknown;
-      };
-    };
-export type ClauseEffect =
   | "DrawCard"
   | {
       AddMana: ManaCostSymbol[];
     };
-export type TargetClauseEffect = "DummyField";
-export type TargetsFilter = "DummyField";
 export type KeywordAbility = "FirstStrike" | "Haste" | "Vigilance" | "DoubleStrike";
 export type TargetId = number;
-export type PlayerId = number;
 export type EntType = "RealCard" | "TokenCard" | "ActivatedAbility" | "TriggeredAbility";
 export type Color = "White" | "Blue" | "Black" | "Red" | "Green" | "Colorless";
 export type GameOutcome =
@@ -105,6 +89,7 @@ export type ActionFilter = "None";
 export type Zone = "Hand" | "Library" | "Exile" | "Battlefield" | "Graveyard" | "Command" | "Stack";
 
 export interface GameState {
+  active_player: PlayerId;
   battlefield: CardId[];
   cards: {
     [k: string]: CardEnt;
@@ -157,11 +142,6 @@ export interface ActivatedAbility {
   costs: Cost[];
   effect: Clause[];
   keyword?: KeywordAbility | null;
-  [k: string]: unknown;
-}
-export interface Targets {
-  num: number;
-  valid: TargetsFilter;
   [k: string]: unknown;
 }
 export interface TriggeredAbility {

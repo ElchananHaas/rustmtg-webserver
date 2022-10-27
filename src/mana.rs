@@ -1,7 +1,5 @@
 use crate::actions::StackActionOption;
-use crate::{
-    game::Game,
-};
+use crate::game::Game;
 use enum_map::Enum;
 use schemars::JsonSchema;
 use serde_derive::Serialize;
