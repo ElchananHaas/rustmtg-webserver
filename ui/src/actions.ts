@@ -14,8 +14,8 @@ export type ActionsUnion = {
     actions: CardActions
 } | {
     type: "attackers",
-    attackers: CardId[],
+    attackers: {[k: CardId]: [number, number]},
+    response: {[k: CardId]:(TargetId | null)}
     targets: TargetId[],
-    response: (TargetId | null)[],
     selected_attacker: CardId | null,
 };

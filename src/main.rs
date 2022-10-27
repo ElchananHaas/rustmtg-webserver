@@ -11,7 +11,6 @@ use warp::Filter;
 use crate::entities::PlayerId;
 use crate::write_schema::write_types;
 mod ability;
-mod ability_db;
 mod actions;
 mod card_entities;
 mod card_types;

@@ -1,4 +1,6 @@
 import React from "react";
+import { ArcherElement } from "react-archer";
+import { RelationType } from "react-archer/lib/types";
 import { ActionsUnion } from "./actions";
 import { CardId, GameState } from "./rustTypes";
 
@@ -18,7 +20,7 @@ export function Card(props:{
     } else{
         url=card.art_url;
     }
-    let style:any={};
+    let style:React.CSSProperties={};
     if(card.tapped){
         style = {
             transform: `rotate(15deg)`,
@@ -29,13 +31,19 @@ export function Card(props:{
             style.borderColor="#AAAA00";
         }
     }
+    const relation:RelationType={
+        targetId: "",
+        targetAnchor: 'bottom',
+        sourceAnchor: 'top',
+        style: { strokeColor: 'red', strokeWidth: 2 }
+    };
     if(props.actions.type==="attackers"){
-        const index=props.actions.attackers.indexOf(props.id);
-        console.log("attacker rendering");
-        if(index!==-1){
+        if(props.id in props.actions.attackers){
             style.borderColor="#AA0000";
-            if(props.actions.response[index]!==null){
+            const attacking=props.actions.response[props.id];
+            if(attacking!==null){
                 style.borderColor="#FF0000";
+                relation.targetId=""+attacking;
             }
         }
         if(props.actions.selected_attacker===props.id){
@@ -43,9 +51,11 @@ export function Card(props:{
         }
     }
     const ret=(
-        <div className="card-div" style={style} onClick={() => props.handlers.click(props.id)}>
-            <img src={url} className="full-height-image" alt=""></img>
-        </div>
+        <ArcherElement id={""+props.id} relations={[relation]}>
+            <div className="card-div" style={style} onClick={() => props.handlers.click(props.id)}>
+                <img src={url} className="full-height-image" alt=""></img>
+            </div>
+        </ArcherElement>
     );
     return(ret);
   }

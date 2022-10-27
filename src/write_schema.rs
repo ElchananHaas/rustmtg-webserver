@@ -1,7 +1,5 @@
-use crate::actions::Action;
 use crate::client_message::ClientMessage;
-use crate::entities::TargetId;
-use schemars::{schema_for, JsonSchema};
+use schemars::schema_for;
 
 pub fn write_types() {
     let mut out: String = String::new();

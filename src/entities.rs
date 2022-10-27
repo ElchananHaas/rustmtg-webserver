@@ -39,7 +39,7 @@ impl<'de> serde::Deserialize<'de> for TargetId {
     {
         let val = u64::deserialize(deserializer)?;
         let v = NonZeroU64::try_from(val)
-            .map_err(|err| serde::de::Error::custom("Value didn't fit in nonzero U64"))?;
+            .map_err(|_| serde::de::Error::custom("Value didn't fit in nonzero U64"))?;
         Ok(if v.get() < MIN_CARDID {
             TargetId::Player(PlayerId::from(v))
         } else {

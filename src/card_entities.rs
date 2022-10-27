@@ -29,14 +29,14 @@ impl Default for EntType {
 #[derive(Derivative)]
 #[derivative(Default)]
 #[derive(Serialize, Clone, JsonSchema)]
+//Holds a card, token or embalem, or triggered/activated ability
 pub struct CardEnt {
-    //Holds a card, token or embalem
     pub etb_this_cycle: bool,
-    pub damaged: i64,
+    pub damaged: i64, 
     pub tapped: bool,
-    pub already_attacked: bool, //Has this dealt combat damage this turn (First strike, double strike)
+    pub already_attacked: bool, //Has this dealt combat damage this turn (First strike, Double strike)
     pub attacking: Option<TargetId>, //Is this attacking a player of planeswalker
-    pub blocked: Vec<CardId>,
+    pub blocked: Vec<CardId>, //What creatues is this blocked by?
     pub blocking: Vec<CardId>,
     pub effect: Vec<Clause>, //Effect of card, for instant sorcery or ability
     pub name: &'static str,
@@ -44,14 +44,14 @@ pub struct CardEnt {
     pub owner: PlayerId,
     pub printed_name: &'static str,
     pub ent_type: EntType,
-    pub known_to: HashSet<PlayerId>,
+    pub known_to: HashSet<PlayerId>, //What players know the front side of this card?
     pub pt: Option<PT>,
     pub controller: Option<PlayerId>,
     pub types: Types,
     pub supertypes: Supertypes,
     pub subtypes: Subtypes,
     pub abilities: Vec<Ability>,
-    pub costs: Vec<Cost>,
+    pub costs: Vec<Cost>, //Casting costs
     pub art_url: Option<String>,
 }
 impl CardEnt {

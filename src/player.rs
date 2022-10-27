@@ -1,7 +1,7 @@
 use crate::client_message::{Ask, AskPairAB, AskSelectN, ClientMessage};
 use crate::entities::{CardId, ManaId, PlayerId};
 use crate::game::Cards;
-use anyhow::{bail, Result};
+use anyhow::Result;
 use futures::{SinkExt, StreamExt};
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
@@ -10,7 +10,6 @@ use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use warp::hyper::Response;
 
 use warp::filters::ws::Message;
 use warp::ws::WebSocket;
@@ -93,6 +92,11 @@ impl Player {
         loop {
             self.send_data(ClientMessage::AskUser(query)).await.expect("Failed to send data");
             let response = self.player_con.receive::<Vec<usize>>().await;
+            let response=if let Ok(resp)=response{
+                resp
+            }else{
+                continue;
+            };
             let response_unique: HashSet<usize> = response.iter().cloned().collect();
             if response.len() < ask.min.try_into().unwrap()
                 || response.len() > ask.max.try_into().unwrap()
@@ -113,19 +117,25 @@ impl Player {
         &self,
         query: &Ask,
         ask: &AskPairAB<T>,
-    ) -> Vec<Vec<T>> {
+    ) -> HashMap<CardId,Vec<T>> {
         'outer: loop {
             self.send_data(ClientMessage::AskUser(query)).await.expect("Failed to send data");
-            let response = self.player_con.receive::<Vec<Vec<T>>>().await;
-            if response.len() != ask.a.len() {
+            let response = self.player_con.receive::<HashMap<CardId,Vec<T>>>().await;
+            let response=if let Ok(resp)=response{
+                resp
+            }else{
                 continue 'outer;
-            }
-            for (i, row) in response.iter().enumerate() {
-                if row.len() < ask.num_choices[i].0 || row.len() > ask.num_choices[i].1 {
+            };
+            for (card,pairing) in response.iter(){
+                let bounds=if let Some(bound)=ask.a.get(card){
+                    bound
+                }else{
+                    continue 'outer; 
+                };    
+                if pairing.len()<bounds.0 || pairing.len() >bounds.1{
                     continue 'outer;
                 }
-                let as_set = row.iter().map(|x| *x).collect::<HashSet<T>>();
-                if row.len() != as_set.len() {
+                if pairing.len() != pairing.iter().map(|x| *x).collect::<HashSet<T>>().len() {
                     continue 'outer;
                 }
             }
@@ -146,29 +156,19 @@ impl PlayerCon {
         }
     }
 
-    pub async fn receive<T: DeserializeOwned>(&self) -> T {
+    pub async fn receive<T: DeserializeOwned>(&self) -> Result<T> {
         let mut socket = self.socket.lock().await;
         loop {
             let recieved = socket.next().await.expect("Socket is still open");
             let message = if let Ok(msg) = recieved {
-                println!("Recieved message {:?}",msg);
                 msg
             } else {
                 PlayerCon::socket_error().await;
                 continue;
             };
-            let text = if let Ok(txt) = message.to_str() {
-                txt
-            } else {
-                continue;
-            };
+            let text = message.to_str().map_err(|err|anyhow::Error::msg("Didn't recieve a string"))?;
             println!("parsing:{}", text);
-            if let Ok(parsed) = serde_json::from_str(text) {
-                println!("parsed!");
-                return parsed;
-            } else {
-                continue;
-            }
+            return serde_json::from_str(text).map_err(|err|anyhow::Error::msg("Message failed to parse correctly"));
         }
     }
     pub async fn send_data(&self, state: Vec<u8>) -> Result<()> {

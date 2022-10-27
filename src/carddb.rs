@@ -3,7 +3,6 @@ use crate::card_entities::PT;
 use crate::card_types::{Subtypes, Supertypes, Types};
 use crate::cost::Cost;
 use crate::entities::PlayerId;
-use crate::mana::Mana;
 use crate::mana::ManaCostSymbol;
 use anyhow::Result;
 use nom::character::complete;
@@ -15,7 +14,6 @@ use serde_json;
 use std::collections::HashMap;
 use std::fmt;
 use std::fs;
-use std::num::ParseIntError;
 //It returns mut cardbuilder due to method chaining
 pub struct CardDB {
     scryfall: HashMap<String, ScryfallEntry>,

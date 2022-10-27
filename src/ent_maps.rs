@@ -1,7 +1,6 @@
 use std::{collections::HashMap, hash::Hash, num::NonZeroU64};
 
 use schemars::JsonSchema;
-use serde::ser::SerializeMap;
 use serde::Serialize;
 
 use crate::{card_entities::CardEnt, entities::CardId, spellabil::KeywordAbility};

@@ -215,25 +215,12 @@
       "type": "object",
       "required": [
         "a",
-        "b",
-        "num_choices"
+        "b"
       ],
       "properties": {
         "a": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/CardId"
-          }
-        },
-        "b": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/CardId"
-          }
-        },
-        "num_choices": {
-          "type": "array",
-          "items": {
+          "type": "object",
+          "additionalProperties": {
             "type": "array",
             "items": [
               {
@@ -250,6 +237,13 @@
             "maxItems": 2,
             "minItems": 2
           }
+        },
+        "b": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CardId"
+          },
+          "uniqueItems": true
         }
       }
     },
@@ -257,25 +251,12 @@
       "type": "object",
       "required": [
         "a",
-        "b",
-        "num_choices"
+        "b"
       ],
       "properties": {
         "a": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/CardId"
-          }
-        },
-        "b": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/TargetId"
-          }
-        },
-        "num_choices": {
-          "type": "array",
-          "items": {
+          "type": "object",
+          "additionalProperties": {
             "type": "array",
             "items": [
               {
@@ -292,6 +273,13 @@
             "maxItems": 2,
             "minItems": 2
           }
+        },
+        "b": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TargetId"
+          },
+          "uniqueItems": true
         }
       }
     },
@@ -516,54 +504,6 @@
     "Clause": {
       "oneOf": [
         {
-          "type": "object",
-          "required": [
-            "Effect"
-          ],
-          "properties": {
-            "Effect": {
-              "type": "object",
-              "required": [
-                "effect"
-              ],
-              "properties": {
-                "effect": {
-                  "$ref": "#/definitions/ClauseEffect"
-                }
-              }
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": [
-            "Target"
-          ],
-          "properties": {
-            "Target": {
-              "type": "object",
-              "required": [
-                "effect",
-                "targets"
-              ],
-              "properties": {
-                "effect": {
-                  "$ref": "#/definitions/TargetClauseEffect"
-                },
-                "targets": {
-                  "$ref": "#/definitions/Targets"
-                }
-              }
-            }
-          },
-          "additionalProperties": false
-        }
-      ]
-    },
-    "ClauseEffect": {
-      "oneOf": [
-        {
           "type": "string",
           "enum": [
             "DrawCard"
@@ -668,6 +608,7 @@
     "GameState": {
       "type": "object",
       "required": [
+        "active_player",
         "battlefield",
         "cards",
         "command",
@@ -686,6 +627,9 @@
         "turn_order"
       ],
       "properties": {
+        "active_player": {
+          "$ref": "#/definitions/PlayerId"
+        },
         "battlefield": {
           "type": "array",
           "items": {
@@ -2043,38 +1987,9 @@
         }
       }
     },
-    "TargetClauseEffect": {
-      "type": "string",
-      "enum": [
-        "DummyField"
-      ]
-    },
     "TargetId": {
       "type": "integer",
       "format": "int32"
-    },
-    "Targets": {
-      "type": "object",
-      "required": [
-        "num",
-        "valid"
-      ],
-      "properties": {
-        "num": {
-          "type": "integer",
-          "format": "uint32",
-          "minimum": 1.0
-        },
-        "valid": {
-          "$ref": "#/definitions/TargetsFilter"
-        }
-      }
-    },
-    "TargetsFilter": {
-      "type": "string",
-      "enum": [
-        "DummyField"
-      ]
     },
     "TriggeredAbility": {
       "type": "object"

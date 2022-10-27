@@ -2,6 +2,7 @@ use schemars::JsonSchema;
 use serde_derive::Serialize;
 
 use crate::cost::Cost;
+use crate::mana::ManaCostSymbol;
 use crate::spellabil::Clause;
 use crate::spellabil::KeywordAbility;
 //use crate::carddb::CardBuilder;
@@ -32,4 +33,13 @@ impl Ability {
             _ => None,
         }
     }
+}
+
+impl Ability{
+    pub fn tap_for_mana(mana: Vec<ManaCostSymbol>) -> Self {
+        Ability::Activated(
+            ActivatedAbility { costs: vec![Cost::Selftap], effect: vec![Clause::AddMana(mana)], keyword: None }
+        )
+    }
+    
 }

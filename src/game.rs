@@ -9,7 +9,7 @@ use crate::errors::MTGError;
 use crate::event::{DiscardCause, Event, EventResult, TagEvent};
 use crate::mana::{Color, Mana, ManaCostSymbol};
 use crate::player::{Player, PlayerCon};
-use crate::spellabil::{Clause, ClauseEffect, KeywordAbility};
+use crate::spellabil::{Clause, KeywordAbility};
 use anyhow::{bail, Result};
 use async_recursion::async_recursion;
 use enum_map::EnumMap;
@@ -18,7 +18,6 @@ use rand::seq::SliceRandom;
 use rand::SeedableRng;
 use schemars::JsonSchema;
 use serde::Serialize;
-use serde_json;
 use std::cmp::max;
 use std::collections::{HashMap, HashSet, VecDeque};
 use warp::ws::WebSocket;
@@ -57,6 +56,7 @@ pub struct Game {
     pub lands_played_this_turn: u32,
     pub land_play_limit: u32,
     pub priority: PlayerId,
+    pub active_player: PlayerId,
     #[serde(skip)]
     db: &'static CardDB,
     #[serde(skip)]
@@ -126,6 +126,7 @@ impl GameBuilder {
             command: HashSet::new(),
             stack: Vec::new(),
             turn_order: self.turn_order,
+            active_player: start,
             db,
             land_play_limit: 1,
             lands_played_this_turn: 0,
@@ -161,22 +162,13 @@ impl Game {
             } else if let Some(phase) = self.phases.pop_front() {
                 self.handle_event(Event::Phase { phase }).await;
             } else if let Some(player) = self.extra_turns.pop_front() {
-                self.handle_event(Event::Turn { extra: true }).await;
+                self.handle_event(Event::Turn { player, extra: true }).await;
             } else {
-                //Make sure the active player is updated properly if a player loses or leaves!
-                let order_spot = self
-                    .turn_order
-                    .iter()
-                    .position(|x| *x == self.active_player())
-                    .unwrap();
-                let new_spot = (order_spot + 1) % self.turn_order.len();
-                self.handle_event(Event::Turn { extra: false }).await;
+                self.turn_order.rotate_left(1);
+                self.handle_event(Event::Turn { player:self.turn_order[0], extra: false }).await;
             }
         }
         self.outcome
-    }
-    pub fn active_player(&self) -> PlayerId {
-        self.turn_order[0]
     }
 
     //backs the game up in case a spell casting or attacker/blocker
@@ -192,6 +184,7 @@ impl Game {
         let mut b = None;
         std::mem::swap(&mut b, &mut self.backup);
         *self = *b.unwrap();
+        self.backup()
     }
     //Taps an entity, returns if it was sucsessfully tapped
     pub async fn tap(&mut self, ent: CardId) -> bool {
@@ -465,6 +458,9 @@ impl Game {
     //The spell has already been moved to the stack for this operation
     async fn handle_cast(&mut self, castopt: StackActionOption) -> Result<(), MTGError> {
         println!("Handling cast {:?}", castopt);
+        if !castopt.filter.check(){
+            return Err(MTGError::CantCast)
+        }
         let cost_paid = self.request_cost_payment(&castopt).await?;
         println!("cost paid {:?}", cost_paid);
         if self.is_mana_ability(castopt.stack_ent) {
@@ -597,12 +593,7 @@ impl Game {
             return;
         }
         for effect in effects {
-            match effect {
-                Clause::Effect { effect } => {
-                    self.resolve_clause(effect, id, controller).await;
-                }
-                _ => todo!(),
-            }
+            self.resolve_clause(effect, id, controller).await;
         }
         let dest = if types.instant || types.sorcery {
             Zone::Graveyard
@@ -611,14 +602,14 @@ impl Game {
         };
         self.move_zones(id, Zone::Stack, dest).await;
     }
-    async fn resolve_clause(&mut self, effect: ClauseEffect, id: CardId, controller: PlayerId) {
-        match effect {
-            ClauseEffect::AddMana(manas) => {
+    async fn resolve_clause(&mut self, clause:Clause, id: CardId, controller: PlayerId) {
+        match clause {
+            Clause::AddMana(manas) => {
                 for mana in manas {
                     self.add_mana(controller, mana).await;
                 }
             }
-            ClauseEffect::DrawCard => {
+            Clause::DrawCard => {
                 self.draw(controller).await;
             }
         }
@@ -636,18 +627,10 @@ impl Game {
             let mut mana_abil = false;
             for clause in &card.effect {
                 match clause {
-                    Clause::Target {
-                        targets: _,
-                        effect: _,
-                    } => {
-                        return false;
+                    Clause::AddMana(_)=>{
+                        mana_abil = true;
                     }
-                    Clause::Effect { effect } => match effect {
-                        ClauseEffect::AddMana(_) => {
-                            mana_abil = true;
-                        }
-                        _ => (),
-                    },
+                    _=> {mana_abil=false;}
                 }
             }
             mana_abil
@@ -714,7 +697,7 @@ impl Game {
         actions
     }
     fn sorcery_speed(&self, player_id: PlayerId) -> bool {
-        player_id == self.active_player()
+        player_id == self.active_player
             && self.stack.is_empty()
             && (self.phase == Some(Phase::FirstMain) || self.phase == Some(Phase::SecondMain))
     }
@@ -781,7 +764,6 @@ impl Game {
                             true
                         }
                     }
-                    _ => todo!(),
                 };
                 if !can_pay {
                     return false;
@@ -800,10 +782,8 @@ impl Game {
                 if let Ability::Activated(abil) = ability {
                     let mut abil_mana: i64 = 0;
                     for clause in &abil.effect {
-                        if let Clause::Effect { effect } = clause {
-                            if let ClauseEffect::AddMana(manas) = effect {
-                                abil_mana += manas.len() as i64; //TODO handle replacement affacts adding mana
-                            }
+                        if let Clause::AddMana(mana)=clause{
+                            abil_mana += mana.len() as i64;
                         }
                     }
                     mana_produce = max(mana_produce, abil_mana);
@@ -832,7 +812,9 @@ impl Game {
     //Checks if this attacking arragment is legal.
     //Does nothing for now, will need to implement legality
     //checking before I can make any progress on that
-    pub fn attackers_legal(&self, attackers: &Vec<CardId>, targets: &Vec<TargetId>) -> bool {
+    //This will need to loop over ALL creatures, not just the ones 
+    //in attacks to handle creatues that must attack
+    pub fn attackers_legal(&self, attacks:&HashMap<CardId,TargetId>) -> bool {
         true
     }
     pub fn blocks_legal(&self, blockers: &Vec<CardId>, blocked: &Vec<Vec<CardId>>) -> bool {

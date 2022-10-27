@@ -487,15 +487,25 @@ export interface PlayerView {
   [k: string]: unknown;
 }
 export interface AskPairABFor_TargetId {
-  a: CardId[];
+  a: {
+    /**
+     * @minItems 2
+     * @maxItems 2
+     */
+    [k: string]: [number, number];
+  };
   b: TargetId[];
-  num_choices: [number, number][];
   [k: string]: unknown;
 }
 export interface AskPairABFor_CardId {
-  a: CardId[];
+  a: {
+    /**
+     * @minItems 2
+     * @maxItems 2
+     */
+    [k: string]: [number, number];
+  };
   b: CardId[];
-  num_choices: [number, number][];
   [k: string]: unknown;
 }
 export interface AskSelectNFor_CardId {

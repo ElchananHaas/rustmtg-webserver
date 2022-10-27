@@ -6,7 +6,7 @@ use nom::Err;
 use nom::IResult;
 use paste::paste;
 use schemars::JsonSchema;
-use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
+use serde::ser::{Serialize, SerializeSeq, Serializer};
 use serde_derive::Serialize;
 use std::convert::AsRef;
 use strum_macros::AsRefStr;

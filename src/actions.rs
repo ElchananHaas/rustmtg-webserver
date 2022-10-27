@@ -2,10 +2,8 @@ use schemars::JsonSchema;
 use serde::Serialize;
 
 use crate::{
-    ability::Ability,
     cost::Cost,
     entities::{CardId, PlayerId},
-    player::Player,
     spellabil::KeywordAbility,
 };
 
@@ -22,7 +20,6 @@ impl ActionFilter {
     pub fn check(&self) -> bool {
         match self {
             ActionFilter::None => true,
-            _ => todo!(),
         }
     }
 }

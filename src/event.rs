@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{
     entities::{CardId, PlayerId, TargetId},
     game::{Phase, Subphase, Zone},
@@ -55,7 +57,7 @@ pub enum Event {
         spell: CardId,
     },
     Attack {
-        attackers: Vec<CardId>,
+        attacks: HashMap<CardId,TargetId>,
     },
     Activate {
         controller: PlayerId,
@@ -83,6 +85,7 @@ pub enum Event {
         phase: Phase,
     },
     Turn {
+        player: PlayerId,
         extra: bool,
     },
     Untap {
