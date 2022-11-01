@@ -9,6 +9,7 @@ use warp::ws::WebSocket;
 use warp::Filter;
 
 use crate::entities::PlayerId;
+use crate::player::PlayerCon;
 use crate::write_schema::write_types;
 mod ability;
 mod actions;
@@ -77,7 +78,7 @@ async fn launch_game(sockets: Vec<WebSocket>) -> Result<()> {
     sockets
         .into_iter()
         .enumerate()
-        .map(|(i, socket)| gamebuild.add_player(&format!("p{}", i), &db, &deck, socket))
+        .map(|(i, socket)| gamebuild.add_player(&format!("p{}", i), &db, &deck, PlayerCon::new(socket)))
         .collect::<Result<Vec<PlayerId>>>()?;
     let mut game = gamebuild.build(&db)?;
     println!("Launching game!");
@@ -88,7 +89,7 @@ async fn launch_game(sockets: Vec<WebSocket>) -> Result<()> {
 #[cfg(test)]
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
-    /*use super::*;
+    use super::*;
 
     #[test]
     fn test_game_init() -> Result<()> {
@@ -97,11 +98,11 @@ mod tests {
         let mut gamebuild = game::GameBuilder::new();
         let mut deck = Vec::new();
         for _ in 1..60 {
-            deck.push(String::from("Staunch Shieldmate"));
+            deck.push("Staunch Shieldmate");
         }
-        gamebuild.add_player("p1", &db, &deck, Box::new(()))?;
-        gamebuild.add_player("p2", &db, &deck, Box::new(()))?;
+        gamebuild.add_player("p1", &db, &deck, PlayerCon::new_test())?;
+        gamebuild.add_player("p2", &db, &deck, PlayerCon::new_test())?;
         let _game = gamebuild.build(&db);
         Ok(())
-    }*/
+    }
 }

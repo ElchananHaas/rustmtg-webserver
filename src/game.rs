@@ -88,7 +88,7 @@ impl GameBuilder {
         name: &str,
         db: &CardDB,
         card_names: &Vec<&'static str>,
-        player_con: WebSocket,
+        player_con: PlayerCon,
     ) -> Result<PlayerId> {
         let mut cards = Vec::new();
         let player = Player {
@@ -99,7 +99,7 @@ impl GameBuilder {
             graveyard: Vec::new(),
             library: Vec::new(),
             max_handsize: 7,
-            player_con: PlayerCon::new(player_con),
+            player_con: player_con,
         };
         let (player_id, player) = self.players.insert(player);
         for cardname in card_names {
@@ -344,16 +344,16 @@ impl Game {
             .and_then(|card| card.controller.or(Some(card.owner)))
     }
     pub async fn cycle_priority(&mut self) {
-        self.player_cycle_priority(self.turn_order.clone()).await;
+        self.player_cycle_priority(self.turn_order_from_player(self.active_player)).await;
     }
     #[async_recursion]
     #[must_use]
     pub async fn player_cycle_priority(&mut self, mut players: VecDeque<PlayerId>) {
+        self.layers();
         self.place_abilities().await;
         let mut pass_count = 0;
         while pass_count < players.len() {
             self.priority = players[0];
-            self.layers();
             self.send_state().await;
             let act_taken = self.grant_priority(&players).await;
             match act_taken {
@@ -473,6 +473,17 @@ impl Game {
             }
         }
     }
+    fn turn_order_from_player(&self,player:PlayerId) -> VecDeque<PlayerId>{
+        let mut order = self.turn_order.clone();
+        for _ in 0..order.len() {
+            if order[0] == player {
+                break;
+            } else {
+                order.rotate_left(1);
+            }
+        }
+        order
+    }
     //The spell has already been moved to the stack for this operation
     async fn handle_cast(&mut self, castopt: StackActionOption) -> Result<(), MTGError> {
         println!("Handling cast {:?}", castopt);
@@ -486,14 +497,7 @@ impl Game {
         } else {
             //TODO handle rest of spellcasting
             let caster = castopt.player;
-            let mut order = self.turn_order.clone();
-            for _ in 0..order.len() {
-                if order[0] == caster {
-                    break;
-                } else {
-                    order.rotate_left(1);
-                }
-            }
+            let order=self.turn_order_from_player(caster);
             self.player_cycle_priority(order).await;
             self.resolve(castopt.stack_ent).await;
         }

@@ -740,10 +740,10 @@
     "KeywordAbility": {
       "type": "string",
       "enum": [
-        "FirstStrike",
-        "Haste",
-        "Vigilance",
-        "DoubleStrike"
+        "firststrike",
+        "haste",
+        "vigilance",
+        "doublestrike"
       ]
     },
     "Mana": {

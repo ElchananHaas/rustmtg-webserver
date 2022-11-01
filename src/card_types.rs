@@ -1,21 +1,14 @@
-use crate::carddb::trim_spaces;
-use nom;
-use nom::bytes::complete::tag;
-use nom::error::{Error, ParseError};
-use nom::Err;
-use nom::IResult;
 use paste::paste;
 use schemars::JsonSchema;
-use serde::ser::{Serialize, SerializeSeq, Serializer};
 use serde_derive::Serialize;
-use std::convert::AsRef;
-use strum_macros::AsRefStr;
-
-
+use serde_derive::Deserialize;
+use nom::IResult;
+use strum_macros::EnumString;
+use std::str::FromStr;
 macro_rules! enumset{
     ($name:ident, $($e:ident),*) => {
-        #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize, JsonSchema)]
-        #[derive(AsRefStr)]
+        #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize, Deserialize, JsonSchema, EnumString)]
+        #[strum(serialize_all = "lowercase")]
         #[allow(dead_code)] //allow dead code to reduce warnings noise on each variant
         #[repr(u32)]
         pub enum $name{
@@ -23,37 +16,23 @@ macro_rules! enumset{
         }
         #[allow(dead_code)]
         impl $name{
-            pub fn parse(x:&str)->IResult<&str, Self>{
-                $(
-                    let parse:IResult<&str,&str>=tag($name::$e.as_ref())(x);
-                    if let Ok((rest,_))=parse{
-                        return Ok((rest,$name::$e));
-                    }
-                )*
-                return Err(Err::Error(Error::from_error_kind(x, nom::error::ErrorKind::Alt)));
+            pub fn parse(x:&[String])->IResult<&[String], Self, ()>{
+                if x.len()==0 {
+                    return Err(nom::Err::Error(()));
+                }
+                match $name::from_str(&x[0]){
+                    Ok(val)=>Ok((&x[1..],val)),
+                    Err(_)=>Err(nom::Err::Error(()))
+                }
             }
         }
         paste!{
             #[derive(Default)]
-            #[derive(Clone, Copy, PartialEq, Eq, Debug, JsonSchema )]
+            #[derive(Clone, Copy, PartialEq, Eq, Debug, JsonSchema, Serialize, Deserialize)]
             pub struct [<$name s>]{
                 $(
                     pub [<$e:lower>]:bool,
                 )*
-            }
-            impl Serialize for [<$name s>]{
-                fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-                where
-                    S: Serializer,
-                {
-                    let mut seq = serializer.serialize_seq(None)?;
-                    $(
-                        if(self.[<$e:lower>]){
-                            seq.serialize_element(&$name::$e)?;
-                        }
-                    )*
-                    seq.end()
-                }
             }
             #[allow(dead_code)]
             impl [<$name s>]{
@@ -81,19 +60,18 @@ macro_rules! enumset{
                         )*
                     }
                 }
-                pub fn remove_all(&mut self){
-                    *self=Default::default();
-                }
-                //TODO handle spaces-or lex, then parse
-                pub fn parse(mut x:&str)->IResult<&str, Self>{
+                pub fn parse(mut x:&[String])->IResult<&[String], Self, ()>{
                     let mut res=Self::new();
-                    loop{
-                        (x,_)=trim_spaces(x)?;
-                        if let Ok((rest,t))=$name::parse(x){
-                            x=rest;
-                            res.add(t);
-                        }else{
-                            return Ok((x,res));
+                    let typed:IResult<&[String],Vec<$name>,()>=nom::multi::many0($name::parse)(x);
+                    match typed{
+                        Ok((rest,types))=>{
+                            for t in types{
+                                res.add(t);
+                            }
+                            return Ok((rest,res))
+                        },
+                        Err(e)=>{
+                            return Err(e)
                         }
                     }
                 }

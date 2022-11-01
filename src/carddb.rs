@@ -1,19 +1,27 @@
+use crate::ability::Ability;
+use crate::ability::StaticAbility;
 use crate::card_entities::CardEnt;
 use crate::card_entities::PT;
 use crate::card_types::{Subtypes, Supertypes, Types};
 use crate::cost::Cost;
 use crate::entities::PlayerId;
 use crate::mana::ManaCostSymbol;
+use crate::spellabil::KeywordAbility;
 use anyhow::Result;
+use nom::bytes::complete::take_until;
+use nom::bytes::complete::take_while;
 use nom::character::complete;
+use nom::character::complete::none_of;
 use nom::error::ErrorKind;
 use nom::multi::many0;
 use nom::IResult;
 use serde_derive::Deserialize;
 use serde_json;
 use std::collections::HashMap;
+use std::collections::VecDeque;
 use std::fmt;
 use std::fs;
+use std::str::FromStr;
 //It returns mut cardbuilder due to method chaining
 pub struct CardDB {
     scryfall: HashMap<String, ScryfallEntry>,
@@ -44,6 +52,7 @@ struct ScryfallEntry {
     cmc: Option<f64>,
     power: Option<String>,
     toughness: Option<String>,
+    oracle_text: Option<String>,
 }
 impl CardDB {
     pub fn new() -> Self {
@@ -72,12 +81,80 @@ impl CardDB {
         parse_cost_line(&mut card, scryfall)?;
         parse_type_line(&mut card, scryfall)?;
         parse_pt(&mut card, scryfall);
+        parse_body(&mut card, scryfall)?;
         card.art_url = (&scryfall.image_uris)
             .as_ref()
             .and_then(|x| x.small.as_ref().or(x.normal.as_ref()).or(x.large.as_ref()))
             .cloned();
         Ok(card)
     }
+}
+
+fn parse_body<'a>(card: &mut CardEnt, entry: &'a ScryfallEntry) -> Result<(), ()> {
+    if let Some(body)=&entry.oracle_text{
+        let tokenized=tokenize(body, Some(&entry.name));
+        if tokenized.len()==0{
+            if let Ok((rest,()))=parse_body_lines(card,&tokenized){
+                if rest.len()==0{
+                    Ok(())
+                }else{
+                    println!("trailing term {:?}",rest);
+                    Err(())
+                }
+            }else{
+                Err(())
+            }
+        }else{
+            Err(())
+        }
+    }else{
+        Ok(())
+    }
+}
+fn parse_keyword_abilities(tokens: &[String])->IResult<&[String], Vec<KeywordAbility>, ()>{
+    many0(parse_keyword_ability)(tokens)
+}
+fn parse_keyword_ability(tokens: &[String])->IResult<&[String], KeywordAbility, ()>{
+    if tokens.len()>0{
+        if let Ok(abil)=KeywordAbility::from_str(&tokens[0]){
+            Ok((&tokens[1..],abil))
+        }else{
+            Err(nom::Err::Error(()))
+        }
+    }else{
+        Err(nom::Err::Error(()))
+    }
+}
+fn parse_body_lines<'a>(card: &mut CardEnt,tokens: &'a [String])-> IResult<&'a [String], (), ()> {
+    let (rest,keywords)=parse_keyword_abilities(tokens)?;
+    for keyword in keywords{
+        card.abilities.push(
+           Ability::Static(StaticAbility{
+            keyword:Some(keyword)
+           })
+        );
+    }
+    Ok((rest,()))
+}
+fn tokenize<'a>(text: &'a str, name: Option<&'a str>)->Vec<String>{
+    let text =if let Some(name)=name{
+        text.replace(name, "cardname")
+    }else{
+        text.to_owned()
+    };
+    let mut res:Vec<String>=Vec::new();
+    for in_line in text.split("\n"){
+        let pre_paren:IResult<&str,&str,()>=take_until("(")(in_line);
+        let parse_input;
+        if let Ok((_rest,line))=pre_paren{
+            parse_input=line;
+        }else{
+            parse_input=in_line;
+        }
+        res.extend(parse_input.split_whitespace().map(|x| x.to_lowercase()).filter(|x| !x.is_empty()));
+        res.push(String::from("\n"));
+    }
+    res
 }
 fn parse_pt<'a>(card: &mut CardEnt, entry: &'a ScryfallEntry) {
     if let Some(power)=entry.power.as_ref()
@@ -137,12 +214,13 @@ fn parse_mana(input: &str) -> IResult<&str, Vec<ManaCostSymbol>> {
     many0(parse_manasymbol)(input).map(|(rest, x)| (rest, x.into_iter().flatten().collect()))
 }
 
-pub fn trim_spaces(input: &str) -> IResult<&str, Vec<char>> {
-    many0(complete::char(' '))(input)
-}
 fn parse_type_line<'a>(card: &mut CardEnt, entry: &'a ScryfallEntry) -> Result<(), ()> {
-    if let Some(text) = entry.type_line.as_ref() {
-        if let Ok((_, (types, subtypes, supertypes))) = parse_type_line_h(text) {
+    if let Some(text) = entry.type_line.as_ref()     {
+        println!("{:?}",text);
+        let tokenized=tokenize(&text,None);
+        println!("{:?}",tokenized);
+
+        if let Ok((_, (types, subtypes, supertypes))) = parse_type_line_h(&tokenized) {
             card.types = types;
             card.supertypes = supertypes;
             card.subtypes = subtypes;
@@ -154,11 +232,21 @@ fn parse_type_line<'a>(card: &mut CardEnt, entry: &'a ScryfallEntry) -> Result<(
         Err(())
     }
 }
-fn parse_type_line_h<'a>(text: &'a str) -> IResult<&'a str, (Types, Subtypes, Supertypes)> {
+fn parse_type_line_h<'a>(text: &[String]) -> IResult<&[String], (Types, Subtypes, Supertypes), ()> {
     let (text, supertypes) = Supertypes::parse(text)?;
     let (text, types) = Types::parse(text)?;
-    let (text, _) = trim_spaces(text)?;
-    let (text, _) = complete::char('—')(text)?;
+    let (text, _) = tag("—")(text)?;
     let (text, subtypes) = Subtypes::parse(text)?;
     Ok((text, (types, subtypes, supertypes)))
 }
+fn tag(x:&str)-> impl Fn(&[String]) -> IResult<&[String], (), ()> + '_{
+    move |input:&[String]| {
+        println!("{}",x);
+        if input.len()>0 && input[0]==x.to_lowercase(){
+            Ok((&input[1..],()))
+        }else{
+            Err(nom::Err::Error(()))
+        }
+    } 
+}
+

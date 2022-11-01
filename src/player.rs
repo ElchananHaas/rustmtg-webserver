@@ -9,6 +9,7 @@ use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
+use std::ops::DerefMut;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -150,20 +151,33 @@ impl Player {
     }
 }
 
+
+pub enum Socket{
+    TestSocket,
+    Web(WebSocket)
+}
 #[derive(Clone)]
 pub struct PlayerCon {
-    socket: Arc<Mutex<WebSocket>>,
+    socket: Arc<Mutex<Socket>>,
 }
 
 impl PlayerCon {
     pub fn new(socket: WebSocket) -> Self {
         PlayerCon {
-            socket: Arc::new(Mutex::new(socket)),
+            socket: Arc::new(Mutex::new(Socket::Web(socket))),
         }
     }
-
+    pub fn new_test() -> Self {
+        PlayerCon { socket: Arc::new(Mutex::new(Socket::TestSocket)) }
+    }
     pub async fn receive<T: DeserializeOwned>(&self) -> Result<T> {
         let mut socket = self.socket.lock().await;
+        let socket: &mut WebSocket=match socket.deref_mut(){
+            Socket::TestSocket=>{
+                return Err(anyhow::Error::msg("Recieving Messages aren't supported in test mode yet"));
+            }
+            Socket::Web(sock)=> {sock}
+        };
         loop {
             let recieved = socket.next().await.expect("Socket is still open");
             let message = if let Ok(msg) = recieved {
@@ -182,6 +196,12 @@ impl PlayerCon {
     }
     pub async fn send_data(&self, state: Vec<u8>) -> Result<()> {
         let mut socket = self.socket.lock().await;
+        let socket: &mut WebSocket=match socket.deref_mut(){
+            Socket::TestSocket=>{
+                return Err(anyhow::Error::msg("Sending Messages aren't supported in test mode yet"));
+            }
+            Socket::Web(sock)=> {sock}
+        };
         let msg = std::str::from_utf8(&state).expect("json is valid text");
         socket
             .send(Message::text(msg))

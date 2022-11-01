@@ -12,7 +12,9 @@ use crate::spellabil::KeywordAbility;
 pub struct TriggeredAbility {}
 
 #[derive(Clone, Serialize, JsonSchema)]
-pub struct StaticAbility {}
+pub struct StaticAbility {
+    pub keyword: Option<KeywordAbility>
+}
 #[derive(Clone, Serialize, JsonSchema)]
 pub struct ActivatedAbility {
     pub costs: Vec<Cost>,
@@ -29,6 +31,7 @@ pub enum Ability {
 impl Ability {
     pub fn keyword(&self) -> Option<KeywordAbility> {
         match self {
+            //TODO! add in other types of keywords as I add them
             Self::Activated(abil) => abil.keyword,
             _ => None,
         }

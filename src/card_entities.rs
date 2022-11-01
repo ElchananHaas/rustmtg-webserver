@@ -1,5 +1,5 @@
 use crate::{
-    card_types::{Subtypes, Supertypes, Types},
+    card_types::{Supertypes, Subtypes, Types},
     entities::MIN_CARDID,
     spellabil::Clause,
 };

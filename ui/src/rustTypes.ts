@@ -35,7 +35,7 @@ export type Clause =
   | {
       AddMana: ManaCostSymbol[];
     };
-export type KeywordAbility = "FirstStrike" | "Haste" | "Vigilance" | "DoubleStrike";
+export type KeywordAbility = "firststrike" | "haste" | "vigilance" | "doublestrike";
 export type TargetId = number;
 export type EntType = "RealCard" | "TokenCard" | "ActivatedAbility" | "TriggeredAbility";
 export type Color = "White" | "Blue" | "Black" | "Red" | "Green" | "Colorless";
@@ -116,7 +116,7 @@ export interface GameState {
 }
 export interface CardEnt {
   abilities: Ability[];
-  already_attacked: boolean;
+  already_dealt_damage: boolean;
   art_url?: string | null;
   attacking?: TargetId | null;
   blocked: CardId[];

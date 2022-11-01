@@ -8,7 +8,6 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.51"
-strum_macros = "0.23.1"
 tokio = { version = "1", features = ["full"] }
 warp = "0.3.2"
 futures-util = "0.3"
@@ -26,3 +25,5 @@ count_tts = "0.2.0"
 paste = "1.0"
 enum-map = "2.4.0"
 schemars = "0.8.11"
+strum = { version = "0.24", features = ["derive"] }
+strum_macros = "0.24"
