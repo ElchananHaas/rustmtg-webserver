@@ -4,6 +4,7 @@
 use crate::entities::PlayerId;
 use crate::player::PlayerCon;
 use crate::write_schema::write_types;
+use crate::game::build_game::GameBuilder;
 use anyhow::Result;
 use once_cell::sync::OnceCell;
 use std::mem;
@@ -32,7 +33,6 @@ type Pairing = Arc<Mutex<Option<WebSocket>>>;
 #[tokio::main]
 async fn main() {
     write_types();
-    let db: &carddb::CardDB = CARDDB.get_or_init(|| carddb::CardDB::new());
     let pairer = Pairing::default();
     let pairer = warp::any().map(move || pairer.clone());
     let hello = warp::path!("hello" / String).map(|name| format!("Hello, {}!", name));
@@ -66,7 +66,7 @@ async fn user_connected(ws1: WebSocket, pair: Pairing) {
 }
 async fn launch_game(sockets: Vec<WebSocket>) -> Result<()> {
     let db: &carddb::CardDB = CARDDB.get().expect("Card database not initialized!");
-    let mut gamebuild = game::GameBuilder::new();
+    let mut gamebuild = GameBuilder::new();
     let mut deck = Vec::new();
     for _ in 0..30 {
         deck.push("Staunch Shieldmate");
@@ -89,7 +89,6 @@ async fn launch_game(sockets: Vec<WebSocket>) -> Result<()> {
 }
 #[cfg(test)]
 mod tests {
-    use std::f32::consts::E;
 
     use anyhow::bail;
 
@@ -103,7 +102,7 @@ mod tests {
 
     fn test_state() -> Result<Game> {
         let db: &carddb::CardDB = CARDDB.get_or_init(|| carddb::CardDB::new());
-        let mut gamebuild = game::GameBuilder::new();
+        let mut gamebuild = GameBuilder::new();
         let mut deck = Vec::new();
         for _ in 1..(60 - deck.len()) {
             deck.push("Staunch Shieldmate");
@@ -115,7 +114,7 @@ mod tests {
     #[test_log::test]
     fn test_game_init() -> Result<()> {
         let db: &carddb::CardDB = CARDDB.get_or_init(|| carddb::CardDB::new());
-        let mut gamebuild = game::GameBuilder::new();
+        let mut gamebuild = GameBuilder::new();
         let mut deck = Vec::new();
         deck.push("Staunch Shieldmate");
         deck.push("Garruk's Gorehorn");

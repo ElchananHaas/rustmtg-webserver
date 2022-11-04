@@ -250,4 +250,16 @@ impl Game{
             }
         }
     }
+
+        //Checks if this attacking arragment is legal.
+    //Does nothing for now, will need to implement legality
+    //checking before I can make any progress on that
+    //This will need to loop over ALL creatures, not just the ones
+    //in attacks to handle creatues that must attack
+    fn attackers_legal(&self, attacks: &HashMap<CardId, TargetId>) -> bool {
+        true
+    }
+    fn blocks_legal(&self, blockers: &Vec<CardId>, blocked: &Vec<Vec<CardId>>) -> bool {
+        true
+    }
 }
