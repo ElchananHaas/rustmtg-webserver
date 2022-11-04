@@ -2,9 +2,9 @@
 #![feature(const_option)]
 #![deny(unused_must_use)]
 use crate::entities::PlayerId;
+use crate::game::build_game::GameBuilder;
 use crate::player::PlayerCon;
 use crate::write_schema::write_types;
-use crate::game::build_game::GameBuilder;
 use anyhow::Result;
 use once_cell::sync::OnceCell;
 use std::mem;
@@ -65,7 +65,7 @@ async fn user_connected(ws1: WebSocket, pair: Pairing) {
     mem::swap(&mut *state, &mut current);
 }
 async fn launch_game(sockets: Vec<WebSocket>) -> Result<()> {
-    let db: &carddb::CardDB = CARDDB.get().expect("Card database not initialized!");
+    let db: &carddb::CardDB = CARDDB.get_or_init(|| carddb::CardDB::new());
     let mut gamebuild = GameBuilder::new();
     let mut deck = Vec::new();
     for _ in 0..30 {

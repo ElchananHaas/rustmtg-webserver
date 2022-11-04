@@ -1,5 +1,5 @@
-mod phase_event;
 mod combat;
+mod phase_event;
 
 use std::cmp::min;
 
@@ -189,7 +189,7 @@ impl Game {
             }
         }
     }
-    
+
     async fn movezones(
         &mut self,
         results: &mut Vec<EventResult>,
@@ -283,7 +283,6 @@ impl Game {
             });
         };
     }
-    
 
     //Add deathtouch and combat triggers
     async fn handle_damage(&mut self, amount: i64, target: TargetId, source: CardId) {

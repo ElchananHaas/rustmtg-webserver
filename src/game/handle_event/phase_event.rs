@@ -1,6 +1,11 @@
-use crate::{game::{Game, Subphase, Phase}, event::{TagEvent, EventResult, DiscardCause}, entities::CardId, client_message::{AskSelectN, Ask}};
+use crate::{
+    client_message::{Ask, AskSelectN},
+    entities::CardId,
+    event::{DiscardCause, EventResult, TagEvent},
+    game::{Game, Phase, Subphase},
+};
 
-impl Game{
+impl Game {
     pub async fn phase(&mut self, _events: &mut Vec<TagEvent>, phase: Phase) {
         self.phase = Some(phase);
         self.subphase = None;

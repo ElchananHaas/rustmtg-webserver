@@ -1,8 +1,22 @@
 use std::collections::HashMap;
 
-use crate::{game::{Game, Subphase}, spellabil::KeywordAbility, entities::{CardId, TargetId, PlayerId}, client_message::{AskPairAB, Ask}, event::{EventResult, TagEvent, Event, DamageReason}};
+use crate::{
+    client_message::{Ask, AskPairAB},
+    entities::{CardId, PlayerId, TargetId},
+    event::{DamageReason, Event, EventResult, TagEvent},
+    game::{Game, Subphase},
+    spellabil::KeywordAbility,
+};
 
-impl Game{
+impl Game {
+
+    pub fn attack_targets(&self, player: PlayerId) -> Vec<TargetId> {
+        self.opponents(player)
+            .iter()
+            .map(|pl| TargetId::Player(*pl))
+            .collect::<Vec<_>>()
+    }
+
     pub async fn attackers(&mut self, _results: &mut Vec<EventResult>, events: &mut Vec<TagEvent>) {
         self.cycle_priority().await;
         self.backup();
@@ -136,7 +150,7 @@ impl Game{
         }
         println!("exiting blockers");
     }
-    
+
     pub async fn damagephase(
         &mut self,
         _results: &mut Vec<EventResult>,
@@ -250,8 +264,7 @@ impl Game{
             }
         }
     }
-
-        //Checks if this attacking arragment is legal.
+    //Checks if this attacking arragment is legal.
     //Does nothing for now, will need to implement legality
     //checking before I can make any progress on that
     //This will need to loop over ALL creatures, not just the ones

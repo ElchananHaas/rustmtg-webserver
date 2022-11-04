@@ -35,7 +35,16 @@ export type Clause =
   | {
       AddMana: ManaCostSymbol[];
     };
-export type KeywordAbility = "firststrike" | "haste" | "vigilance" | "doublestrike";
+export type KeywordAbility =
+  | "FirstStrike"
+  | "Haste"
+  | "Vigilance"
+  | "DoubleStrike"
+  | "Flying"
+  | "Prowess"
+  | "Lifelink"
+  | "Trample"
+  | "Reach";
 export type TargetId = number;
 export type EntType = "RealCard" | "TokenCard" | "ActivatedAbility" | "TriggeredAbility";
 export type Color = "White" | "Blue" | "Black" | "Red" | "Green" | "Colorless";
@@ -148,6 +157,7 @@ export interface TriggeredAbility {
   [k: string]: unknown;
 }
 export interface StaticAbility {
+  keyword?: KeywordAbility | null;
   [k: string]: unknown;
 }
 export interface PT {

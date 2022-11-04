@@ -740,10 +740,15 @@
     "KeywordAbility": {
       "type": "string",
       "enum": [
-        "firststrike",
-        "haste",
-        "vigilance",
-        "doublestrike"
+        "FirstStrike",
+        "Haste",
+        "Vigilance",
+        "DoubleStrike",
+        "Flying",
+        "Prowess",
+        "Lifelink",
+        "Trample",
+        "Reach"
       ]
     },
     "Mana": {
@@ -871,7 +876,19 @@
       }
     },
     "StaticAbility": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "keyword": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/KeywordAbility"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
     },
     "Subphase": {
       "type": "string",

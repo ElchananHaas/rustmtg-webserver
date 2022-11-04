@@ -22,16 +22,15 @@ use std::cmp::max;
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::actions::{Action, ActionFilter, CastingOption, StackActionOption};
+pub mod build_game;
 mod event_generators;
 mod handle_event;
 mod layers_state_actions;
 mod serialize_game;
-pub mod build_game;
 
 pub type Players = EntMap<PlayerId, Player>;
 pub type Cards = EntMap<CardId, CardEnt>;
 
-//Implement debug trait!
 #[derive(Serialize, Clone, JsonSchema)]
 pub struct Game {
     #[serde(skip)]
@@ -69,7 +68,6 @@ pub enum GameOutcome {
     Tie,
     Winner(PlayerId),
 }
-
 
 //This is a helper struct for game serialization because
 //the function takes a mutable context,
@@ -228,9 +226,9 @@ impl Game {
     #[async_recursion]
     #[must_use]
     pub async fn player_cycle_priority(&mut self, mut players: VecDeque<PlayerId>) {
-        self.layers_state_actions().await;
         let mut pass_count = 0;
         while pass_count < players.len() {
+            self.layers_state_actions().await;
             self.priority = players[0];
             self.send_state().await;
             let act_taken = self.grant_priority(&players).await;
@@ -239,9 +237,12 @@ impl Game {
                     pass_count += 1;
                     players.rotate_left(1);
                 }
-                ActionPriorityType::Keep => {
+                ActionPriorityType::ManaAbilOrSpecialAction => {
                     //Do nothing, the player gains priority again.
                     //This happens for mana abilities and special abiltiies
+                }
+                ActionPriorityType::Action => {
+                    //Do nothing, but there was a cycling of priority
                 }
             }
         }
@@ -304,7 +305,7 @@ impl Game {
                             self.restore();
                             continue;
                         }
-                        return ActionPriorityType::Keep;
+                        return ActionPriorityType::Action;
                     }
                     Action::PlayLand(card) => {
                         self.handle_event(Event::PlayLand {
@@ -312,7 +313,7 @@ impl Game {
                             land: *card,
                         })
                         .await;
-                        return ActionPriorityType::Keep;
+                        return ActionPriorityType::ManaAbilOrSpecialAction;
                     }
                     Action::ActivateAbility { source, index } => {
                         self.backup();
@@ -343,9 +344,9 @@ impl Game {
                             continue;
                         }
                         if mana_abil {
-                            return ActionPriorityType::Keep;
+                            return ActionPriorityType::ManaAbilOrSpecialAction;
                         } else {
-                            return ActionPriorityType::Pass;
+                            return ActionPriorityType::Action;
                         }
                     }
                 };
@@ -695,13 +696,6 @@ impl Game {
         }
         return mana_produce;
     }
-    pub fn attack_targets(&self, player: PlayerId) -> Vec<TargetId> {
-        self.opponents(player)
-            .iter()
-            .map(|pl| TargetId::Player(*pl))
-            .collect::<Vec<_>>()
-    }
-
     pub fn opponents(&self, player: PlayerId) -> Vec<PlayerId> {
         self.turn_order
             .iter()
@@ -724,7 +718,8 @@ impl Game {
 
 pub enum ActionPriorityType {
     Pass,
-    Keep,
+    ManaAbilOrSpecialAction,
+    Action,
 }
 #[derive(Clone, Copy, Debug, Serialize, PartialEq, JsonSchema)]
 pub enum Phase {
