@@ -14,7 +14,30 @@ pub enum Layer {
 }
 
 impl Game {
-    pub fn layers(&mut self) {
+    //Computes layers, state based actions and places abilities on the stack
+    pub async fn layers_state_actions(&mut self) {
+        self.layers();
+        self.state_based_actions().await;
+        self.place_abilities().await;
+    }
+    async fn state_based_actions(&mut self) {
+        for &cardid in &self.battlefield.clone() {
+            if let Some(card)=self.cards.get(cardid) &&
+            let Some(pt)=card.pt{
+                if pt.toughness<=0{
+                    self.move_zones(cardid, Zone::Battlefield, Zone::Graveyard).await;
+                }
+                else if card.damaged>=pt.toughness{
+                    self.destroy(cardid).await;
+                }
+            }
+        }
+    }
+    //Places abilities on the stack
+    async fn place_abilities(&mut self) {
+        //TODO!
+    }
+    fn layers(&mut self) {
         self.layer_zero();
         self.layer_four();
     }

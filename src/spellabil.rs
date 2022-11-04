@@ -1,17 +1,23 @@
+use crate::mana::ManaCostSymbol;
 use schemars::JsonSchema;
 use serde_derive::Serialize;
 use strum_macros::EnumString;
-use crate::mana::ManaCostSymbol;
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, JsonSchema, EnumString)]
+#[strum(serialize_all = "lowercase")]
 pub enum KeywordAbility {
-    FirstStrike,
-    Haste,
-    Vigilance,
-    DoubleStrike,
+    FirstStrike,  //Implemented
+    Haste,        //Implemented
+    Vigilance,    //Implemented
+    DoubleStrike, //Implemented
+    Flying,
+    Prowess,
+    Lifelink,
+    Trample,
+    Reach,
 }
 
-#[derive(Clone, Serialize, JsonSchema)]
+#[derive(Clone, Serialize, JsonSchema, Debug)]
 pub enum Clause {
     AddMana(Vec<ManaCostSymbol>),
     DrawCard,

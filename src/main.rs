@@ -1,16 +1,15 @@
 #![feature(never_type)]
 #![feature(const_option)]
 #![deny(unused_must_use)]
+use crate::entities::PlayerId;
+use crate::player::PlayerCon;
+use crate::write_schema::write_types;
 use anyhow::Result;
 use once_cell::sync::OnceCell;
 use std::mem;
 use std::sync::{Arc, Mutex};
 use warp::ws::WebSocket;
 use warp::Filter;
-
-use crate::entities::PlayerId;
-use crate::player::PlayerCon;
-use crate::write_schema::write_types;
 mod ability;
 mod actions;
 mod card_entities;
@@ -33,7 +32,7 @@ type Pairing = Arc<Mutex<Option<WebSocket>>>;
 #[tokio::main]
 async fn main() {
     write_types();
-    CARDDB.set(carddb::CardDB::new()).unwrap();
+    let db: &carddb::CardDB = CARDDB.get_or_init(|| carddb::CardDB::new());
     let pairer = Pairing::default();
     let pairer = warp::any().map(move || pairer.clone());
     let hello = warp::path!("hello" / String).map(|name| format!("Hello, {}!", name));
@@ -78,7 +77,9 @@ async fn launch_game(sockets: Vec<WebSocket>) -> Result<()> {
     sockets
         .into_iter()
         .enumerate()
-        .map(|(i, socket)| gamebuild.add_player(&format!("p{}", i), &db, &deck, PlayerCon::new(socket)))
+        .map(|(i, socket)| {
+            gamebuild.add_player(&format!("p{}", i), &db, &deck, PlayerCon::new(socket))
+        })
         .collect::<Result<Vec<PlayerId>>>()?;
     let mut game = gamebuild.build(&db)?;
     println!("Launching game!");
@@ -88,21 +89,99 @@ async fn launch_game(sockets: Vec<WebSocket>) -> Result<()> {
 }
 #[cfg(test)]
 mod tests {
+    use std::f32::consts::E;
+
+    use anyhow::bail;
+
+    use crate::{
+        entities::CardId,
+        game::{Game, Zone},
+    };
+
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
 
-    #[test]
-    fn test_game_init() -> Result<()> {
-        CARDDB.set(carddb::CardDB::new()).unwrap();
-        let db: &carddb::CardDB = CARDDB.get().expect("Card database not initialized!");
+    fn test_state() -> Result<Game> {
+        let db: &carddb::CardDB = CARDDB.get_or_init(|| carddb::CardDB::new());
         let mut gamebuild = game::GameBuilder::new();
         let mut deck = Vec::new();
-        for _ in 1..60 {
+        for _ in 1..(60 - deck.len()) {
             deck.push("Staunch Shieldmate");
         }
         gamebuild.add_player("p1", &db, &deck, PlayerCon::new_test())?;
         gamebuild.add_player("p2", &db, &deck, PlayerCon::new_test())?;
+        gamebuild.build(&db)
+    }
+    #[test_log::test]
+    fn test_game_init() -> Result<()> {
+        let db: &carddb::CardDB = CARDDB.get_or_init(|| carddb::CardDB::new());
+        let mut gamebuild = game::GameBuilder::new();
+        let mut deck = Vec::new();
+        deck.push("Staunch Shieldmate");
+        deck.push("Garruk's Gorehorn");
+        deck.push("Alpine Watchdog");
+        deck.push("Mistral Singer");
+        deck.push("Wishcoin Crab");
+        deck.push("Blood Glutton");
+        deck.push("Walking Corpse");
+        deck.push("Onakke Ogre");
+        deck.push("Colossal Dreadmaw");
+        deck.push("Concordia Pegasus");
+        for _ in 1..(60 - deck.len()) {
+            deck.push("Plains");
+        }
+        gamebuild.add_player("p1", &db, &deck, PlayerCon::new_test())?;
+        gamebuild.add_player("p2", &db, &deck, PlayerCon::new_test())?;
         let _game = gamebuild.build(&db);
+        Ok(())
+    }
+    fn cards_with_name(state: &mut Game, name: &str) -> Vec<CardId> {
+        state
+            .cards_and_zones()
+            .iter()
+            .filter_map(|(id, _zone)| {
+                state.cards.get(*id).map_or(
+                    None,
+                    |card| {
+                        if card.name == name {
+                            Some(*id)
+                        } else {
+                            None
+                        }
+                    },
+                )
+            })
+            .collect()
+    }
+    #[test_log::test(tokio::test)]
+    async fn test_lethal_damage() -> Result<()> {
+        let mut game = test_state()?;
+        let shieldmates = cards_with_name(&mut game, "Staunch Shieldmate");
+        let results = game
+            .move_zones(shieldmates[0], Zone::Library, Zone::Battlefield)
+            .await;
+        println!("{:?}", results);
+        assert!(game.battlefield.len() == 1);
+        for (_, player) in game.players.view() {
+            assert!(player.graveyard.len() == 0);
+        }
+        let mut owner = None;
+        for &key in &game.battlefield {
+            if let Some(card) = game.cards.get_mut(key) {
+                card.damaged = 3;
+                owner = Some(card.owner);
+                break;
+            } else {
+                bail!("Card wasn't on battlefield");
+            }
+        }
+        game.layers_state_actions().await;
+        assert!(game.battlefield.len() == 0);
+        let owning_player = game
+            .players
+            .get(owner.expect("found card"))
+            .expect("owner exists");
+        assert!(owning_player.graveyard.len() == 1);
         Ok(())
     }
 }

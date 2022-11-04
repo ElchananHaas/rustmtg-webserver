@@ -1,5 +1,5 @@
 use crate::{
-    card_types::{Supertypes, Subtypes, Types},
+    card_types::{Subtypes, Supertypes, Types},
     entities::MIN_CARDID,
     spellabil::Clause,
 };
@@ -14,7 +14,7 @@ use crate::{
     entities::{CardId, PlayerId, TargetId},
     spellabil::KeywordAbility,
 };
-#[derive(Clone, Serialize, PartialEq, Eq, JsonSchema)]
+#[derive(Clone, Serialize, PartialEq, Eq, JsonSchema, Debug)]
 pub enum EntType {
     RealCard,
     TokenCard,
@@ -28,7 +28,7 @@ impl Default for EntType {
 }
 #[derive(Derivative)]
 #[derivative(Default)]
-#[derive(Serialize, Clone, JsonSchema)]
+#[derive(Serialize, Clone, JsonSchema, Debug)]
 //Holds a card, token or embalem, or triggered/activated ability
 pub struct CardEnt {
     pub etb_this_cycle: bool,
@@ -36,7 +36,7 @@ pub struct CardEnt {
     pub tapped: bool,
     pub already_dealt_damage: bool, //Has this dealt combat damage this turn (First strike, Double strike)
     pub attacking: Option<TargetId>, //Is this attacking a player of planeswalker
-    pub blocked: Vec<CardId>,   //What creatues is this blocked by?
+    pub blocked: Vec<CardId>,       //What creatues is this blocked by?
     pub blocking: Vec<CardId>,
     pub effect: Vec<Clause>, //Effect of card, for instant sorcery or ability
     pub name: &'static str,

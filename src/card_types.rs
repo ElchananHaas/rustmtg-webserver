@@ -1,10 +1,10 @@
+use nom::IResult;
 use paste::paste;
 use schemars::JsonSchema;
-use serde_derive::Serialize;
 use serde_derive::Deserialize;
-use nom::IResult;
-use strum_macros::EnumString;
+use serde_derive::Serialize;
 use std::str::FromStr;
+use strum_macros::EnumString;
 macro_rules! enumset{
     ($name:ident, $($e:ident),*) => {
         #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize, Deserialize, JsonSchema, EnumString)]
@@ -28,11 +28,26 @@ macro_rules! enumset{
         }
         paste!{
             #[derive(Default)]
-            #[derive(Clone, Copy, PartialEq, Eq, Debug, JsonSchema, Serialize, Deserialize)]
+            #[derive(Clone, Copy, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
             pub struct [<$name s>]{
                 $(
                     pub [<$e:lower>]:bool,
                 )*
+            }
+            impl std::fmt::Debug for [<$name s>]{
+                fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+                    write!(f, "[")?;
+                    $(
+                        if(self.[<$e:lower>]){
+                            $name::$e.fmt(f)?;
+                           write!(f, ",")?;
+                        }
+
+                    )*
+                    write!(f, "]")?;
+                    Ok(())
+
+                }
             }
             #[allow(dead_code)]
             impl [<$name s>]{

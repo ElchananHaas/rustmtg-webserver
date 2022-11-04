@@ -23,8 +23,9 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use warp::ws::WebSocket;
 
 use crate::actions::{Action, ActionFilter, CastingOption, StackActionOption};
+mod event_generators;
 mod handle_event;
-mod layers;
+mod layers_state_actions;
 mod serialize_game;
 
 pub type Players = EntMap<PlayerId, Player>;
@@ -194,61 +195,11 @@ impl Game {
         *self = *b.unwrap();
         self.backup()
     }
-    //Taps an entity, returns if it was sucsessfully tapped
-    pub async fn tap(&mut self, ent: CardId) -> bool {
-        self.handle_event(Event::Tap { ent })
-            .await
-            .contains(&EventResult::Tap(ent))
-    }
-    //Taps an entity, returns if it was sucsessfully tapped
-    pub async fn untap(&mut self, ent: CardId) -> bool {
-        self.handle_event(Event::Untap { ent })
-            .await
-            .contains(&EventResult::Untap(ent))
-    }
-    //draws a card, returns the entities drawn
-    pub async fn draw(&mut self, player: PlayerId) -> Vec<CardId> {
-        let res = self.handle_event(Event::Draw { player }).await;
-        let mut drawn = Vec::new();
-        for event in res {
-            if let EventResult::Draw(cardid) = event {
-                if let Some(card) = self.cards.get(cardid) {
-                    if card.owner == player {
-                        drawn.push(cardid);
-                    }
-                }
-            }
-        }
-        drawn
-        //TODO figure out which cards were drawn!
-    }
+
     pub fn shuffle(&mut self, player: PlayerId) {
         if let Some(pl) = self.players.get_mut(player) {
             pl.library.shuffle(&mut self.rng);
         }
-    }
-    //discard cards, returns discarded cards
-    pub async fn discard(
-        &mut self,
-        player: PlayerId,
-        card: CardId,
-        cause: DiscardCause,
-    ) -> Vec<CardId> {
-        let res = self
-            .handle_event(Event::Discard {
-                player,
-                card,
-                cause,
-            })
-            .await;
-        let mut discarded = Vec::new();
-        for event in res{
-            if let EventResult::MoveZones { oldent:_, newent:Some(newent),source:Zone::Hand, dest:Zone::Graveyard }=event{
-                discarded.push(newent);
-            }
-        }
-        discarded
-        //TODO figure out which cards were discarded!
     }
     pub async fn add_mana(&mut self, player: PlayerId, mana: ManaCostSymbol) -> Vec<ManaId> {
         let colors: Vec<Color> = match mana {
@@ -344,13 +295,13 @@ impl Game {
             .and_then(|card| card.controller.or(Some(card.owner)))
     }
     pub async fn cycle_priority(&mut self) {
-        self.player_cycle_priority(self.turn_order_from_player(self.active_player)).await;
+        self.player_cycle_priority(self.turn_order_from_player(self.active_player))
+            .await;
     }
     #[async_recursion]
     #[must_use]
     pub async fn player_cycle_priority(&mut self, mut players: VecDeque<PlayerId>) {
-        self.layers();
-        self.place_abilities().await;
+        self.layers_state_actions().await;
         let mut pass_count = 0;
         while pass_count < players.len() {
             self.priority = players[0];
@@ -367,11 +318,6 @@ impl Game {
                 }
             }
         }
-    }
-    pub async fn move_zones(&mut self, ent: CardId, origin: Zone, dest: Zone) -> Vec<EventResult> {
-        self
-            .handle_event(Event::MoveZones { ent, origin, dest })
-            .await
     }
 
     pub async fn grant_priority(&mut self, players: &VecDeque<PlayerId>) -> ActionPriorityType {
@@ -401,14 +347,20 @@ impl Game {
                             .move_zones(card, casting_option.zone, Zone::Stack)
                             .await;
                         let stack_ent;
-                        if stackobjs.len()==1{ 
-                            if let EventResult::MoveZones { oldent:_, newent:Some(newent), source:_, dest:_ }=stackobjs[0]{
-                                stack_ent=newent
-                            }else{
+                        if stackobjs.len() == 1 {
+                            if let EventResult::MoveZones {
+                                oldent: _,
+                                newent: Some(newent),
+                                source: _,
+                                dest: _,
+                            } = stackobjs[0]
+                            {
+                                stack_ent = newent
+                            } else {
                                 self.restore();
                                 continue;
                             }
-                        }else{
+                        } else {
                             self.restore();
                             continue;
                         }
@@ -473,7 +425,7 @@ impl Game {
             }
         }
     }
-    fn turn_order_from_player(&self,player:PlayerId) -> VecDeque<PlayerId>{
+    fn turn_order_from_player(&self, player: PlayerId) -> VecDeque<PlayerId> {
         let mut order = self.turn_order.clone();
         for _ in 0..order.len() {
             if order[0] == player {
@@ -497,7 +449,7 @@ impl Game {
         } else {
             //TODO handle rest of spellcasting
             let caster = castopt.player;
-            let order=self.turn_order_from_player(caster);
+            let order = self.turn_order_from_player(caster);
             self.player_cycle_priority(order).await;
             self.resolve(castopt.stack_ent).await;
         }
@@ -815,10 +767,6 @@ impl Game {
             }
         }
         return mana_produce;
-    }
-    //Places abilities on the stack
-    pub async fn place_abilities(&mut self) {
-        //TODO!
     }
     pub fn attack_targets(&self, player: PlayerId) -> Vec<TargetId> {
         self.opponents(player)

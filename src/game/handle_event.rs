@@ -1,3 +1,6 @@
+mod phase_event;
+mod combat;
+
 use std::cmp::min;
 
 use crate::card_entities::EntType;
@@ -33,12 +36,22 @@ impl Game {
             //By the time the loop reaches here, the game is ready to
             //Execute the event. No more prevention/replacement effects
             match event.event {
+                Event::Destory { card } => {
+                    Game::add_event(
+                        &mut events,
+                        Event::MoveZones {
+                            ent: card,
+                            origin: Zone::Battlefield,
+                            dest: Zone::Graveyard,
+                        },
+                    );
+                }
                 //The assigning as a blocker happens during the two-part block trigger
                 Event::Damage {
                     amount,
                     target,
                     source,
-                    reason,
+                    reason: _,
                 } => {
                     self.handle_damage(amount, target, source).await;
                 }
@@ -176,41 +189,7 @@ impl Game {
             }
         }
     }
-    async fn phase(&mut self, _events: &mut Vec<TagEvent>, phase: Phase) {
-        self.phase = Some(phase);
-        self.subphase = None;
-        self.send_state().await;
-        match phase {
-            Phase::Begin => {
-                self.subphases
-                    .extend([Subphase::Untap, Subphase::Upkeep, Subphase::Draw].iter());
-            }
-            Phase::FirstMain => {
-                self.cycle_priority().await;
-            }
-            Phase::Combat => {
-                self.subphases.extend(
-                    [
-                        Subphase::BeginCombat,
-                        Subphase::Attackers,
-                        Subphase::Blockers,
-                        Subphase::FirstStrikeDamage,
-                        Subphase::Damage,
-                        Subphase::EndCombat,
-                    ]
-                    .iter(),
-                );
-            }
-            Phase::SecondMain => {
-                self.cycle_priority().await;
-            }
-            Phase::Ending => {
-                self.subphases
-                    .extend([Subphase::EndStep, Subphase::Cleanup].iter());
-            }
-        }
-        self.drain_mana_pools().await;
-    }
+    
     async fn movezones(
         &mut self,
         results: &mut Vec<EventResult>,
@@ -304,297 +283,8 @@ impl Game {
             });
         };
     }
-    async fn blockers(&mut self, results: &mut Vec<EventResult>, events: &mut Vec<TagEvent>) {
-        for opponent in self.opponents(self.active_player) {
-            self.backup();
-            //Filter only attacking creatures attacking that player
-            //Add in planeswalkers later
-            let attacking = self
-                .all_creatures()
-                .filter(|&creature| {
-                    self.cards
-                        .is(creature, |card| card.attacking == Some(opponent.into()))
-                })
-                .collect::<Vec<_>>();
-            let potential_blockers = self
-                .players_creatures(opponent)
-                .filter(|&creature| self.cards.is(creature, |card| !card.tapped))
-                .collect::<Vec<_>>();
-            loop {
-                //This will be adjusted for creatures that can make multiple blocks
-                let a = potential_blockers.iter().map(|x| (*x, (0, 1))).collect();
-                let blocks = if let Some(player) = self.players.get(opponent) {
-                    let pairing = AskPairAB {
-                        a,
-                        b: attacking.iter().cloned().collect(),
-                    };
-                    player
-                        .ask_user_pair(&Ask::Blockers(pairing.clone()), &pairing)
-                        .await
-                } else {
-                    return;
-                };
-                let mut blockers = Vec::new();
-                let mut blocked = Vec::new();
-                for (blocker, blocking) in blocks {
-                    if blocking.len() > 0 {
-                        blockers.push(blocker);
-                        blocked.push(blocking.clone());
-                    }
-                }
-                if !self.blocks_legal(&blockers, &blocked) {
-                    self.restore();
-                    continue;
-                }
-                for (i, &blocker) in blockers.iter().enumerate() {
-                    Game::add_event(events, Event::Block { blocker });
-                    for itsblocks in blocked[i].iter() {
-                        Game::add_event(
-                            events,
-                            Event::BlockedBy {
-                                blocker,
-                                attacker: *itsblocks,
-                            },
-                        );
-                    }
-                }
-                break;
-            }
-        }
-        for attacker in self
-            .all_creatures()
-            .filter(|&creature| self.cards.is(creature, |card| card.attacking.is_some()))
-        {
-            Game::add_event(events, Event::AttackUnblocked { attacker });
-        }
-        println!("exiting blockers");
-    }
-    async fn attackers(&mut self, _results: &mut Vec<EventResult>, events: &mut Vec<TagEvent>) {
-        self.cycle_priority().await;
-        self.backup();
-        //Only allow creatures that have haste or don't have summoning sickness to attack
-        let legal_attackers = self
-            .players_creatures(self.active_player)
-            .filter(|e| self.can_tap(*e))
-            .collect::<Vec<CardId>>();
-        let attack_targets = self.attack_targets(self.active_player);
-        loop {
-            let attacks;
-            //Choice limits is inclusive on both bounds
-            let a: HashMap<CardId, (usize, usize)> =
-                legal_attackers.iter().map(|id| (*id, (0, 1))).collect();
-            if let Some(player) = self.players.get(self.active_player) {
-                let pairing = AskPairAB {
-                    a,
-                    b: attack_targets.iter().cloned().collect(),
-                };
+    
 
-                attacks = player
-                    .ask_user_pair(&Ask::Attackers(pairing.clone()), &pairing)
-                    .await;
-            } else {
-                return;
-            }
-            let attacks: HashMap<CardId, TargetId> = attacks
-                .into_iter()
-                .filter_map(|attack| {
-                    if attack.1.len() == 0 {
-                        None
-                    } else {
-                        Some((attack.0, attack.1[0]))
-                    }
-                })
-                .collect();
-            if !self.attackers_legal(&attacks) {
-                self.restore();
-                continue;
-            }
-            for (&attacker, attacking) in attacks.iter() {
-                if !self
-                    .cards
-                    .is(attacker, |card| card.has_keyword(KeywordAbility::Vigilance))
-                {
-                    self.tap(attacker).await;
-                }
-            }
-            //Handle costs to attack here
-            //THis may led to a redeclaration of attackers
-            //Now declare them attackers and fire attacking events
-            if attacks.len() > 0 {
-                for (&attacker, &attacked) in &attacks {
-                    if let Some(card) = self.cards.get_mut(attacker) {
-                        card.attacking = Some(attacked);
-                    }
-                }
-                events.push(TagEvent {
-                    event: Event::Attack { attacks },
-                    replacements: Vec::new(),
-                });
-            } else {
-                self.subphases = vec![Subphase::EndCombat].into();
-            }
-            break;
-        }
-    }
-    async fn subphase(
-        &mut self,
-        results: &mut Vec<EventResult>,
-        events: &mut Vec<TagEvent>,
-        subphase: Subphase,
-    ) {
-        self.subphase = Some(subphase);
-        self.send_state().await;
-        match subphase {
-            Subphase::Untap => {
-                for perm in self
-                    .players_permanents(self.active_player)
-                    .collect::<Vec<_>>()
-                {
-                    self.untap(perm).await;
-                    if let Some(card) = self.cards.get_mut(perm) {
-                        card.etb_this_cycle = false;
-                    }
-                }
-                //Don't cycle priority in untap
-            }
-            Subphase::Upkeep => self.cycle_priority().await,
-            Subphase::Draw => {
-                self.draw(self.active_player).await;
-                self.cycle_priority().await
-            }
-            Subphase::BeginCombat => self.cycle_priority().await,
-            Subphase::Attackers => self.attackers(results, events).await,
-            Subphase::Blockers => self.blockers(results, events).await,
-            Subphase::FirstStrikeDamage => self.damagephase(results, events, subphase).await,
-            Subphase::Damage => self.damagephase(results, events, subphase).await,
-            Subphase::EndCombat => {
-                self.cycle_priority().await;
-                for &perm in &self.battlefield {
-                    if let Some(card) = self.cards.get_mut(perm) {
-                        card.attacking = None;
-                        card.blocked = Vec::new();
-                        card.blocking = Vec::new();
-                        card.already_dealt_damage = false;
-                    }
-                }
-            }
-            Subphase::EndStep => {
-                self.cycle_priority().await;
-            }
-            Subphase::Cleanup => {
-                self.cleanup_phase().await;
-            }
-        }
-        self.drain_mana_pools().await;
-    }
-    async fn cleanup_phase(&mut self) {
-        if let Some(player) = self.players.get_mut(self.active_player) {
-            if player.hand.len() > player.max_handsize {
-                let diff = player.hand.len().saturating_sub(player.max_handsize);
-                let diff: u32 = diff.try_into().unwrap();
-                let hand: Vec<CardId> = player.hand.iter().cloned().collect();
-                let ask = AskSelectN {
-                    ents: hand.clone(),
-                    min: diff,
-                    max: diff,
-                };
-                let to_discard = player
-                    .ask_user_selectn(&Ask::DiscardToHandSize(ask.clone()), &ask)
-                    .await;
-                for i in to_discard {
-                    self.discard(self.active_player, hand[i], DiscardCause::GameInternal)
-                        .await;
-                }
-            }
-        }
-
-        for &perm in &self.battlefield {
-            if let Some(perm) = self.cards.get_mut(perm) {
-                perm.damaged = 0;
-            }
-        }
-        self.lands_played_this_turn = 0;
-        //TODO handle priority being given in cleanup step by giving
-        //another cleanup step afterwards
-    }
-    async fn damagephase(
-        &mut self,
-        _results: &mut Vec<EventResult>,
-        events: &mut Vec<TagEvent>,
-        subphase: Subphase,
-    ) {
-        //Handle first strike and normal strike
-        for attacker in self
-            .damage_phase_permanents(self.active_player, subphase){
-            if let Some(attack) = self.cards.get_mut(attacker) {
-                attack.already_dealt_damage = true;
-            }
-            if let Some(attack)=self.cards.get(attacker)
-            && let Some(attacked)=attack.attacking{
-                if attack.blocked.len() > 0 {
-                    self.spread_damage(events, attacker, &attack.blocked).await;
-                } else {
-                    if let Some(pt)=attack.pt{
-                        Game::add_event(
-                            events,
-                            Event::Damage {
-                                amount: pt.power,
-                                target: attacked,
-                                source: attacker,
-                                reason: DamageReason::Combat,
-                            },
-                        );
-                    }
-                }
-            };
-        }
-        for player in self.opponents(self.active_player){
-            for blocker in self.damage_phase_permanents(player, subphase) {
-                if let Some(card) = self.cards.get(blocker) && card.blocking.len()>0 {
-                    self.spread_damage(events, blocker, &card.blocking).await;
-                }
-            }
-        }
-
-    }
-    pub fn damage_phase_permanents<'b>(
-        &'b self,
-        player: PlayerId,
-        subphase: Subphase,
-    ) -> Vec<CardId> {
-        self.players_creatures(player).filter(move |&ent| {
-            if subphase == Subphase::FirstStrikeDamage {
-                self.cards.has_keyword(ent, KeywordAbility::FirstStrike)
-                    || self.cards.has_keyword(ent, KeywordAbility::DoubleStrike)
-            } else if subphase == Subphase::Damage {
-                self.cards.has_keyword(ent, KeywordAbility::DoubleStrike)
-                    || !self.cards.is(ent, |card| card.already_dealt_damage)
-            } else {
-                panic!("This function may only be called within the damage phases")
-            }
-        }).collect()
-    }
-    async fn blocked_by(
-        &mut self,
-        events: &mut Vec<TagEvent>,
-        attacker_id: CardId,
-        blocker_id: CardId,
-    ) {
-        if let Some(attacker) = self.cards.get_mut(attacker_id) {
-            if attacker.blocked.len() == 0 {
-                Game::add_event(
-                    events,
-                    Event::Blocked {
-                        attacker: attacker_id,
-                    },
-                );
-            }
-            attacker.blocked.push(blocker_id);
-        }
-        if let Some(blocker) = self.cards.get_mut(blocker_id) {
-            blocker.blocking.push(attacker_id);
-        }
-    }
     //Add deathtouch and combat triggers
     async fn handle_damage(&mut self, amount: i64, target: TargetId, source: CardId) {
         if amount <= 0 {
@@ -610,39 +300,6 @@ impl Game {
                 if let Some(player) = self.players.get_mut(playerid) {
                     player.life -= amount;
                 }
-            }
-        }
-    }
-    async fn spread_damage(
-        &self,
-        events: &mut Vec<TagEvent>,
-        dealer: CardId,
-        creatures: &Vec<CardId>,
-    ) {
-        let mut damage_to_deal = if let Some(pt) = self.cards.get(dealer).and_then(|card| card.pt) {
-            pt.power
-        } else {
-            return;
-        };
-        if damage_to_deal <= 0 {
-            return;
-        }
-        for &creature in creatures {
-            if damage_to_deal <= 0 {
-                break;
-            }
-            if let Some(needed_damage) = self.remaining_lethal(creature) {
-                let amount = min(damage_to_deal, needed_damage);
-                Game::add_event(
-                    events,
-                    Event::Damage {
-                        amount,
-                        target: creature.into(),
-                        source: dealer,
-                        reason: DamageReason::Combat,
-                    },
-                );
-                damage_to_deal -= amount;
             }
         }
     }

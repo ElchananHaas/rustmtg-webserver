@@ -8,20 +8,20 @@ use crate::spellabil::KeywordAbility;
 //use crate::carddb::CardBuilder;
 //origin entity, target entity
 
-#[derive(Clone, Serialize, JsonSchema)]
+#[derive(Clone, Serialize, JsonSchema, Debug)]
 pub struct TriggeredAbility {}
 
-#[derive(Clone, Serialize, JsonSchema)]
+#[derive(Clone, Serialize, JsonSchema, Debug)]
 pub struct StaticAbility {
-    pub keyword: Option<KeywordAbility>
+    pub keyword: Option<KeywordAbility>,
 }
-#[derive(Clone, Serialize, JsonSchema)]
+#[derive(Clone, Serialize, JsonSchema, Debug)]
 pub struct ActivatedAbility {
     pub costs: Vec<Cost>,
     pub effect: Vec<Clause>,
     pub keyword: Option<KeywordAbility>,
 }
-#[derive(Clone, Serialize, JsonSchema)]
+#[derive(Clone, Serialize, JsonSchema, Debug)]
 pub enum Ability {
     Activated(ActivatedAbility),
     Triggered(TriggeredAbility),

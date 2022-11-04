@@ -34,6 +34,9 @@ pub enum Event {
         source: CardId,
         reason: DamageReason,
     },
+    Destory {
+        card: CardId,
+    },
     Discard {
         player: PlayerId,
         card: CardId,
@@ -95,8 +98,6 @@ pub enum Event {
 #[derive(Clone, Debug, PartialEq)]
 pub enum EventResult {
     Draw(CardId),
-    Cast(CardId),
-    Activate(CardId),
     MoveZones {
         oldent: CardId,
         newent: Option<CardId>,
