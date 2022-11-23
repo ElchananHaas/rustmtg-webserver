@@ -1,11 +1,7 @@
 mod combat;
 mod phase_event;
 
-use std::cmp::min;
-
 use crate::card_entities::EntType;
-use crate::client_message::AskPairAB;
-use crate::event::DamageReason;
 use crate::game::*;
 use async_recursion::async_recursion;
 
@@ -185,7 +181,7 @@ impl Game {
         //TODO handle effects that keep mana pools from draining
         for &player in &self.turn_order {
             if let Some(pl) = self.players.get_mut(player) {
-                pl.mana_pool = HashSet::new();
+                pl.mana_pool = HashSetObj::new();
             }
         }
     }

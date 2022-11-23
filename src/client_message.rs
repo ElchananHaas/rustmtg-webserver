@@ -3,12 +3,12 @@ use crate::{
     card_entities::CardEnt,
     entities::{CardId, PlayerId, TargetId},
     game::Game,
-    player::PlayerView,
+    player::PlayerView, hashset_obj::HashSetObj,
 };
 use schemars::JsonSchema;
 use serde::Serialize;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     hash::Hash,
 };
 #[derive(Serialize, JsonSchema)]
@@ -32,14 +32,19 @@ pub struct AskSelectN<T> {
     pub max: u32,
 }
 #[derive(Clone, Debug, Serialize, JsonSchema)]
-pub struct AskPairAB<T: Hash + Eq> {
-    pub a: HashMap<CardId, (usize, usize)>,
-    pub b: HashSet<T>,
+pub struct AskPairItem<T: Hash + Eq> {
+    pub items: HashSetObj<T>,
+    pub min: usize, //inclusive
+    pub max: usize, //inclusive
+}
+#[derive(Clone, Debug, Serialize, JsonSchema)]
+pub struct AskPair<T: Hash + Eq> {
+    pub pairs: HashMap<CardId, AskPairItem<T>>,
 }
 #[derive(Clone, Debug, Serialize, JsonSchema)]
 pub enum Ask {
-    Attackers(AskPairAB<TargetId>),
-    Blockers(AskPairAB<CardId>),
+    Attackers(AskPair<TargetId>),
+    Blockers(AskPair<CardId>),
     DiscardToHandSize(AskSelectN<CardId>),
     Action(AskSelectN<Action>),
 }

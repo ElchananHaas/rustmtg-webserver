@@ -1,6 +1,7 @@
-use crate::client_message::{Ask, AskPairAB, AskSelectN, ClientMessage};
+use crate::client_message::{Ask, AskPair, AskSelectN, ClientMessage};
 use crate::entities::{CardId, ManaId, PlayerId};
 use crate::game::Cards;
+use crate::hashset_obj::HashSetObj;
 use anyhow::Result;
 use futures::{SinkExt, StreamExt};
 use schemars::JsonSchema;
@@ -12,7 +13,7 @@ use std::hash::Hash;
 use std::ops::DerefMut;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-
+use warp::http::response;
 use warp::filters::ws::Message;
 use warp::ws::WebSocket;
 #[derive(Clone, JsonSchema)]
@@ -20,8 +21,8 @@ pub struct Player {
     pub name: String,
     pub life: i64,
     pub library: Vec<CardId>,
-    pub hand: HashSet<CardId>,
-    pub mana_pool: HashSet<ManaId>,
+    pub hand: HashSetObj<CardId>,
+    pub mana_pool: HashSetObj<ManaId>,
     pub graveyard: Vec<CardId>,
     pub max_handsize: usize,
     #[serde(skip)]
@@ -35,7 +36,7 @@ pub struct PlayerView<'a> {
     pub library: Vec<CardId>,
     pub hand: Vec<CardId>,
     pub graveyard: &'a Vec<CardId>,
-    pub mana_pool: &'a HashSet<ManaId>,
+    pub mana_pool: &'a HashSetObj<ManaId>,
     pub max_handsize: usize,
 }
 fn view_t<'a>(
@@ -120,28 +121,35 @@ impl Player {
     pub async fn ask_user_pair<T: DeserializeOwned + Hash + Eq + Copy + Clone + Debug>(
         &self,
         query: &Ask,
-        ask: &AskPairAB<T>,
-    ) -> HashMap<CardId, Vec<T>> {
+        ask: &AskPair<T>,
+    ) -> HashMap<CardId, HashSetObj<T>> {
         'outer: loop {
             self.send_data(ClientMessage::AskUser(query))
                 .await
                 .expect("Failed to send data");
-            let response = self.player_con.receive::<HashMap<CardId, Vec<T>>>().await;
+            let response = self
+                .player_con
+                .receive::<HashMap<CardId, HashSetObj<T>>>()
+                .await;
             let response = if let Ok(resp) = response {
                 resp
             } else {
                 continue 'outer;
             };
+            let response: HashMap<CardId, HashSetObj<T>> = response
+                .into_iter()
+                .map(|(key, value)| (key, value.into_iter().collect()))
+                .collect();
             for (card, pairing) in response.iter() {
-                let bounds = if let Some(bound) = ask.a.get(card) {
-                    bound
+                if let Some(input) = ask.pairs.get(card) {
+                    let items= input.items.clone();
+                    if pairing.len() < input.min
+                        || pairing.len() > input.max
+                        || !items.is_subset(pairing)
+                    {
+                        continue 'outer;
+                    }
                 } else {
-                    continue 'outer;
-                };
-                if pairing.len() < bounds.0 || pairing.len() > bounds.1 {
-                    continue 'outer;
-                }
-                if pairing.len() != pairing.iter().map(|x| *x).collect::<HashSet<T>>().len() {
                     continue 'outer;
                 }
             }
@@ -151,8 +159,9 @@ impl Player {
     }
 }
 
+#[allow(dead_code)]
 pub enum Socket {
-    TestSocket,
+    TestSocket, //used in test, and therefore isn't dead code
     Web(WebSocket),
 }
 #[derive(Clone)]
@@ -166,6 +175,7 @@ impl PlayerCon {
             socket: Arc::new(Mutex::new(Socket::Web(socket))),
         }
     }
+    #[allow(dead_code)] //Used in test code and therefore isn't dead
     pub fn new_test() -> Self {
         PlayerCon {
             socket: Arc::new(Mutex::new(Socket::TestSocket)),

@@ -19,8 +19,8 @@ use rand::SeedableRng;
 use schemars::JsonSchema;
 use serde::Serialize;
 use std::cmp::max;
-use std::collections::{HashMap, HashSet, VecDeque};
-
+use std::collections::{HashMap, VecDeque};
+use crate::hashset_obj::HashSetObj;
 use crate::actions::{Action, ActionFilter, CastingOption, StackActionOption};
 pub mod build_game;
 mod event_generators;
@@ -38,9 +38,9 @@ pub struct Game {
     #[serde(skip)]
     pub cards: Cards,
     pub mana: EntMap<ManaId, Mana>,
-    pub battlefield: HashSet<CardId>,
-    pub exile: HashSet<CardId>,
-    pub command: HashSet<CardId>,
+    pub battlefield: HashSetObj<CardId>,
+    pub exile: HashSetObj<CardId>,
+    pub command: HashSetObj<CardId>,
     pub stack: Vec<CardId>,
     pub turn_order: VecDeque<PlayerId>,
     pub extra_turns: VecDeque<PlayerId>,
@@ -516,6 +516,12 @@ impl Game {
             }
         }
     }
+    fn has_keyword(&self, id: CardId, keyword: KeywordAbility) -> bool {
+        if let Some(card) = self.cards.get(id) {
+            return card.has_keyword(keyword);
+        }
+        false
+    }
     fn is_mana_ability(&self, id: CardId) -> bool {
         if let Some(card) = self.cards.get(id) {
             if !(card.ent_type == EntType::ActivatedAbility
@@ -523,9 +529,7 @@ impl Game {
             {
                 return false;
             }
-            for cost in &card.costs {
-                //Check for loyalty abilities when implemented
-            }
+            //TODO Check for loyalty abilities when implemented
             let mut mana_abil = false;
             for clause in &card.effect {
                 match clause {
@@ -563,7 +567,7 @@ impl Game {
         abil.controller = Some(player);
         abil.costs = activated.costs.clone();
         abil.effect = activated.effect.clone();
-        let (new_id, new_ent) = self.cards.insert(abil);
+        let (new_id, _new_ent) = self.cards.insert(abil);
         Some((new_id, keyword))
     }
     pub fn compute_actions(&self, player: PlayerId) -> Vec<Action> {

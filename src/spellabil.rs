@@ -10,11 +10,11 @@ pub enum KeywordAbility {
     Haste,        //Implemented
     Vigilance,    //Implemented
     DoubleStrike, //Implemented
-    Flying,
+    Flying,       //Implemented
     Prowess,
     Lifelink,
     Trample,
-    Reach,
+    Reach,        //Implemented
 }
 
 #[derive(Clone, Serialize, JsonSchema, Debug)]

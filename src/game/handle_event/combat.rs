@@ -1,20 +1,19 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::{
-    client_message::{Ask, AskPairAB},
+    client_message::{Ask, AskPair, AskPairItem},
     entities::{CardId, PlayerId, TargetId},
     event::{DamageReason, Event, EventResult, TagEvent},
     game::{Game, Subphase},
-    spellabil::KeywordAbility,
+    spellabil::KeywordAbility, hashset_obj::HashSetObj,
 };
 
 impl Game {
-
-    pub fn attack_targets(&self, player: PlayerId) -> Vec<TargetId> {
+    pub fn attack_targets(&self, player: PlayerId) -> HashSet<TargetId> {
         self.opponents(player)
             .iter()
             .map(|pl| TargetId::Player(*pl))
-            .collect::<Vec<_>>()
+            .collect::<HashSet<_>>()
     }
 
     pub async fn attackers(&mut self, _results: &mut Vec<EventResult>, events: &mut Vec<TagEvent>) {
@@ -25,18 +24,27 @@ impl Game {
             .players_creatures(self.active_player)
             .filter(|e| self.can_tap(*e))
             .collect::<Vec<CardId>>();
-        let attack_targets = self.attack_targets(self.active_player);
         loop {
             let attacks;
             //Choice limits is inclusive on both bounds
-            let a: HashMap<CardId, (usize, usize)> =
-                legal_attackers.iter().map(|id| (*id, (0, 1))).collect();
+            let pairs = legal_attackers
+                .iter()
+                .map(|&attacker| {
+                    (
+                        attacker,
+                        AskPairItem {
+                            items: self
+                                .attack_targets(self.active_player)
+                                .into_iter()
+                                .collect(),
+                            min: 0,
+                            max: 1,
+                        },
+                    )
+                })
+                .collect();
             if let Some(player) = self.players.get(self.active_player) {
-                let pairing = AskPairAB {
-                    a,
-                    b: attack_targets.iter().cloned().collect(),
-                };
-
+                let pairing = AskPair { pairs };
                 attacks = player
                     .ask_user_pair(&Ask::Attackers(pairing.clone()), &pairing)
                     .await;
@@ -45,12 +53,11 @@ impl Game {
             }
             let attacks: HashMap<CardId, TargetId> = attacks
                 .into_iter()
-                .filter_map(|attack| {
-                    if attack.1.len() == 0 {
-                        None
-                    } else {
-                        Some((attack.0, attack.1[0]))
+                .filter_map(|(attack, attacking)| {
+                    for x in attacking {
+                        return Some((attack, x));
                     }
+                    None
                 })
                 .collect();
             if !self.attackers_legal(&attacks) {
@@ -97,44 +104,53 @@ impl Game {
                         .is(creature, |card| card.attacking == Some(opponent.into()))
                 })
                 .collect::<Vec<_>>();
-            let potential_blockers = self
+            let legal_blockers = self
                 .players_creatures(opponent)
                 .filter(|&creature| self.cards.is(creature, |card| !card.tapped))
                 .collect::<Vec<_>>();
             loop {
                 //This will be adjusted for creatures that can make multiple blocks
-                let a = potential_blockers.iter().map(|x| (*x, (0, 1))).collect();
+                let pairs = legal_blockers
+                    .iter()
+                    .map(|&blocker| {
+                        let this_can_block: Vec<_> = attacking
+                            .clone()
+                            .into_iter()
+                            .filter(|&attacker| self.can_block(attacker, blocker))
+                            .collect();
+                        (
+                            blocker,
+                            AskPairItem {
+                                items: this_can_block.iter().cloned().collect(),
+                                min: 0,
+                                max: 1,
+                            },
+                        )
+                    })
+                    .collect();
                 let blocks = if let Some(player) = self.players.get(opponent) {
-                    let pairing = AskPairAB {
-                        a,
-                        b: attacking.iter().cloned().collect(),
-                    };
+                    let pairing = AskPair { pairs };
                     player
                         .ask_user_pair(&Ask::Blockers(pairing.clone()), &pairing)
                         .await
                 } else {
                     return;
                 };
-                let mut blockers = Vec::new();
-                let mut blocked = Vec::new();
-                for (blocker, blocking) in blocks {
-                    if blocking.len() > 0 {
-                        blockers.push(blocker);
-                        blocked.push(blocking.clone());
-                    }
-                }
-                if !self.blocks_legal(&blockers, &blocked) {
+                if !self.blocks_legal(&blocks) {
                     self.restore();
                     continue;
                 }
-                for (i, &blocker) in blockers.iter().enumerate() {
+                for (blocker, blocking) in blocks {
+                    if blocking.len() == 0 {
+                        continue;
+                    }
                     Game::add_event(events, Event::Block { blocker });
-                    for itsblocks in blocked[i].iter() {
+                    for blocked in blocking {
                         Game::add_event(
                             events,
                             Event::BlockedBy {
                                 blocker,
-                                attacker: *itsblocks,
+                                attacker: blocked,
                             },
                         );
                     }
@@ -272,7 +288,24 @@ impl Game {
     fn attackers_legal(&self, attacks: &HashMap<CardId, TargetId>) -> bool {
         true
     }
-    fn blocks_legal(&self, blockers: &Vec<CardId>, blocked: &Vec<Vec<CardId>>) -> bool {
+    fn can_block(&self, attacker: CardId, blocker: CardId) -> bool {
+        if self.has_keyword(attacker, KeywordAbility::Flying) {
+            if !(self.has_keyword(blocker, KeywordAbility::Flying)
+                || self.has_keyword(blocker, KeywordAbility::Reach))
+            {
+                return false;
+            }
+        }
+        true
+    }
+    fn blocks_legal(&self, blocks: &HashMap<CardId, HashSetObj<CardId>>) -> bool {
+        for (&blocker, attackers) in blocks {
+            for &attacker in attackers {
+                if !self.can_block(attacker, blocker) {
+                    return false;
+                }
+            }
+        }
         true
     }
 }

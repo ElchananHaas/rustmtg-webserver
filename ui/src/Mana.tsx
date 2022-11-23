@@ -42,7 +42,7 @@ export function ManaSymbols(props: {
         return null;
     });
     const mana_pool = props.player.mana_pool;
-    mana_pool.map(function(mana_id) {
+    Object.keys(mana_pool).map(function(mana_id) {
         color_quantities[props.game.mana.ents[mana_id].color] += 1;
         return null;
     });

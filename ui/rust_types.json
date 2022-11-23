@@ -168,7 +168,7 @@
           ],
           "properties": {
             "Attackers": {
-              "$ref": "#/definitions/AskPairAB_for_TargetId"
+              "$ref": "#/definitions/AskPair_for_TargetId"
             }
           },
           "additionalProperties": false
@@ -180,7 +180,7 @@
           ],
           "properties": {
             "Blockers": {
-              "$ref": "#/definitions/AskPairAB_for_CardId"
+              "$ref": "#/definitions/AskPair_for_CardId"
             }
           },
           "additionalProperties": false
@@ -211,75 +211,77 @@
         }
       ]
     },
-    "AskPairAB_for_CardId": {
+    "AskPairItem_for_CardId": {
       "type": "object",
       "required": [
-        "a",
-        "b"
+        "items",
+        "max",
+        "min"
       ],
       "properties": {
-        "a": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "array",
-            "items": [
-              {
-                "type": "integer",
-                "format": "uint",
-                "minimum": 0.0
-              },
-              {
-                "type": "integer",
-                "format": "uint",
-                "minimum": 0.0
-              }
-            ],
-            "maxItems": 2,
-            "minItems": 2
-          }
+        "items": {
+          "$ref": "#/definitions/Map_of_Null"
         },
-        "b": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/CardId"
-          },
-          "uniqueItems": true
+        "max": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0.0
+        },
+        "min": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0.0
         }
       }
     },
-    "AskPairAB_for_TargetId": {
+    "AskPairItem_for_TargetId": {
       "type": "object",
       "required": [
-        "a",
-        "b"
+        "items",
+        "max",
+        "min"
       ],
       "properties": {
-        "a": {
+        "items": {
+          "$ref": "#/definitions/Map_of_Null"
+        },
+        "max": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0.0
+        },
+        "min": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0.0
+        }
+      }
+    },
+    "AskPair_for_CardId": {
+      "type": "object",
+      "required": [
+        "pairs"
+      ],
+      "properties": {
+        "pairs": {
           "type": "object",
           "additionalProperties": {
-            "type": "array",
-            "items": [
-              {
-                "type": "integer",
-                "format": "uint",
-                "minimum": 0.0
-              },
-              {
-                "type": "integer",
-                "format": "uint",
-                "minimum": 0.0
-              }
-            ],
-            "maxItems": 2,
-            "minItems": 2
+            "$ref": "#/definitions/AskPairItem_for_CardId"
           }
-        },
-        "b": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/TargetId"
-          },
-          "uniqueItems": true
+        }
+      }
+    },
+    "AskPair_for_TargetId": {
+      "type": "object",
+      "required": [
+        "pairs"
+      ],
+      "properties": {
+        "pairs": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/AskPairItem_for_TargetId"
+          }
         }
       }
     },
@@ -631,11 +633,7 @@
           "$ref": "#/definitions/PlayerId"
         },
         "battlefield": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/CardId"
-          },
-          "uniqueItems": true
+          "$ref": "#/definitions/Map_of_Null"
         },
         "cards": {
           "type": "object",
@@ -644,18 +642,10 @@
           }
         },
         "command": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/CardId"
-          },
-          "uniqueItems": true
+          "$ref": "#/definitions/Map_of_Null"
         },
         "exile": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/CardId"
-          },
-          "uniqueItems": true
+          "$ref": "#/definitions/Map_of_Null"
         },
         "extra_turns": {
           "type": "array",
@@ -784,13 +774,14 @@
         "Generic"
       ]
     },
-    "ManaId": {
-      "type": "integer",
-      "format": "uint64",
-      "minimum": 1.0
-    },
     "ManaRestriction": {
       "type": "object"
+    },
+    "Map_of_Null": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "null"
+      }
     },
     "PT": {
       "type": "object",
@@ -859,11 +850,7 @@
           "format": "int64"
         },
         "mana_pool": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/ManaId"
-          },
-          "uniqueItems": true
+          "$ref": "#/definitions/Map_of_Null"
         },
         "max_handsize": {
           "type": "integer",

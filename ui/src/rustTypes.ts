@@ -13,7 +13,6 @@ export type ClientMessage =
       AskUser: Ask;
     };
 export type PlayerId = number;
-export type CardId = number;
 export type Ability =
   | {
       Activated: ActivatedAbility;
@@ -46,6 +45,7 @@ export type KeywordAbility =
   | "Trample"
   | "Reach";
 export type TargetId = number;
+export type CardId = number;
 export type EntType = "RealCard" | "TokenCard" | "ActivatedAbility" | "TriggeredAbility";
 export type Color = "White" | "Blue" | "Black" | "Red" | "Green" | "Colorless";
 export type GameOutcome =
@@ -54,7 +54,6 @@ export type GameOutcome =
       Winner: PlayerId;
     };
 export type Phase = "Begin" | "FirstMain" | "Combat" | "SecondMain" | "Ending";
-export type ManaId = number;
 export type Subphase =
   | "Untap"
   | "Upkeep"
@@ -69,10 +68,10 @@ export type Subphase =
   | "Cleanup";
 export type Ask =
   | {
-      Attackers: AskPairABFor_TargetId;
+      Attackers: AskPairFor_TargetId;
     }
   | {
-      Blockers: AskPairABFor_CardId;
+      Blockers: AskPairFor_CardId;
     }
   | {
       DiscardToHandSize: AskSelectNFor_CardId;
@@ -99,12 +98,12 @@ export type Zone = "Hand" | "Library" | "Exile" | "Battlefield" | "Graveyard" | 
 
 export interface GameState {
   active_player: PlayerId;
-  battlefield: CardId[];
+  battlefield: MapOf_Null;
   cards: {
     [k: string]: CardEnt;
   };
-  command: CardId[];
-  exile: CardId[];
+  command: MapOf_Null;
+  exile: MapOf_Null;
   extra_turns: PlayerId[];
   land_play_limit: number;
   lands_played_this_turn: number;
@@ -122,6 +121,9 @@ export interface GameState {
   subphases: Subphase[];
   turn_order: PlayerId[];
   [k: string]: unknown;
+}
+export interface MapOf_Null {
+  [k: string]: null;
 }
 export interface CardEnt {
   abilities: Ability[];
@@ -471,31 +473,33 @@ export interface PlayerView {
   hand: CardId[];
   library: CardId[];
   life: number;
-  mana_pool: ManaId[];
+  mana_pool: MapOf_Null;
   max_handsize: number;
   name: string;
   [k: string]: unknown;
 }
-export interface AskPairABFor_TargetId {
-  a: {
-    /**
-     * @minItems 2
-     * @maxItems 2
-     */
-    [k: string]: [number, number];
+export interface AskPairFor_TargetId {
+  pairs: {
+    [k: string]: AskPairItemFor_TargetId;
   };
-  b: TargetId[];
   [k: string]: unknown;
 }
-export interface AskPairABFor_CardId {
-  a: {
-    /**
-     * @minItems 2
-     * @maxItems 2
-     */
-    [k: string]: [number, number];
+export interface AskPairItemFor_TargetId {
+  items: MapOf_Null;
+  max: number;
+  min: number;
+  [k: string]: unknown;
+}
+export interface AskPairFor_CardId {
+  pairs: {
+    [k: string]: AskPairItemFor_CardId;
   };
-  b: CardId[];
+  [k: string]: unknown;
+}
+export interface AskPairItemFor_CardId {
+  items: MapOf_Null;
+  max: number;
+  min: number;
   [k: string]: unknown;
 }
 export interface AskSelectNFor_CardId {

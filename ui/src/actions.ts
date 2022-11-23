@@ -1,4 +1,4 @@
-import { Action, CardId, TargetId } from "./rustTypes";
+import { Action, AskPairItemFor_CardId, AskPairItemFor_TargetId, CardId, TargetId } from "./rustTypes";
 
 export type CardActions = {
     [key: CardId]: {
@@ -14,14 +14,16 @@ export type ActionsUnion = {
     actions: CardActions
 } | {
     type: "attackers",
-    attackers: { [k: CardId]: [number, number] },
-    response: { [k: CardId]: (TargetId | null) }
-    targets: TargetId[],
+    attackers: { [k: CardId]: AskPairItemFor_TargetId };
+    response: { [k: CardId]: {
+        [k: string]: null;
+      } }
     selected_attacker: CardId | null,
 } | {
     type: "blockers",
-    blockers: { [k: CardId]: [number, number] },
-    attackers: CardId[],
-    response: { [k: CardId]: [TargetId] },
+    blockers: { [k: CardId]: AskPairItemFor_CardId },
+    response: { [k: CardId]: {
+        [k: string]: null;
+      } }
     selected_blocker: CardId | null,
 };

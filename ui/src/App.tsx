@@ -5,6 +5,7 @@ import { phase_image_map, PhaseImages } from './Phases';
 import {
     Ask,
     AskSelectNFor_Action,
+    CardId,
     ClientMessage,
     GameState,
 } from './rustTypes';
@@ -61,10 +62,6 @@ interface IState {
     handlers: any,
     actions: ActionsUnion
 }
-function objMap(obj: any, func: any) {
-    return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, func(v)]));
-}
-
 function exhaustiveCheck(param: never) { }
 class Game extends React.Component<IProps, IState>{
     socket: WebSocket;
@@ -110,14 +107,7 @@ class Game extends React.Component<IProps, IState>{
             return;
         }
         if (this.state.actions.type === "attackers") {
-            const resp = objMap(this.state.actions.response, (x: number | null) => {
-                if (x === null) {
-                    return []
-                } else {
-                    return [x]
-                }
-            });
-            const response = JSON.stringify(resp);
+            const response = JSON.stringify(this.state.actions.response);
             this.socket.send(response);
             this.clear_actions();
             return;
@@ -156,30 +146,40 @@ class Game extends React.Component<IProps, IState>{
             }
         }
         if ("Attackers" in parsed) {
-            const attackers = parsed.Attackers.a;
-            if (Object.entries(attackers).length === 0) {
+            const pairs = parsed.Attackers.pairs;
+            if (Object.entries(pairs).length === 0) {
                 this.socket.send("{}");
                 return;
             }
+            let resp: {
+                [k: CardId | string]: {
+                    [k: string]: null;
+                }
+            } = {};
+            Object.keys(pairs).map((key) => resp[key] = {});
             actions = {
                 type: "attackers",
-                attackers: attackers,
-                response: objMap(attackers, (_i: any) => null),
+                attackers: pairs,
+                response: resp,
                 selected_attacker: null,
-                targets: parsed.Attackers.b
             }
         }
         if ("Blockers" in parsed) {
-            const blockers = parsed.Blockers.a;
+            const blockers = parsed.Blockers.pairs;
             if (Object.entries(blockers).length === 0) {
                 this.socket.send("{}");
                 return;
             }
+            let resp: {
+                [k: CardId | string]: {
+                    [k: string]: null;
+                }
+            } = {};
+            Object.keys(blockers).map((key) => resp[key] = {});
             actions = {
                 type: "blockers",
                 blockers: blockers,
-                response: objMap(blockers, (_i: any) => []),
-                attackers: parsed.Blockers.b,
+                response: resp,
                 selected_blocker: null,
             }
         }
@@ -194,7 +194,7 @@ class Game extends React.Component<IProps, IState>{
         );
     }
     item_clicked(ent_id: number) { //This number is a CardId or PlayerId
-        console.log("clicked "+ent_id);
+        console.log("clicked " + ent_id);
         if (this.state.actions.type === "action") {
             const actions: CardActions = this.state.actions.actions;
             const card_actions = actions[ent_id];
@@ -221,11 +221,13 @@ class Game extends React.Component<IProps, IState>{
             }
             else if (actions.selected_attacker !== null) {
                 const selected = actions.selected_attacker;
-                if (actions.targets.includes(ent_id)) {
-                    if (actions.response[selected] === ent_id) {
-                        actions.response[selected] = null;
+                const this_attack = actions.attackers[selected];
+                const this_resp = actions.response[selected];
+                if (ent_id in this_attack.items && Object.keys(this_resp).length < this_attack.max) {
+                    if (ent_id in this_resp) {
+                        delete this_resp[ent_id];
                     } else {
-                        actions.response[selected] = ent_id;
+                        this_resp[ent_id] = null;
                     }
                     actions.selected_attacker = null;
                 }
@@ -243,14 +245,13 @@ class Game extends React.Component<IProps, IState>{
             }
             else if (actions.selected_blocker !== null) {
                 const selected = actions.selected_blocker;
-                if (actions.attackers.includes(ent_id)) {
-                    const idx = actions.response[selected].indexOf(ent_id);
-                    if (idx !== -1) {
-                        actions.response[selected].splice(idx, 1);
+                const this_block = actions.blockers[selected];
+                const this_resp = actions.response[selected];
+                if (ent_id in this_block.items && Object.keys(this_resp).length < this_block.max) {
+                    if (ent_id in this_resp) {
+                        delete this_resp[ent_id];
                     } else {
-                        if (actions.response[selected].length < actions.blockers[selected][1]) {
-                            actions.response[selected].push(ent_id);
-                        }
+                        this_resp[ent_id] = null;
                     }
                     actions.selected_blocker = null;
                 }

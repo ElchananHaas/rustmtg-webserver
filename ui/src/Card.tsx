@@ -4,7 +4,7 @@ import { RelationType } from "react-archer/lib/types";
 import { ActionsUnion } from "./actions";
 import { CardId, GameState } from "./rustTypes";
 
-function blocker(id: number): RelationType {
+function blocker(id: number|string): RelationType {
     return {
         targetId: "" + id,
         targetAnchor: 'top',
@@ -50,10 +50,11 @@ export function Card(props: {
         if (props.id in props.actions.attackers) {
             style.borderColor = "#AA0000";
             const attacking = props.actions.response[props.id];
-            if (attacking !== null) {
+            Object.keys(attacking).map((key)=>{
                 style.borderColor = "#FF0000";
-                attack_relation.targetId = "" + attacking;
-            }
+                attack_relation.targetId = "" + key;
+                return null;
+            });
         }
         if (props.actions.selected_attacker === props.id) {
             style.borderColor = "#FF0000";
@@ -66,7 +67,7 @@ export function Card(props: {
     if (props.actions.type === "blockers") {
         if (props.id in props.actions.blockers) {
             const blocking = props.actions.response[props.id];
-            blocking.map((attacker) => (
+            Object.entries(blocking).map(([attacker,_]) => (
                 blocking_relations.push(blocker(attacker))
             ));
             if (props.actions.selected_blocker === props.id) {

@@ -43,13 +43,14 @@ function LifeTotalBox(props: {
     let style: {
         borderColor?: string
     } = {};
-    const response = props.actions.type === "attackers" && props.actions.targets.filter((attacked) => {
-        return attacked === props.player_id;
-    }).length > 0;
+    const response = props.actions.type === "attackers" && Object.entries(props.actions.response).filter(([attacker,attacking]) => {
+        console.log(props.actions);
+        return (props.player_id in attacking);
+    }).length>0;
     if (response) {
         style.borderColor = "#AA0000";
     }
-    return (
+    return ( 
         <ArcherElement id={"" + props.player_id}>
             <div className="life-total-box" style={style} onClick={() => props.handlers.click(props.player_id)}>
                 <ImageCircledText src="./heart.svg" number={props.life} />
@@ -108,7 +109,7 @@ function PlayerBox(props: PlayerProps) {
 }
 
 function HandAndBattlefield(props: PlayerProps) {
-    const controlled = props.game.battlefield.filter((card_id) => {
+    const controlled = Object.keys(props.game.battlefield).filter((card_id) => {
         const card = props.game.cards[card_id];
         if (!card) {
             return false;
@@ -131,7 +132,7 @@ function HandAndBattlefield(props: PlayerProps) {
                 {controlled.map((card_id) =>
                     <Card
                         game={props.game}
-                        id={card_id}
+                        id={Number(card_id)}
                         key={card_id}
                         actions={props.actions}
                         handlers={props.handlers} />

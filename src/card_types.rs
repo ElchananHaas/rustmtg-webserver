@@ -75,7 +75,7 @@ macro_rules! enumset{
                         )*
                     }
                 }
-                pub fn parse(mut x:&[String])->IResult<&[String], Self, ()>{
+                pub fn parse(x:&[String])->IResult<&[String], Self, ()>{
                     let mut res=Self::new();
                     let typed:IResult<&[String],Vec<$name>,()>=nom::multi::many0($name::parse)(x);
                     match typed{
