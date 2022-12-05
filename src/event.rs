@@ -94,6 +94,10 @@ pub enum Event {
     Untap {
         ent: CardId,
     },
+    GainLife {
+        player: PlayerId,
+        amount: i64,
+    },
 }
 #[derive(Clone, Debug, PartialEq)]
 pub enum EventResult {

@@ -14,11 +14,12 @@ pub enum KeywordAbility {
     Prowess,
     Lifelink,
     Trample,
-    Reach,        //Implemented
+    Reach, //Implemented
 }
 
 #[derive(Clone, Serialize, JsonSchema, Debug)]
 pub enum Clause {
     AddMana(Vec<ManaCostSymbol>),
+    GainLife(i64),
     DrawCard,
 }

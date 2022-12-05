@@ -23,11 +23,11 @@ mod entities;
 mod errors;
 mod event;
 mod game;
+mod hashset_obj;
 mod mana;
 mod player;
 mod spellabil;
 mod write_schema;
-mod hashset_obj;
 static CARDDB: OnceCell<carddb::CardDB> = OnceCell::new();
 
 type Pairing = Arc<Mutex<Option<WebSocket>>>;

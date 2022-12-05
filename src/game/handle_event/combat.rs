@@ -5,7 +5,8 @@ use crate::{
     entities::{CardId, PlayerId, TargetId},
     event::{DamageReason, Event, EventResult, TagEvent},
     game::{Game, Subphase},
-    spellabil::KeywordAbility, hashset_obj::HashSetObj,
+    hashset_obj::HashSetObj,
+    spellabil::KeywordAbility,
 };
 
 impl Game {

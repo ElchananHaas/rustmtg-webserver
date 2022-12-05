@@ -1,3 +1,6 @@
+use crate::carddb::nom_error;
+use crate::carddb::text_token::Tokens;
+use nom::error::VerboseError;
 use nom::IResult;
 use paste::paste;
 use schemars::JsonSchema;
@@ -16,13 +19,13 @@ macro_rules! enumset{
         }
         #[allow(dead_code)]
         impl $name{
-            pub fn parse(x:&[String])->IResult<&[String], Self, ()>{
+            pub fn parse<'a>(x:&'a Tokens)->IResult<&'a Tokens, Self, VerboseError<&'a Tokens>>{
                 if x.len()==0 {
-                    return Err(nom::Err::Error(()));
+                    return Err(nom_error(x,"Empty string when parsing type"));
                 }
                 match $name::from_str(&x[0]){
                     Ok(val)=>Ok((&x[1..],val)),
-                    Err(_)=>Err(nom::Err::Error(()))
+                    Err(_)=>Err(nom_error(x,"failed to parse type"))
                 }
             }
         }
@@ -75,9 +78,9 @@ macro_rules! enumset{
                         )*
                     }
                 }
-                pub fn parse(x:&[String])->IResult<&[String], Self, ()>{
+                pub fn parse<'a>(x:&'a Tokens)->IResult<&'a Tokens, Self, VerboseError<&'a Tokens>>{
                     let mut res=Self::new();
-                    let typed:IResult<&[String],Vec<$name>,()>=nom::multi::many0($name::parse)(x);
+                    let typed:IResult<&'a Tokens,Vec<$name>,VerboseError<&'a Tokens>>=nom::multi::many0($name::parse)(x);
                     match typed{
                         Ok((rest,types))=>{
                             for t in types{

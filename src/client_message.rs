@@ -3,14 +3,12 @@ use crate::{
     card_entities::CardEnt,
     entities::{CardId, PlayerId, TargetId},
     game::Game,
-    player::PlayerView, hashset_obj::HashSetObj,
+    hashset_obj::HashSetObj,
+    player::PlayerView,
 };
 use schemars::JsonSchema;
 use serde::Serialize;
-use std::{
-    collections::HashMap,
-    hash::Hash,
-};
+use std::{collections::HashMap, hash::Hash};
 #[derive(Serialize, JsonSchema)]
 pub struct GameState<'a, 'b, 'c> {
     pub player: PlayerId,

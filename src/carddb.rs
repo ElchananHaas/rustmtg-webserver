@@ -1,3 +1,4 @@
+use self::text_token::Tokens;
 use crate::ability::Ability;
 use crate::ability::StaticAbility;
 use crate::card_entities::CardEnt;
@@ -6,22 +7,34 @@ use crate::card_types::{Subtypes, Supertypes, Types};
 use crate::cost::Cost;
 use crate::entities::PlayerId;
 use crate::mana::ManaCostSymbol;
+use crate::spellabil::Clause;
 use crate::spellabil::KeywordAbility;
-use anyhow::Result;
 use log::debug;
 use log::info;
-use nom::bytes::complete::take_until;
+use nom::branch::alt;
+use nom::bytes::complete::is_not;
+use nom::bytes::complete::tag;
 use nom::character::complete;
+use nom::character::complete::one_of;
+use nom::combinator::opt;
+use nom::error::context;
 use nom::error::ErrorKind;
+use nom::error::VerboseError;
 use nom::multi::many0;
+use nom::sequence::delimited;
 use nom::IResult;
 use serde_derive::Deserialize;
 use serde_json;
+use spawn_error::SpawnError;
 use std::collections::HashMap;
 use std::fmt;
 use std::fs;
 use std::str::FromStr;
-//It returns mut cardbuilder due to method chaining
+pub mod spawn_error;
+pub mod text_token;
+use crate::tokens;
+type Res<T, U> = IResult<T, U, VerboseError<T>>;
+
 pub struct CardDB {
     scryfall: HashMap<String, ScryfallEntry>,
 }
@@ -46,20 +59,36 @@ struct ScryfallEntry {
     image_uris: Option<ScryfallImageUrls>,
     mana_cost: Option<String>,
     type_line: Option<String>,
+    tokenized_type_line: Option<Vec<String>>, //Will be tokeized upon construction
     lang: Option<String>,
     color_identity: Option<Vec<String>>,
     cmc: Option<f64>,
     power: Option<String>,
     toughness: Option<String>,
     oracle_text: Option<String>,
+    tokenized_oracle_text: Option<Vec<String>>, //Will be tokeized upon construction
 }
+pub fn nom_error<'a>(
+    tokens: &'a Tokens,
+    message: &'static str,
+) -> nom::Err<VerboseError<&'a Tokens>> {
+    nom::Err::Error(VerboseError {
+        errors: vec![(tokens, nom::error::VerboseErrorKind::Context(message))],
+    })
+}
+
 impl CardDB {
     pub fn new() -> Self {
         let path = "oracle-cards-20220820210234.json";
         let data = fs::read_to_string(path).expect("Couldn't find scryfall oracle database file");
         let desered: Vec<ScryfallEntry> = serde_json::from_str(&data).expect("failed to parse!");
         let mut byname = HashMap::new();
-        for card in desered {
+        for mut card in desered {
+            card.tokenized_type_line = card.type_line.as_ref().map(|line| tokenize(line, None));
+            card.tokenized_oracle_text = card
+                .oracle_text
+                .as_ref()
+                .map(|line| tokenize(line, Some(&card.name)));
             byname.insert(card.name.clone(), card);
         }
         CardDB { scryfall: byname }
@@ -71,14 +100,21 @@ impl CardDB {
             .expect("couldn't spawn card")
     }
 
-    pub fn try_spawn_card(&self, card_name: &'static str, owner: PlayerId) -> Result<CardEnt, ()> {
+    pub fn try_spawn_card(
+        &self,
+        card_name: &'static str,
+        owner: PlayerId,
+    ) -> Result<CardEnt, SpawnError> {
         info!("spawning {}", card_name);
         let mut card: CardEnt = CardEnt::default();
         card.name = card_name;
         card.printed_name = card_name;
         card.owner = owner;
-        let scryfall: &ScryfallEntry = self.scryfall.get(card_name).ok_or(())?;
-        parse_cost_line(&mut card, scryfall)?;
+        let scryfall: &ScryfallEntry = self
+            .scryfall
+            .get(card_name)
+            .ok_or(SpawnError::CardNotFoundError(card_name))?;
+        parse_cost_line(&mut card, scryfall).unwrap();
         debug!("parsed cost line");
         parse_type_line(&mut card, scryfall)?;
         debug!("parsed type line");
@@ -94,48 +130,102 @@ impl CardDB {
     }
 }
 
-fn parse_body<'a>(card: &mut CardEnt, entry: &'a ScryfallEntry) -> Result<(), ()> {
-    if let Some(body) = &entry.oracle_text {
-        let tokenized = tokenize(body, Some(&entry.name));
-        if let Ok((rest, ())) = parse_body_lines(card, &tokenized) {
-            if rest.len() == 0 {
-                Ok(())
-            } else {
-                println!("trailing term {:?}", rest);
-                Err(())
-            }
+fn parse_body<'a>(
+    card: &mut CardEnt,
+    entry: &'a ScryfallEntry,
+) -> Result<(), nom::Err<VerboseError<&'a Tokens>>> {
+    if let Some(tokenized) = &entry.tokenized_oracle_text {
+        let tokens = Tokens::from_array(&tokenized);
+        let (rest, ()) = parse_body_lines(card, tokens)?;
+        if rest.len() == 0 {
+            Ok(())
         } else {
-            Err(())
+            Err(nom_error(rest, "Failed to parse complete body"))
         }
     } else {
         Ok(())
     }
 }
-fn parse_keyword_abilities(tokens: &[String]) -> IResult<&[String], Vec<KeywordAbility>, ()> {
+fn parse_keyword_abilities<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Vec<KeywordAbility>> {
     many0(parse_keyword_ability)(tokens)
 }
-fn parse_keyword_ability(tokens: &[String]) -> IResult<&[String], KeywordAbility, ()> {
+fn parse_keyword_ability<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, KeywordAbility> {
     if tokens.len() > 0 {
         if let Ok(abil) = KeywordAbility::from_str(&tokens[0]) {
-            let (rest, _) = nom::combinator::opt(tag("\n"))(&tokens[1..])?;
+            let (rest, _) =
+                nom::combinator::opt(tag(Tokens::from_array(&["\n".to_string()])))(&tokens[1..])?;
             Ok((rest, abil))
         } else {
-            Err(nom::Err::Error(()))
+            Err(nom_error(tokens, "failed to parse keyword ability"))
         }
     } else {
-        Err(nom::Err::Error(()))
+        Err(nom_error(tokens, "Empty string passed to keyword ability"))
     }
 }
-fn parse_body_lines<'a>(card: &mut CardEnt, tokens: &'a [String]) -> IResult<&'a [String], (), ()> {
-    let (rest, keywords) = parse_keyword_abilities(tokens)?;
+fn prune_comment<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ()> {
+    let (rest, _) = opt(delimited(
+        tag(tokens!("(")),
+        is_not(tokens!(")")),
+        tag(tokens!(")")),
+    ))(tokens)?;
+    Ok((rest, ()))
+}
+fn parse_number<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, i64> {
+    if tokens.len() == 0 {
+        return Err(nom_error(tokens, "Empty tokens when parsing integer"));
+    }
+    let first_token = &tokens[0];
+    if let Ok(num) = i64::from_str(&first_token) {
+        Ok((&tokens[1..], num))
+    } else {
+        Err(nom_error(tokens, "Failed to parse integer"))
+    }
+}
+fn parse_gain_life<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
+    let (tokens, _) = tag(tokens!("you", "gain"))(tokens)?;
+    let (tokens, value) = parse_number(tokens)?;
+    let (tokens, _) = tag(tokens!("life"))(tokens)?;
+    Ok((tokens, Clause::GainLife(value)))
+}
+fn parse_draw_a_card<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
+    let (tokens, _) = tag(tokens!("draw", "a", "card"))(tokens)?;
+    Ok((tokens, Clause::DrawCard))
+}
+fn parse_body_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
+    let (tokens, clause) = alt((parse_gain_life, parse_draw_a_card))(tokens)?;
+    let (tokens, _) = opt(tag(tokens!(".")))(tokens)?;
+    let (tokens, _) = opt(tag(tokens!("\n")))(tokens)?;
+    Ok((tokens, clause))
+}
+fn parse_body_lines<'a>(card: &mut CardEnt, tokens: &'a Tokens) -> Res<&'a Tokens, ()> {
+    let (rest, keywords) = context("parse keywords", parse_keyword_abilities)(tokens)?;
     for keyword in keywords {
         card.abilities.push(Ability::Static(StaticAbility {
             keyword: Some(keyword),
         }));
     }
-    let (rest, _) = nom::combinator::opt(tag("\n"))(rest)?;
+    let (rest, clauses) = many0(parse_body_line)(rest)?;
+    card.effect = clauses;
+    let (rest, _) = context("pruning comments", prune_comment)(rest)?;
+    let (rest, _) = nom::combinator::opt(tag(Tokens::from_array(&["\n".to_owned()])))(rest)?;
     debug!("rest is {:?}", rest);
     Ok((rest, ()))
+}
+fn parse_token<'a>(mut text: &'a str) -> IResult<&str, String, ()> {
+    let special_chars = " .:,\"\n()";
+    (text, _) = many0(nom::character::complete::char(' '))(text)?;
+    if let Ok((rest, char)) = one_of::<_, _, ()>(special_chars)(text) {
+        if char == ' ' {
+            text = rest;
+        } else {
+            return Ok((rest, char.to_string()));
+        }
+    };
+    let (rest, word) = is_not::<_, _, ()>(special_chars)(text)?;
+    if word.len() > 0 {
+        return Ok((rest, word.to_lowercase()));
+    }
+    return Err(nom::Err::Error(()));
 }
 fn tokenize<'a>(text: &'a str, name: Option<&'a str>) -> Vec<String> {
     let text = if let Some(name) = name {
@@ -143,24 +233,9 @@ fn tokenize<'a>(text: &'a str, name: Option<&'a str>) -> Vec<String> {
     } else {
         text.to_owned()
     };
-    let mut res: Vec<String> = Vec::new();
-    for in_line in text.split("\n") {
-        let pre_paren: IResult<&str, &str, ()> = take_until("(")(in_line);
-        let parse_input;
-        if let Ok((_rest, line)) = pre_paren {
-            parse_input = line;
-        } else {
-            parse_input = in_line;
-        }
-        res.extend(
-            parse_input
-                .split_whitespace()
-                .map(|x| x.to_lowercase())
-                .filter(|x| !x.is_empty()),
-        );
-        res.push(String::from("\n"));
-    }
-    res
+    let (remainder, res) = many0(parse_token)(&text).expect("Tokenizing failed");
+    assert!(remainder.len() == 0);
+    return res;
 }
 fn parse_pt<'a>(card: &mut CardEnt, entry: &'a ScryfallEntry) {
     if let Some(power)=entry.power.as_ref()
@@ -178,9 +253,12 @@ fn parse_pt<'a>(card: &mut CardEnt, entry: &'a ScryfallEntry) {
         });
     };
 }
-fn parse_cost_line<'a>(card: &mut CardEnt, entry: &'a ScryfallEntry) -> Result<(), ()> {
+fn parse_cost_line<'a>(
+    card: &mut CardEnt,
+    entry: &'a ScryfallEntry,
+) -> Result<(), nom::Err<VerboseError<&'a str>>> {
     if let Some(manatext) = entry.mana_cost.as_ref() {
-        let (rest, manas) = parse_mana(&manatext).map_err(|_| ())?;
+        let (rest, manas) = parse_mana(&manatext)?;
         if rest.len() > 0 {
             panic!("parser error!");
         }
@@ -189,11 +267,16 @@ fn parse_cost_line<'a>(card: &mut CardEnt, entry: &'a ScryfallEntry) -> Result<(
         }
         Ok(())
     } else {
-        Err(())
+        Err(nom::Err::Error(VerboseError {
+            errors: vec![(
+                "",
+                nom::error::VerboseErrorKind::Context("card had no cost line"),
+            )],
+        }))
     }
 }
 
-fn parse_manasymbol_contents(input: &str) -> IResult<&str, Vec<ManaCostSymbol>> {
+fn parse_manasymbol_contents(input: &str) -> Res<&str, Vec<ManaCostSymbol>> {
     if let Ok((rest, symbol)) = complete::one_of::<_, _, (&str, ErrorKind)>("WUBRG")(input) {
         let costsymbol = match symbol {
             'W' => vec![ManaCostSymbol::White],
@@ -208,7 +291,7 @@ fn parse_manasymbol_contents(input: &str) -> IResult<&str, Vec<ManaCostSymbol>> 
         complete::u64(input).map(|(rest, x)| (rest, vec![ManaCostSymbol::Generic; x as usize]))
     }
 }
-fn parse_manasymbol(input: &str) -> IResult<&str, Vec<ManaCostSymbol>> {
+fn parse_manasymbol(input: &str) -> Res<&str, Vec<ManaCostSymbol>> {
     nom::sequence::delimited(
         complete::char('{'),
         parse_manasymbol_contents,
@@ -216,38 +299,65 @@ fn parse_manasymbol(input: &str) -> IResult<&str, Vec<ManaCostSymbol>> {
     )(input)
 }
 
-fn parse_mana(input: &str) -> IResult<&str, Vec<ManaCostSymbol>> {
+fn parse_mana(input: &str) -> Res<&str, Vec<ManaCostSymbol>> {
     many0(parse_manasymbol)(input).map(|(rest, x)| (rest, x.into_iter().flatten().collect()))
 }
 
-fn parse_type_line<'a>(card: &mut CardEnt, entry: &'a ScryfallEntry) -> Result<(), ()> {
-    if let Some(text) = entry.type_line.as_ref() {
-        let tokenized = tokenize(&text, None);
-        if let Ok((_, (types, subtypes, supertypes))) = parse_type_line_h(&tokenized) {
+fn parse_type_line<'a>(card: &mut CardEnt, entry: &'a ScryfallEntry) -> Res<&'a Tokens, ()> {
+    if let Some(tokenized) = entry.tokenized_type_line.as_ref() {
+        let tokens = Tokens::from_array(&tokenized);
+        let (rest, (types, subtypes, supertypes)) = parse_type_line_h(&tokens)?;
+        if rest.len() == 0 {
             card.types = types;
             card.supertypes = supertypes;
             card.subtypes = subtypes;
-            Ok(())
+            Ok((rest, ()))
         } else {
-            Err(())
+            Err(nom_error(rest, "failed to parse complete type line"))
         }
     } else {
-        Err(())
+        Err(nom_error(
+            &Tokens::empty(),
+            "scryfall entry had no type line",
+        ))
     }
 }
-fn parse_type_line_h<'a>(text: &[String]) -> IResult<&[String], (Types, Subtypes, Supertypes), ()> {
+fn parse_type_line_h<'a>(text: &'a Tokens) -> Res<&'a Tokens, (Types, Subtypes, Supertypes)> {
     let (text, supertypes) = Supertypes::parse(text)?;
     let (text, types) = Types::parse(text)?;
-    let (text, _) = tag("—")(text)?;
+    let (text, _) = opt(tag(Tokens::from_array(&["—".to_owned()])))(text)?;
     let (text, subtypes) = Subtypes::parse(text)?;
+    let (text, _) = opt(tag(Tokens::from_array(&["\n".to_owned()])))(text)?;
     Ok((text, (types, subtypes, supertypes)))
 }
-fn tag(x: &str) -> impl Fn(&[String]) -> IResult<&[String], (), ()> + '_ {
-    move |input: &[String]| {
-        if input.len() > 0 && input[0] == x.to_lowercase() {
-            Ok((&input[1..], ()))
-        } else {
-            Err(nom::Err::Error(()))
+
+mod tests {
+    use std::num::NonZeroU64;
+
+    use once_cell::sync::OnceCell;
+
+    use super::*;
+    static CARDDB: OnceCell<CardDB> = OnceCell::new();
+
+    #[test_log::test]
+    fn card_tests() {
+        test_card(db(), "Staunch Shieldmate");
+        test_card(db(), "Plains");
+        test_card(db(), "Revitalize");
+    }
+    fn db() -> &'static CardDB {
+        CARDDB.get_or_init(|| CardDB::new())
+    }
+    #[test_log::test]
+    fn revitalize_test() {
+        test_card(db(), "Revitalize");
+    }
+    #[allow(dead_code)]
+    fn test_card(db: &CardDB, card_name: &'static str) -> CardEnt {
+        let spawned = db.try_spawn_card(card_name, PlayerId::from(NonZeroU64::new(1).unwrap()));
+        if spawned.is_err() {
+            println!("card {} failed to spawn", card_name);
         }
+        spawned.unwrap()
     }
 }

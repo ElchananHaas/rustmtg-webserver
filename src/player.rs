@@ -13,8 +13,8 @@ use std::hash::Hash;
 use std::ops::DerefMut;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use warp::http::response;
 use warp::filters::ws::Message;
+use warp::http::response;
 use warp::ws::WebSocket;
 #[derive(Clone, JsonSchema)]
 pub struct Player {
@@ -142,7 +142,7 @@ impl Player {
                 .collect();
             for (card, pairing) in response.iter() {
                 if let Some(input) = ask.pairs.get(card) {
-                    let items= input.items.clone();
+                    let items = input.items.clone();
                     if pairing.len() < input.min
                         || pairing.len() > input.max
                         || !items.is_subset(pairing)

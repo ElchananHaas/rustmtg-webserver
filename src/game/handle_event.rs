@@ -31,7 +31,13 @@ impl Game {
             //Handle prevention, replacement, triggered abilties here
             //By the time the loop reaches here, the game is ready to
             //Execute the event. No more prevention/replacement effects
+            //At this point
             match event.event {
+                Event::GainLife { player, amount } =>{
+                    if amount>0 && let Some(pl)=self.players.get_mut(player){
+                        pl.life+=amount;
+                    }
+                }
                 Event::Destory { card } => {
                     Game::add_event(
                         &mut events,

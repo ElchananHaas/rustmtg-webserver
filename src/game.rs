@@ -1,4 +1,5 @@
 use crate::ability::Ability;
+use crate::actions::{Action, ActionFilter, CastingOption, StackActionOption};
 use crate::card_entities::{CardEnt, EntType};
 use crate::carddb::CardDB;
 use crate::client_message::{Ask, AskSelectN};
@@ -7,6 +8,7 @@ use crate::ent_maps::EntMap;
 use crate::entities::{CardId, ManaId, PlayerId, TargetId, MIN_CARDID};
 use crate::errors::MTGError;
 use crate::event::{DiscardCause, Event, EventResult, TagEvent};
+use crate::hashset_obj::HashSetObj;
 use crate::mana::{Color, Mana, ManaCostSymbol};
 use crate::player::{Player, PlayerCon};
 use crate::spellabil::{Clause, KeywordAbility};
@@ -20,8 +22,7 @@ use schemars::JsonSchema;
 use serde::Serialize;
 use std::cmp::max;
 use std::collections::{HashMap, VecDeque};
-use crate::hashset_obj::HashSetObj;
-use crate::actions::{Action, ActionFilter, CastingOption, StackActionOption};
+
 pub mod build_game;
 mod event_generators;
 mod handle_event;
@@ -510,6 +511,9 @@ impl Game {
                 for mana in manas {
                     self.add_mana(controller, mana).await;
                 }
+            }
+            Clause::GainLife(amount) => {
+                self.gain_life(controller, amount).await;
             }
             Clause::DrawCard => {
                 self.draw(controller).await;

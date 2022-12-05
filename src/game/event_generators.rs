@@ -65,4 +65,7 @@ impl Game {
     pub async fn destroy(&mut self, id: CardId) {
         self.handle_event(Event::Destory { card: id }).await;
     }
+    pub async fn gain_life(&mut self, player: PlayerId, amount: i64) {
+        self.handle_event(Event::GainLife { player, amount }).await;
+    }
 }
