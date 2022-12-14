@@ -49,7 +49,7 @@ impl Game {
         self.land_play_limit = 1;
         for (ent, zone) in self.cards_and_zones() {
             if let Some(card) = self.cards.get_mut(ent) {
-                let base = self.db.spawn_card(card.printed_name, card.owner);
+                let base = card.printed.as_ref().unwrap().as_ref().clone();
                 card.types = base.types;
                 card.subtypes = base.subtypes;
                 card.supertypes = base.supertypes;

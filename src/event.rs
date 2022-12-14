@@ -34,7 +34,7 @@ pub enum Event {
         source: CardId,
         reason: DamageReason,
     },
-    Destory {
+    Destroy {
         card: CardId,
     },
     Discard {

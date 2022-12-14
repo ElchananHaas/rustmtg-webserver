@@ -2,7 +2,7 @@ use crate::{
     actions::Action,
     card_entities::CardEnt,
     entities::{CardId, PlayerId, TargetId},
-    game::Game,
+    game::{Game, Zone},
     hashset_obj::HashSetObj,
     player::PlayerView,
 };
@@ -45,4 +45,5 @@ pub enum Ask {
     Blockers(AskPair<CardId>),
     DiscardToHandSize(AskSelectN<CardId>),
     Action(AskSelectN<Action>),
+    Target(AskSelectN<TargetId>),
 }

@@ -30,6 +30,9 @@ function process_actions(action_data: AskSelectNFor_Action): CardActions {
             id = action.PlayLand;
         }
         if ("Cast" in action) {
+            if (!action.Cast.possible_to_take){
+                return null;
+            }
             id = action.Cast.source_card;
         }
         if ("ActivateAbility" in action) {
@@ -118,6 +121,10 @@ class Game extends React.Component<IProps, IState>{
             this.clear_actions();
             return;
         }
+        if (this.state.actions.type === "target") {
+            //You can't skip targets!
+            return;
+        }
         exhaustiveCheck(this.state.actions);
     }
     componentDidMount() {
@@ -136,13 +143,14 @@ class Game extends React.Component<IProps, IState>{
         };
         if ("Action" in parsed) {
             const parsed_actions: AskSelectNFor_Action = parsed.Action;
-            if (parsed_actions.ents.length === 0) {
+            const processed=process_actions(parsed_actions);
+            if (Object.entries(processed).length ===0){
                 this.socket.send("[]");
-                return;
+                return;  
             }
             actions = {
                 type: "action",
-                actions: process_actions(parsed_actions)
+                actions: processed
             }
         }
         if ("Attackers" in parsed) {
@@ -183,6 +191,12 @@ class Game extends React.Component<IProps, IState>{
                 selected_blocker: null,
             }
         }
+        if ("Target" in parsed){
+            actions={
+                type: "target",
+                action: parsed.Target
+            }
+        }
         this.setState({ actions: actions });
     }
     clear_actions() {
@@ -193,7 +207,7 @@ class Game extends React.Component<IProps, IState>{
         }
         );
     }
-    item_clicked(ent_id: number) { //This number is a CardId or PlayerId
+    item_clicked(ent_id: number) { //This number is a CardId or PlayerId (TargetId)
         console.log("clicked " + ent_id);
         if (this.state.actions.type === "action") {
             const actions: CardActions = this.state.actions.actions;
@@ -209,6 +223,19 @@ class Game extends React.Component<IProps, IState>{
             else {
                 throw new Error("I don't know how to deal with multiple actions for one card yet!");
             }
+        }
+        if (this.state.actions.type === "target") {
+            let act=this.state.actions.action;
+            let idx=act.ents.indexOf(ent_id);
+            if(idx===-1){
+                return;
+            }
+            if (act.min!==1 || act.max!==1){
+                throw new Error("I can't deal with multiple targets yet!");
+            }
+            const to_send = JSON.stringify([idx]);
+            this.socket.send(to_send);
+            this.clear_actions();
         }
         if (this.state.actions.type === "attackers") {
             const actions = { ...this.state.actions }

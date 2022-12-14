@@ -2,7 +2,7 @@ use nom::error::VerboseError;
 
 use super::text_token::Tokens;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum SpawnError<'a> {
     Nom(nom::Err<VerboseError<&'a Tokens>>),
     CardNotFoundError(&'a str),

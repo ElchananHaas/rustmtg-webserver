@@ -38,7 +38,7 @@ impl Game {
                         pl.life+=amount;
                     }
                 }
-                Event::Destory { card } => {
+                Event::Destroy { card } => {
                     Game::add_event(
                         &mut events,
                         Event::MoveZones {

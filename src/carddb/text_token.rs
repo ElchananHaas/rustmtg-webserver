@@ -20,9 +20,6 @@ pub struct Tokens {
     pub tokens: [String],
 }
 impl Tokens {
-    pub fn dummy() {
-        tokens!("a", "b", "c");
-    }
     pub fn len(&self) -> usize {
         self.tokens.len()
     }

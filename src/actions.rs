@@ -30,11 +30,17 @@ pub struct CastingOption {
     pub costs: Vec<Cost>,
     pub filter: ActionFilter,
     pub player: PlayerId,
+    pub possible_to_take: bool, //If the player doesn't have enough resources to
+                                //case the spell, this will be false. The user will still have the
+                                //option to put it on the stack as per the game rules.
+                                //The engine will have a best effort at making this correct for UI benefits
+                                //There is a bigger issue if a spell is caatable and the engine thinks it isn't
+                                //As opposed to the other way around.
 }
 #[derive(Clone, Serialize, Debug)]
 pub struct StackActionOption {
     pub stack_ent: CardId,
-    pub ability_source: Option<CardId>,
+    pub ability_source: Option<CardId>, //Set only if its an ability
     pub costs: Vec<Cost>,
     pub filter: ActionFilter,
     pub keyword: Option<KeywordAbility>,

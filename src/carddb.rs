@@ -3,11 +3,15 @@ use crate::ability::Ability;
 use crate::ability::StaticAbility;
 use crate::card_entities::CardEnt;
 use crate::card_entities::PT;
+use crate::card_types::Type;
 use crate::card_types::{Subtypes, Supertypes, Types};
 use crate::cost::Cost;
 use crate::entities::PlayerId;
 use crate::mana::ManaCostSymbol;
+use crate::spellabil::Affected;
 use crate::spellabil::Clause;
+use crate::spellabil::ClauseConstraint;
+use crate::spellabil::ClauseEffect;
 use crate::spellabil::KeywordAbility;
 use log::debug;
 use log::info;
@@ -21,6 +25,7 @@ use nom::error::context;
 use nom::error::ErrorKind;
 use nom::error::VerboseError;
 use nom::multi::many0;
+use nom::multi::many1;
 use nom::sequence::delimited;
 use nom::IResult;
 use serde_derive::Deserialize;
@@ -126,6 +131,7 @@ impl CardDB {
             .as_ref()
             .and_then(|x| x.small.as_ref().or(x.normal.as_ref()).or(x.large.as_ref()))
             .cloned();
+        card.printed = Some(Box::new(card.clone()));
         Ok(card)
     }
 }
@@ -137,11 +143,8 @@ fn parse_body<'a>(
     if let Some(tokenized) = &entry.tokenized_oracle_text {
         let tokens = Tokens::from_array(&tokenized);
         let (rest, ()) = parse_body_lines(card, tokens)?;
-        if rest.len() == 0 {
-            Ok(())
-        } else {
-            Err(nom_error(rest, "Failed to parse complete body"))
-        }
+        assert!(rest.len() == 0); //parse body lines loops until rest is empty
+        Ok(())
     } else {
         Ok(())
     }
@@ -185,30 +188,134 @@ fn parse_gain_life<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
     let (tokens, _) = tag(tokens!("you", "gain"))(tokens)?;
     let (tokens, value) = parse_number(tokens)?;
     let (tokens, _) = tag(tokens!("life"))(tokens)?;
-    Ok((tokens, Clause::GainLife(value)))
+    Ok((
+        tokens,
+        Clause {
+            effect: ClauseEffect::GainLife(value),
+            affected: Affected::Controller,
+            constraints: Vec::new(),
+        },
+    ))
 }
 fn parse_draw_a_card<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
     let (tokens, _) = tag(tokens!("draw", "a", "card"))(tokens)?;
-    Ok((tokens, Clause::DrawCard))
+    Ok((
+        tokens,
+        Clause {
+            effect: ClauseEffect::DrawCard,
+            affected: Affected::Controller,
+            constraints: Vec::new(),
+        },
+    ))
 }
 fn parse_body_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
-    let (tokens, clause) = alt((parse_gain_life, parse_draw_a_card))(tokens)?;
+    let (tokens, clause) = context(
+        "parsing body line",
+        alt((parse_gain_life, parse_draw_a_card, parse_target_line)),
+    )(tokens)?;
     let (tokens, _) = opt(tag(tokens!(".")))(tokens)?;
     let (tokens, _) = opt(tag(tokens!("\n")))(tokens)?;
     Ok((tokens, clause))
 }
+
+fn parse_its_controller_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
+    let (tokens, _) = context(
+        "parsing controller addon",
+        tag(tokens!["its", "controller"]),
+    )(tokens)?;
+    parse_body_line(tokens)
+}
+fn parse_target_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
+    let (tokens, clause) = context(
+        "parsing target clause",
+        alt((parse_destroy_clause, parse_exile_clause)),
+    )(tokens)?;
+    let (tokens, addendum) = opt(parse_its_controller_clause)(tokens)?;
+    if let Some(addendum) = addendum {
+        Ok((
+            tokens,
+            Clause {
+                effect: ClauseEffect::Compound(vec![clause.clone(), addendum]),
+                affected: clause.affected,
+                constraints: clause.constraints,
+            },
+        ))
+    } else {
+        Ok((tokens, clause))
+    }
+}
+
+fn parse_tapped_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseConstraint> {
+    let (tokens, _) = tag(tokens!["tapped"])(tokens)?;
+    Ok((tokens, ClauseConstraint::IsTapped))
+}
+fn parse_type<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Type> {
+    let first = &*tokens[0];
+    let rest = &tokens[1..];
+    if let Ok(t) = Type::from_str(first) {
+        return Ok((rest, t));
+    }
+    Err(nom_error(tokens, "Not a type"))
+}
+fn parse_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseConstraint> {
+    let type_constraint = nom::combinator::map(parse_type, |t| ClauseConstraint::CardType(t));
+    let (tokens, constraint) = alt((parse_tapped_constraint, type_constraint))(tokens)?;
+    let (tokens, or_part) = opt(parse_or_constraint)(tokens)?;
+    if let Some(or_part) = or_part {
+        Ok((tokens, ClauseConstraint::Or(vec![constraint, or_part])))
+    } else {
+        Ok((tokens, constraint))
+    }
+}
+fn parse_or_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseConstraint> {
+    let (tokens, _) = tag(tokens!["or"])(tokens)?;
+    let (tokens, constraint) = parse_constraint(tokens)?;
+    Ok((tokens, constraint))
+}
+
+fn parse_destroy_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
+    let (tokens, _) = tag(tokens!["destroy", "target"])(tokens)?;
+    let (tokens, constraints) = many1(parse_constraint)(tokens)?;
+    Ok((
+        tokens,
+        Clause {
+            effect: ClauseEffect::Destroy,
+            constraints,
+            affected: Affected::Target { target: None },
+        },
+    ))
+}
+fn parse_exile_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
+    let (tokens, _) = tag(tokens!["exile", "target"])(tokens)?;
+    let (tokens, constraints) = many1(parse_constraint)(tokens)?;
+    Ok((
+        tokens,
+        Clause {
+            effect: ClauseEffect::ExileBattlefield,
+            constraints,
+            affected: Affected::Target { target: None },
+        },
+    ))
+}
 fn parse_body_lines<'a>(card: &mut CardEnt, tokens: &'a Tokens) -> Res<&'a Tokens, ()> {
-    let (rest, keywords) = context("parse keywords", parse_keyword_abilities)(tokens)?;
+    let (mut rest, keywords) = context("parse keywords", parse_keyword_abilities)(tokens)?;
     for keyword in keywords {
         card.abilities.push(Ability::Static(StaticAbility {
             keyword: Some(keyword),
         }));
     }
-    let (rest, clauses) = many0(parse_body_line)(rest)?;
+    let mut clauses = Vec::new();
+    while rest.len() > 0 {
+        let clause;
+        (rest, _) = context("pruning comments", prune_comment)(rest)?;
+        if rest.len() == 0 {
+            break;
+        }
+        (rest, clause) = parse_body_line(rest)?;
+        clauses.push(clause);
+    }
     card.effect = clauses;
-    let (rest, _) = context("pruning comments", prune_comment)(rest)?;
-    let (rest, _) = nom::combinator::opt(tag(Tokens::from_array(&["\n".to_owned()])))(rest)?;
-    debug!("rest is {:?}", rest);
+    let (rest, _) = nom::combinator::opt(tag(tokens!["\n"]))(rest)?;
     Ok((rest, ()))
 }
 fn parse_token<'a>(mut text: &'a str) -> IResult<&str, String, ()> {
@@ -352,12 +459,34 @@ mod tests {
     fn revitalize_test() {
         test_card(db(), "Revitalize");
     }
+    #[test_log::test]
+    fn defiant_strike_test() {
+        test_card(db(), "Defiant Strike");
+    }
+    #[test_log::test]
+    fn swift_response_test() {
+        test_card(db(), "Swift Response");
+    }
+    #[test_log::test]
+    fn angelic_ascension_test() {
+        test_card(db(), "Angelic Ascension");
+    }
     #[allow(dead_code)]
     fn test_card(db: &CardDB, card_name: &'static str) -> CardEnt {
         let spawned = db.try_spawn_card(card_name, PlayerId::from(NonZeroU64::new(1).unwrap()));
         if spawned.is_err() {
             println!("card {} failed to spawn", card_name);
         }
-        spawned.unwrap()
+        if let Err(err)=&spawned
+        && let SpawnError::Nom(err)=err
+        && let nom::Err::Error(err)=err{
+            println!("spawn error[");
+            for error in &err.errors{
+                println!("{:?}",error);
+            } 
+        }
+        let spawned = spawned.unwrap();
+        //println!("{:?}", spawned);
+        spawned
     }
 }

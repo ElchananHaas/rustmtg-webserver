@@ -3,7 +3,9 @@ use serde_derive::Serialize;
 
 use crate::cost::Cost;
 use crate::mana::ManaCostSymbol;
+use crate::spellabil::Affected;
 use crate::spellabil::Clause;
+use crate::spellabil::ClauseEffect;
 use crate::spellabil::KeywordAbility;
 //use crate::carddb::CardBuilder;
 //origin entity, target entity
@@ -42,7 +44,11 @@ impl Ability {
     pub fn tap_for_mana(mana: Vec<ManaCostSymbol>) -> Self {
         Ability::Activated(ActivatedAbility {
             costs: vec![Cost::Selftap],
-            effect: vec![Clause::AddMana(mana)],
+            effect: vec![Clause {
+                effect: ClauseEffect::AddMana(mana),
+                constraints: Vec::new(),
+                affected: Affected::Controller,
+            }],
             keyword: None,
         })
     }

@@ -5,6 +5,7 @@ use serde::Serialize;
 
 use crate::{card_entities::CardEnt, entities::CardId, spellabil::KeywordAbility};
 #[derive(Clone, JsonSchema, Serialize, Debug)]
+
 pub struct EntMap<K, V>
 where
     K: Copy + Hash + Eq + From<NonZeroU64> + JsonSchema,

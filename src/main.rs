@@ -69,7 +69,10 @@ async fn launch_game(sockets: Vec<WebSocket>) -> Result<()> {
     let db: &carddb::CardDB = CARDDB.get_or_init(|| carddb::CardDB::new());
     let mut gamebuild = GameBuilder::new();
     let mut deck = Vec::new();
-    for _ in 0..30 {
+    for _ in 0..20 {
+        deck.push("Swift Response");
+    }
+    for _ in 0..20 {
         deck.push("Staunch Shieldmate");
     }
     for _ in 0..30 {

@@ -34,10 +34,17 @@ export function Card(props: {
             transform: `rotate(15deg)`,
         };
     }
+    let selected:Boolean=false;
     if (props.actions.type === "action") {
         if (props.actions.actions[props.id] && props.actions.actions[props.id].length > 0) {
-            style.borderColor = "#AAAA00";
+            selected=true;
         }
+    }
+    if (props.actions.type=="target" && props.actions.action.ents.includes(props.id)){
+        selected=true;
+    }
+    if(selected){
+        style.borderColor = "#AAAA00";
     }
     const attack_relation: RelationType = {
         targetId: "",

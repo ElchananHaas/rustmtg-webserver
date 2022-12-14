@@ -208,6 +208,18 @@
             }
           },
           "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "Target"
+          ],
+          "properties": {
+            "Target": {
+              "$ref": "#/definitions/AskSelectN_for_TargetId"
+            }
+          },
+          "additionalProperties": false
         }
       ]
     },
@@ -323,6 +335,32 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/CardId"
+          }
+        },
+        "max": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "min": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        }
+      }
+    },
+    "AskSelectN_for_TargetId": {
+      "type": "object",
+      "required": [
+        "ents",
+        "max",
+        "min"
+      ],
+      "properties": {
+        "ents": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TargetId"
           }
         },
         "max": {
@@ -479,6 +517,7 @@
         "costs",
         "filter",
         "player",
+        "possible_to_take",
         "source_card",
         "zone"
       ],
@@ -495,6 +534,9 @@
         "player": {
           "$ref": "#/definitions/PlayerId"
         },
+        "possible_to_take": {
+          "type": "boolean"
+        },
         "source_card": {
           "$ref": "#/definitions/CardId"
         },
@@ -504,6 +546,34 @@
       }
     },
     "Clause": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "Simple"
+          ],
+          "properties": {
+            "Simple": {
+              "$ref": "#/definitions/ClauseEffect"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "Target"
+          ],
+          "properties": {
+            "Target": {
+              "$ref": "#/definitions/TargetClause"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "ClauseEffect": {
       "oneOf": [
         {
           "type": "string",
@@ -522,6 +592,19 @@
               "items": {
                 "$ref": "#/definitions/ManaCostSymbol"
               }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "GainLife"
+          ],
+          "properties": {
+            "GainLife": {
+              "type": "integer",
+              "format": "int64"
             }
           },
           "additionalProperties": false
@@ -1991,12 +2074,80 @@
         }
       }
     },
+    "TargetClause": {
+      "type": "object",
+      "required": [
+        "constraints",
+        "effect"
+      ],
+      "properties": {
+        "constraints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TargetConstraint"
+          }
+        },
+        "effect": {
+          "$ref": "#/definitions/TargetClauseEffect"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TargetId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "TargetClauseEffect": {
+      "type": "string",
+      "enum": [
+        "Destroy"
+      ]
+    },
+    "TargetConstraint": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "IsTapped"
+          ]
+        },
+        {
+          "type": "object",
+          "required": [
+            "CardType"
+          ],
+          "properties": {
+            "CardType": {
+              "$ref": "#/definitions/Type"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
     "TargetId": {
       "type": "integer",
       "format": "int32"
     },
     "TriggeredAbility": {
       "type": "object"
+    },
+    "Type": {
+      "type": "string",
+      "enum": [
+        "Artifact",
+        "Enchantment",
+        "Planeswalker",
+        "Land",
+        "Creature",
+        "Instant",
+        "Sorcery"
+      ]
     },
     "Types": {
       "type": "object",

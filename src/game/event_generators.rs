@@ -62,8 +62,17 @@ impl Game {
         self.handle_event(Event::MoveZones { ent, origin, dest })
             .await
     }
-    pub async fn destroy(&mut self, id: CardId) {
-        self.handle_event(Event::Destory { card: id }).await;
+    pub async fn destroy(&mut self, id: CardId) -> Vec<EventResult> {
+        self.handle_event(Event::Destroy { card: id }).await
+    }
+    //Exiles a permanent, records the old and new entities.
+    pub async fn exile(&mut self, id: CardId, origin: Zone) -> Vec<EventResult> {
+        self.handle_event(Event::MoveZones {
+            ent: id,
+            origin,
+            dest: Zone::Exile,
+        })
+        .await
     }
     pub async fn gain_life(&mut self, player: PlayerId, amount: i64) {
         self.handle_event(Event::GainLife { player, amount }).await;

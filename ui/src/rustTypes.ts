@@ -30,10 +30,28 @@ export type Cost =
     };
 export type ManaCostSymbol = "White" | "Blue" | "Black" | "Red" | "Green" | "Colorless" | "Generic";
 export type Clause =
+  | {
+      Simple: ClauseEffect;
+    }
+  | {
+      Target: TargetClause;
+    };
+export type ClauseEffect =
   | "DrawCard"
   | {
       AddMana: ManaCostSymbol[];
+    }
+  | {
+      GainLife: number;
     };
+export type TargetConstraint =
+  | "IsTapped"
+  | {
+      CardType: Type;
+    };
+export type Type = "Artifact" | "Enchantment" | "Planeswalker" | "Land" | "Creature" | "Instant" | "Sorcery";
+export type TargetClauseEffect = "Destroy";
+export type TargetId = number;
 export type KeywordAbility =
   | "FirstStrike"
   | "Haste"
@@ -44,7 +62,6 @@ export type KeywordAbility =
   | "Lifelink"
   | "Trample"
   | "Reach";
-export type TargetId = number;
 export type CardId = number;
 export type EntType = "RealCard" | "TokenCard" | "ActivatedAbility" | "TriggeredAbility";
 export type Color = "White" | "Blue" | "Black" | "Red" | "Green" | "Colorless";
@@ -78,6 +95,9 @@ export type Ask =
     }
   | {
       Action: AskSelectNFor_Action;
+    }
+  | {
+      Target: AskSelectNFor_TargetId;
     };
 export type Action =
   | {
@@ -153,6 +173,12 @@ export interface ActivatedAbility {
   costs: Cost[];
   effect: Clause[];
   keyword?: KeywordAbility | null;
+  [k: string]: unknown;
+}
+export interface TargetClause {
+  constraints: TargetConstraint[];
+  effect: TargetClauseEffect;
+  target?: TargetId | null;
   [k: string]: unknown;
 }
 export interface TriggeredAbility {
@@ -518,7 +544,14 @@ export interface CastingOption {
   costs: Cost[];
   filter: ActionFilter;
   player: PlayerId;
+  possible_to_take: boolean;
   source_card: CardId;
   zone: Zone;
+  [k: string]: unknown;
+}
+export interface AskSelectNFor_TargetId {
+  ents: TargetId[];
+  max: number;
+  min: number;
   [k: string]: unknown;
 }

@@ -11,7 +11,7 @@ use crate::event::{DiscardCause, Event, EventResult, TagEvent};
 use crate::hashset_obj::HashSetObj;
 use crate::mana::{Color, Mana, ManaCostSymbol};
 use crate::player::{Player, PlayerCon};
-use crate::spellabil::{Clause, KeywordAbility};
+use crate::spellabil::{Affected, Clause, ClauseEffect, KeywordAbility};
 use anyhow::{bail, Result};
 use async_recursion::async_recursion;
 use enum_map::EnumMap;
@@ -22,11 +22,14 @@ use schemars::JsonSchema;
 use serde::Serialize;
 use std::cmp::max;
 use std::collections::{HashMap, VecDeque};
+use std::num::ParseFloatError;
 
 pub mod build_game;
+mod compute_actions;
 mod event_generators;
 mod handle_event;
 mod layers_state_actions;
+mod resolve;
 mod serialize_game;
 
 pub type Players = EntMap<PlayerId, Player>;
@@ -365,12 +368,63 @@ impl Game {
         }
         order
     }
+    async fn select_targets(&mut self, castopt: &StackActionOption) -> Result<(), MTGError> {
+        let cards_and_zones = self.cards_and_zones();
+        let mut selected_targets = Vec::new();
+        if let Some(card) = self.cards.get(castopt.stack_ent) {
+            for clause in &card.effect {
+                let mut selected_target = None;
+                if let Affected::Target { target } = clause.affected {
+                    if let Some(pl) = self.players.get(castopt.player) {
+                        let mut valid = Vec::new();
+                        for &(card, zone) in &cards_and_zones {
+                            if clause
+                                .constraints
+                                .iter()
+                                .all(|x| x.passes_constraint(&self, card.into()))
+                            {
+                                valid.push(TargetId::Card(card))
+                            }
+                        }
+                        let ask = AskSelectN {
+                            ents: valid.clone(),
+                            min: 1,
+                            max: 1,
+                        };
+                        let choice = pl.ask_user_selectn(&Ask::Target(ask.clone()), &ask).await;
+                        selected_target = Some(valid[choice[0]]);
+                    } else {
+                        return Err(MTGError::PlayerDoesntExist);
+                    }
+                }
+                selected_targets.push(selected_target);
+            }
+        } else {
+            return Err(MTGError::CastNonExistentSpell);
+        }
+        let card = self
+            .cards
+            .get_mut(castopt.stack_ent)
+            .expect("card was checked to exist");
+        for (i, clause) in card.effect.iter_mut().enumerate() {
+            if let Affected::Target { target } = clause.affected {
+                let target = selected_targets[i];
+                if let Some(t) = target {
+                    clause.affected = Affected::Target { target: Some(t) };
+                } else {
+                    return Err(MTGError::TargetNotChosen);
+                }
+            }
+        }
+        Ok(())
+    }
     //The spell has already been moved to the stack for this operation
     async fn handle_cast(&mut self, castopt: StackActionOption) -> Result<(), MTGError> {
         println!("Handling cast {:?}", castopt);
         if !castopt.filter.check() {
             return Err(MTGError::CantCast);
         }
+        self.select_targets(&castopt).await?;
         let cost_paid = self.request_cost_payment(&castopt).await?;
         println!("cost paid {:?}", cost_paid);
         if self.is_mana_ability(castopt.stack_ent) {
@@ -484,42 +538,6 @@ impl Game {
         }
         Ok(paid_costs)
     }
-    async fn resolve(&mut self, id: CardId) {
-        let effects;
-        let controller;
-        let types;
-        if let Some(ent) = self.cards.get(id) {
-            effects = ent.effect.clone();
-            controller = ent.get_controller();
-            types = ent.types.clone();
-        } else {
-            return;
-        }
-        for effect in effects {
-            self.resolve_clause(effect, id, controller).await;
-        }
-        let dest = if types.instant || types.sorcery {
-            Zone::Graveyard
-        } else {
-            Zone::Battlefield
-        };
-        self.move_zones(id, Zone::Stack, dest).await;
-    }
-    async fn resolve_clause(&mut self, clause: Clause, id: CardId, controller: PlayerId) {
-        match clause {
-            Clause::AddMana(manas) => {
-                for mana in manas {
-                    self.add_mana(controller, mana).await;
-                }
-            }
-            Clause::GainLife(amount) => {
-                self.gain_life(controller, amount).await;
-            }
-            Clause::DrawCard => {
-                self.draw(controller).await;
-            }
-        }
-    }
     fn has_keyword(&self, id: CardId, keyword: KeywordAbility) -> bool {
         if let Some(card) = self.cards.get(id) {
             return card.has_keyword(keyword);
@@ -535,17 +553,18 @@ impl Game {
             }
             //TODO Check for loyalty abilities when implemented
             let mut mana_abil = false;
+            let mut other_effect = false;
             for clause in &card.effect {
-                match clause {
-                    Clause::AddMana(_) => {
+                match clause.effect {
+                    ClauseEffect::AddMana(_) => {
                         mana_abil = true;
                     }
                     _ => {
-                        mana_abil = false;
+                        other_effect = true;
                     }
                 }
             }
-            mana_abil
+            mana_abil & !other_effect
         } else {
             false
         }
@@ -574,88 +593,10 @@ impl Game {
         let (new_id, _new_ent) = self.cards.insert(abil);
         Some((new_id, keyword))
     }
-    pub fn compute_actions(&self, player: PlayerId) -> Vec<Action> {
-        let mut actions = Vec::new();
-        if let Some(pl) = self.players.get(player) {
-            for &card_id in &pl.hand {
-                if let Some(card) = self.cards.get(card_id) {
-                    actions.extend(self.play_land_actions(player, pl, card_id, card));
-                }
-            }
-            for (card_id, zone) in self.cards_and_zones() {
-                if let Some(card) = self.cards.get(card_id) {
-                    actions.extend(self.ability_actions(player, pl, card_id, card, zone));
-                }
-            }
-            actions.extend(self.cast_actions(pl, player));
-        }
-        actions
-    }
-    pub fn cast_actions(&self, pl: &Player, player: PlayerId) -> Vec<Action> {
-        let mut actions = Vec::new();
-        for &card_id in pl.hand.iter() {
-            if let Some(card) = self.cards.get(card_id) {
-                if card.costs.len() > 0 && (card.types.instant || self.sorcery_speed(player)) {
-                    actions.push(Action::Cast(CastingOption {
-                        source_card: card_id,
-                        costs: card.costs.clone(),
-                        filter: ActionFilter::None,
-                        zone: Zone::Hand,
-                        player,
-                    }));
-                }
-            }
-        }
-        actions
-    }
     fn sorcery_speed(&self, player_id: PlayerId) -> bool {
         player_id == self.active_player
             && self.stack.is_empty()
             && (self.phase == Some(Phase::FirstMain) || self.phase == Some(Phase::SecondMain))
-    }
-    fn play_land_actions(
-        &self,
-        player_id: PlayerId,
-        player: &Player,
-        card_id: CardId,
-        card: &CardEnt,
-    ) -> Vec<Action> {
-        let mut actions = Vec::new();
-        let play_sorcery = self.sorcery_speed(player_id);
-        if card.types.land && play_sorcery && self.land_play_limit > self.lands_played_this_turn {
-            actions.push(Action::PlayLand(card_id));
-        }
-        actions
-    }
-    fn ability_actions(
-        &self,
-        player_id: PlayerId,
-        player: &Player,
-        card_id: CardId,
-        card: &CardEnt,
-        zone: Zone,
-    ) -> Vec<Action> {
-        let mut actions = Vec::new();
-        let controller = card.controller.unwrap_or(card.owner);
-        for i in 0..card.abilities.len() {
-            if zone == Zone::Battlefield && controller == player_id {
-                let abil = &card.abilities[i];
-                let abil = match abil {
-                    Ability::Activated(abil) => abil,
-                    _ => continue,
-                };
-
-                let maybe_pay = self.maybe_can_pay(&abil.costs, player_id, card_id);
-                if !maybe_pay {
-                    continue;
-                }
-                actions.push(Action::ActivateAbility {
-                    source: card_id,
-                    index: i,
-                })
-            }
-        }
-        actions
     }
     pub fn maybe_can_pay(&self, costs: &Vec<Cost>, player_id: PlayerId, card_id: CardId) -> bool {
         if let Some(player) = self.players.get(player_id) {
@@ -694,7 +635,7 @@ impl Game {
                 if let Ability::Activated(abil) = ability {
                     let mut abil_mana: i64 = 0;
                     for clause in &abil.effect {
-                        if let Clause::AddMana(mana) = clause {
+                        if let ClauseEffect::AddMana(mana) = &clause.effect {
                             abil_mana += mana.len() as i64;
                         }
                     }

@@ -53,6 +53,8 @@ pub struct CardEnt {
     pub abilities: Vec<Ability>,
     pub costs: Vec<Cost>, //Casting costs
     pub art_url: Option<String>,
+    pub printed: Option<Box<CardEnt>>, //This stores the printed version of the card so
+                                       //when layers are recalculated, this can be set.
 }
 impl CardEnt {
     pub fn has_keyword(&self, keyword: KeywordAbility) -> bool {
