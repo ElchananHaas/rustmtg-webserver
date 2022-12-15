@@ -68,7 +68,7 @@ pub enum Event {
     },
     MoveZones {
         ent: CardId,
-        origin: Zone,
+        origin: Option<Zone>,
         dest: Zone,
     },
     Lose {
@@ -105,7 +105,7 @@ pub enum EventResult {
     MoveZones {
         oldent: CardId,
         newent: Option<CardId>,
-        source: Zone,
+        source: Option<Zone>,
         dest: Zone,
     },
     Tap(CardId),

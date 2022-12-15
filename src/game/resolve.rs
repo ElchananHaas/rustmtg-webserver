@@ -1,4 +1,7 @@
-use crate::{token_builder::TokenAttribute, ability::{StaticAbility, StaticAbilityEffect}};
+use crate::{
+    ability::{StaticAbility, StaticAbilityEffect},
+    token_builder::TokenAttribute,
+};
 
 use super::*;
 impl Game {
@@ -35,7 +38,7 @@ impl Game {
                     return;
                 }
             }
-            Affected::ManuallySet(x) =>{
+            Affected::ManuallySet(x) => {
                 if let Some(x) = x {
                     x
                 } else {
@@ -83,7 +86,7 @@ impl Game {
                 }
             }
             ClauseEffect::SetTargetController(clause) => {
-                let mut clause=*clause;
+                let mut clause = *clause;
                 if let TargetId::Card(affected)=affected
                 && let Some(controller)=self.get_controller(affected){
                     clause.affected=Affected::ManuallySet(Some(controller.into()));
@@ -91,37 +94,47 @@ impl Game {
                 }
             }
             ClauseEffect::CreateToken(attributes) => {
-                if let TargetId::Player(affected)=affected{
-                    let mut ent=CardEnt::default();
-                    ent.owner=affected;
-                    ent.controller=Some(affected);
-                    ent.etb_this_cycle=true;
-                    ent.ent_type=EntType::TokenCard;
-                    for attribute in attributes{
-                        match attribute{
+                println!("creating token");
+                println!("{:?} : \n {:?}", attributes, affected);
+                if let TargetId::Player(affected) = affected {
+                    let mut ent = CardEnt::default();
+                    ent.owner = affected;
+                    ent.controller = Some(affected);
+                    ent.etb_this_cycle = true;
+                    ent.ent_type = EntType::TokenCard;
+                    for attribute in attributes {
+                        match attribute {
                             TokenAttribute::PT(pt) => {
-                                ent.pt=Some(pt);
-                            },
+                                ent.pt = Some(pt);
+                            }
                             TokenAttribute::Type(t) => {
                                 ent.types.add(t);
-                            },
+                            }
                             TokenAttribute::Subtype(t) => {
                                 ent.subtypes.add(t);
-                            },
+                            }
                             TokenAttribute::HasColor(color) => {
-                                ent.abilities.push(Ability::Static(
-                                    StaticAbility{
-                                        keyword:None,
-                                        effect: StaticAbilityEffect::HasColor(color)
-                                    }
-                                ));
+                                ent.abilities.push(Ability::Static(StaticAbility {
+                                    keyword: None,
+                                    effect: StaticAbilityEffect::HasColor(color),
+                                }));
                             }
                             TokenAttribute::Ability(abil) => {
                                 ent.abilities.push(abil);
                             }
                         }
                     }
-                    ent.printed=Some(Box::new(ent.clone()));
+                    ent.printed = Some(Box::new(ent.clone()));
+                    let (id, ent) = self.cards.insert(ent);
+                    let results = self
+                        .handle_event(Event::MoveZones {
+                            ent: id,
+                            origin: None,
+                            dest: Zone::Battlefield,
+                        })
+                        .await; //This will need to be modified to use proper
+                                //triggers/zonemove
+                    println!("zone move results: {:?}", results);
                 }
             }
         }

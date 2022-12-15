@@ -29,29 +29,326 @@ export type Cost =
       Mana: ManaCostSymbol;
     };
 export type ManaCostSymbol = "White" | "Blue" | "Black" | "Red" | "Green" | "Colorless" | "Generic";
-export type Clause =
+export type Affected =
+  | "Controller"
   | {
-      Simple: ClauseEffect;
+      Target: TargetId | null;
     }
   | {
-      Target: TargetClause;
+      ManuallySet: TargetId | null;
     };
+export type TargetId = number;
+export type ClauseConstraint =
+  | "IsTapped"
+  | {
+      CardType: Type;
+    }
+  | {
+      Or: ClauseConstraint[];
+    };
+export type Type = "Artifact" | "Enchantment" | "Planeswalker" | "Land" | "Creature" | "Instant" | "Sorcery";
 export type ClauseEffect =
-  | "DrawCard"
+  | ("Destroy" | "ExileBattlefield" | "DrawCard")
   | {
       AddMana: ManaCostSymbol[];
     }
   | {
       GainLife: number;
-    };
-export type TargetConstraint =
-  | "IsTapped"
+    }
   | {
-      CardType: Type;
+      Compound: Clause[];
+    }
+  | {
+      SetTargetController: Clause;
+    }
+  | {
+      CreateToken: TokenAttribute[];
     };
-export type Type = "Artifact" | "Enchantment" | "Planeswalker" | "Land" | "Creature" | "Instant" | "Sorcery";
-export type TargetClauseEffect = "Destroy";
-export type TargetId = number;
+export type TokenAttribute =
+  | {
+      PT: PT;
+    }
+  | {
+      HasColor: Color;
+    }
+  | {
+      Type: Type;
+    }
+  | {
+      Subtype: Subtype;
+    }
+  | {
+      Ability: Ability;
+    };
+export type Color = "White" | "Blue" | "Black" | "Red" | "Green" | "Colorless";
+export type Subtype =
+  | "Advisor"
+  | "Aetherborn"
+  | "Ally"
+  | "Angel"
+  | "Antelope"
+  | "Ape"
+  | "Archer"
+  | "Archon"
+  | "Army"
+  | "Artificer"
+  | "Assassin"
+  | "AssemblyWorker"
+  | "Atog"
+  | "Aurochs"
+  | "Avatar"
+  | "Azra"
+  | "Badger"
+  | "Barbarian"
+  | "Bard"
+  | "Basilisk"
+  | "Bat"
+  | "Bear"
+  | "Beast"
+  | "Beeble"
+  | "Beholder"
+  | "Berserker"
+  | "Bird"
+  | "Blinkmoth"
+  | "Boar"
+  | "Bringer"
+  | "Brushwagg"
+  | "Camarid"
+  | "Camel"
+  | "Caribou"
+  | "Carrier"
+  | "Cat"
+  | "Centaur"
+  | "Cephalid"
+  | "Chimera"
+  | "Citizen"
+  | "Cleric"
+  | "Cockatrice"
+  | "Construct"
+  | "Coward"
+  | "Crab"
+  | "Crocodile"
+  | "Cyclops"
+  | "Dauthi"
+  | "Demigod"
+  | "Demon"
+  | "Deserter"
+  | "Devil"
+  | "Dinosaur"
+  | "Djinn"
+  | "Dog"
+  | "Dragon"
+  | "Drake"
+  | "Dreadnought"
+  | "Drone"
+  | "Druid"
+  | "Dryad"
+  | "Dwarf"
+  | "Efreet"
+  | "Egg"
+  | "Elder"
+  | "Eldrazi"
+  | "Elemental"
+  | "Elephant"
+  | "Elf"
+  | "Elk"
+  | "Eye"
+  | "Faerie"
+  | "Ferret"
+  | "Fish"
+  | "Flagbearer"
+  | "Fox"
+  | "Fractal"
+  | "Frog"
+  | "Fungus"
+  | "Gargoyle"
+  | "Germ"
+  | "Giant"
+  | "Gnoll"
+  | "Gnome"
+  | "Goat"
+  | "Goblin"
+  | "God"
+  | "Golem"
+  | "Gorgon"
+  | "Graveborn"
+  | "Gremlin"
+  | "Griffin"
+  | "Hag"
+  | "Halfling"
+  | "Hamster"
+  | "Harpy"
+  | "Hellion"
+  | "Hippo"
+  | "Hippogriff"
+  | "Homarid"
+  | "Homunculus"
+  | "Horror"
+  | "Horse"
+  | "Human"
+  | "Hydra"
+  | "Hyena"
+  | "Illusion"
+  | "Imp"
+  | "Incarnation"
+  | "Inkling"
+  | "Insect"
+  | "Jackal"
+  | "Jellyfish"
+  | "Juggernaut"
+  | "Kavu"
+  | "Kirin"
+  | "Kithkin"
+  | "Knight"
+  | "Kobold"
+  | "Kor"
+  | "Kraken"
+  | "Lamia"
+  | "Lammasu"
+  | "Leech"
+  | "Leviathan"
+  | "Lhurgoyf"
+  | "Licid"
+  | "Lizard"
+  | "Manticore"
+  | "Masticore"
+  | "Mercenary"
+  | "Merfolk"
+  | "Metathran"
+  | "Minion"
+  | "Minotaur"
+  | "Mole"
+  | "Monger"
+  | "Mongoose"
+  | "Monk"
+  | "Monkey"
+  | "Moonfolk"
+  | "Mouse"
+  | "Mutant"
+  | "Myr"
+  | "Mystic"
+  | "Naga"
+  | "Nautilus"
+  | "Nephilim"
+  | "Nightmare"
+  | "Nightstalker"
+  | "Ninja"
+  | "Noble"
+  | "Noggle"
+  | "Nomad"
+  | "Nymph"
+  | "Octopus"
+  | "Ogre"
+  | "Ooze"
+  | "Orb"
+  | "Orc"
+  | "Orgg"
+  | "Otter"
+  | "Ouphe"
+  | "Ox"
+  | "Oyster"
+  | "Pangolin"
+  | "Peasant"
+  | "Pegasus"
+  | "Pentavite"
+  | "Pest"
+  | "Phelddagrif"
+  | "Phoenix"
+  | "Phyrexian"
+  | "Pilot"
+  | "Pincher"
+  | "Pirate"
+  | "Plant"
+  | "Praetor"
+  | "Prism"
+  | "Processor"
+  | "Rabbit"
+  | "Ranger"
+  | "Rat"
+  | "Rebel"
+  | "Reflection"
+  | "Rhino"
+  | "Rigger"
+  | "Rogue"
+  | "Sable"
+  | "Salamander"
+  | "Samurai"
+  | "Sand"
+  | "Saproling"
+  | "Satyr"
+  | "Scarecrow"
+  | "Scion"
+  | "Scorpion"
+  | "Scout"
+  | "Sculpture"
+  | "Serf"
+  | "Serpent"
+  | "Servo"
+  | "Shade"
+  | "Shaman"
+  | "Shapeshifter"
+  | "Shark"
+  | "Sheep"
+  | "Siren"
+  | "Skeleton"
+  | "Slith"
+  | "Sliver"
+  | "Slug"
+  | "Snake"
+  | "Soldier"
+  | "Soltari"
+  | "Spawn"
+  | "Specter"
+  | "Spellshaper"
+  | "Sphinx"
+  | "Spider"
+  | "Spike"
+  | "Spirit"
+  | "Splinter"
+  | "Sponge"
+  | "Squid"
+  | "Squirrel"
+  | "Starfish"
+  | "Surrakar"
+  | "Survivor"
+  | "Tentacle"
+  | "Tetravite"
+  | "Thalakos"
+  | "Thopter"
+  | "Thrull"
+  | "Tiefling"
+  | "Treefolk"
+  | "Trilobite"
+  | "Triskelavite"
+  | "Troll"
+  | "Turtle"
+  | "Unicorn"
+  | "Vampire"
+  | "Vedalken"
+  | "Viashino"
+  | "Volver"
+  | "Wall"
+  | "Warlock"
+  | "Warrior"
+  | "Weird"
+  | "Werewolf"
+  | "Whale"
+  | "Wizard"
+  | "Wolf"
+  | "Wolverine"
+  | "Wombat"
+  | "Worm"
+  | "Wraith"
+  | "Wurm"
+  | "Yeti"
+  | "Zombie"
+  | "Zubera"
+  | "EndCreatureMarker"
+  | "Plains"
+  | "Island"
+  | "Swamp"
+  | "Mountain"
+  | "Forest";
 export type KeywordAbility =
   | "FirstStrike"
   | "Haste"
@@ -62,9 +359,13 @@ export type KeywordAbility =
   | "Lifelink"
   | "Trample"
   | "Reach";
+export type StaticAbilityEffect =
+  | "GivenByKeyword"
+  | {
+      HasColor: Color;
+    };
 export type CardId = number;
 export type EntType = "RealCard" | "TokenCard" | "ActivatedAbility" | "TriggeredAbility";
-export type Color = "White" | "Blue" | "Black" | "Red" | "Green" | "Colorless";
 export type GameOutcome =
   | ("Ongoing" | "Tie")
   | {
@@ -161,6 +462,7 @@ export interface CardEnt {
   known_to: PlayerId[];
   name: string;
   owner: PlayerId;
+  printed?: CardEnt | null;
   printed_name: string;
   pt?: PT | null;
   subtypes: Subtypes;
@@ -175,22 +477,23 @@ export interface ActivatedAbility {
   keyword?: KeywordAbility | null;
   [k: string]: unknown;
 }
-export interface TargetClause {
-  constraints: TargetConstraint[];
-  effect: TargetClauseEffect;
-  target?: TargetId | null;
+export interface Clause {
+  affected: Affected;
+  constraints: ClauseConstraint[];
+  effect: ClauseEffect;
+  [k: string]: unknown;
+}
+export interface PT {
+  power: number;
+  toughness: number;
   [k: string]: unknown;
 }
 export interface TriggeredAbility {
   [k: string]: unknown;
 }
 export interface StaticAbility {
+  effect: StaticAbilityEffect;
   keyword?: KeywordAbility | null;
-  [k: string]: unknown;
-}
-export interface PT {
-  power: number;
-  toughness: number;
   [k: string]: unknown;
 }
 export interface Subtypes {

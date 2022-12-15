@@ -212,7 +212,12 @@ fn parse_draw_a_card<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
 fn parse_body_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
     let (tokens, clause) = context(
         "parsing body line",
-        alt((parse_gain_life, parse_draw_a_card, parse_target_line, parse_create_token)),
+        alt((
+            parse_gain_life,
+            parse_draw_a_card,
+            parse_target_line,
+            parse_create_token,
+        )),
     )(tokens)?;
     let (tokens, _) = opt(tag(tokens!(".")))(tokens)?;
     let (tokens, _) = opt(tag(tokens!("\n")))(tokens)?;
@@ -220,34 +225,38 @@ fn parse_body_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
 }
 
 fn parse_create_token<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
-    let (tokens,_)=alt((tag(tokens!["create"]),tag(tokens!["creates"])))(tokens)?;
-    let (tokens, _)=tag(tokens!["a"])(tokens)?;
-    let (tokens, attr1)= parse_token_attributes(tokens)?;
-    let (tokens, _)= tag(tokens!["token"])(tokens)?;
-    let (tokens, _)= opt(tag(tokens!["with"]))(tokens)?;
-    let (tokens, attr2)= parse_token_attributes(tokens)?;
-    let attrs=attr1.into_iter().chain(attr2.into_iter()).collect();
-    Ok((tokens,Clause{
-        effect:ClauseEffect::CreateToken(attrs),
-        affected: Affected::Controller,
-        constraints: Vec::new()
-    }))
+    let (tokens, _) = alt((tag(tokens!["create"]), tag(tokens!["creates"])))(tokens)?;
+    let (tokens, _) = tag(tokens!["a"])(tokens)?;
+    let (tokens, attr1) = parse_token_attributes(tokens)?;
+    let (tokens, _) = tag(tokens!["token"])(tokens)?;
+    let (tokens, _) = opt(tag(tokens!["with"]))(tokens)?;
+    let (tokens, attr2) = parse_token_attributes(tokens)?;
+    let attrs = attr1.into_iter().chain(attr2.into_iter()).collect();
+    Ok((
+        tokens,
+        Clause {
+            effect: ClauseEffect::CreateToken(attrs),
+            affected: Affected::Controller,
+            constraints: Vec::new(),
+        },
+    ))
 }
 fn parse_its_controller_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
-    println!("parsing its controller clause with {:?}",tokens);
-    let (tokens,_)=tag(tokens!["."])(tokens)?;
+    let (tokens, _) = tag(tokens!["."])(tokens)?;
     let (tokens, _) = opt(tag(tokens!("\n")))(tokens)?;
     let (tokens, _) = context(
         "parsing controller addon",
         tag(tokens!["its", "controller"]),
     )(tokens)?;
-    println!("remainder {:?}",tokens);
-    let (tokens,clause)=parse_body_line(tokens)?;
-    Ok((tokens,Clause{
-        affected:Affected::Target(None),
-        effect:ClauseEffect::SetTargetController(Box::new(clause)),
-        constraints:vec![],
-    }))
+    let (tokens, clause) = parse_body_line(tokens)?;
+    Ok((
+        tokens,
+        Clause {
+            affected: Affected::Target(None),
+            effect: ClauseEffect::SetTargetController(Box::new(clause)),
+            constraints: vec![],
+        },
+    ))
 }
 fn parse_target_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
     let (tokens, clause) = context(
@@ -278,7 +287,7 @@ fn parse_type<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Type> {
     let rest = &tokens[1..];
     if let Ok(t) = Type::from_str(first) {
         return Ok((rest, t));
-    } 
+    }
     Err(nom_error(tokens, "Not a type"))
 }
 fn parse_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseConstraint> {
@@ -298,8 +307,8 @@ fn parse_or_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseConstrai
 }
 
 fn parse_destroy_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
-    let (tokens, _) = context("parsing destroy target",tag(tokens!["destroy", "target"]))(tokens)?;
-    let (tokens, constraints) =many1(parse_constraint)(tokens)?;
+    let (tokens, _) = context("parsing destroy target", tag(tokens!["destroy", "target"]))(tokens)?;
+    let (tokens, constraints) = many1(parse_constraint)(tokens)?;
     Ok((
         tokens,
         Clause {
@@ -310,7 +319,7 @@ fn parse_destroy_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
     ))
 }
 fn parse_exile_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
-    let (tokens, _) = context("parsing exile clause",tag(tokens!["exile", "target"]))(tokens)?;
+    let (tokens, _) = context("parsing exile clause", tag(tokens!["exile", "target"]))(tokens)?;
     let (tokens, constraints) = many1(parse_constraint)(tokens)?;
     Ok((
         tokens,

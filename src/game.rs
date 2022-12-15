@@ -374,7 +374,7 @@ impl Game {
         if let Some(card) = self.cards.get(castopt.stack_ent) {
             for clause in &card.effect {
                 let mut selected_target = None;
-                if let Affected::Target(target ) = clause.affected {
+                if let Affected::Target(target) = clause.affected {
                     if let Some(pl) = self.players.get(castopt.player) {
                         let mut valid = Vec::new();
                         for &(card, zone) in &cards_and_zones {

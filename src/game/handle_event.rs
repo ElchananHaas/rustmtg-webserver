@@ -43,7 +43,7 @@ impl Game {
                         &mut events,
                         Event::MoveZones {
                             ent: card,
-                            origin: Zone::Battlefield,
+                            origin: Some(Zone::Battlefield),
                             dest: Zone::Graveyard,
                         },
                     );
@@ -72,7 +72,7 @@ impl Game {
                         &mut events,
                         Event::MoveZones {
                             ent: card,
-                            origin: Zone::Hand,
+                            origin: Some(Zone::Hand),
                             dest: Zone::Graveyard,
                         },
                     );
@@ -84,7 +84,7 @@ impl Game {
                             &mut events,
                             Event::MoveZones {
                                 ent: land,
-                                origin: zone,
+                                origin: Some(zone),
                                 dest: Zone::Battlefield,
                             },
                         )
@@ -142,7 +142,7 @@ impl Game {
                                     &mut events,
                                     Event::MoveZones {
                                         ent: *card,
-                                        origin: Zone::Library,
+                                        origin: Some(Zone::Library),
                                         dest: Zone::Hand,
                                     },
                                 );
@@ -197,13 +197,13 @@ impl Game {
         results: &mut Vec<EventResult>,
         _events: &mut Vec<TagEvent>,
         ent: CardId,
-        origin: Zone,
+        origin: Option<Zone>,
         dest: Zone,
     ) {
-        let mut props = None;
         if let Some(card)=self.cards.get_mut(ent)
         && let Some(owner)= self.players.get_mut(card.owner) {
-            let removed = match origin {
+            let removed = if let Some(origin)=origin{
+            match origin {
                 Zone::Exile => self.exile.remove(&ent),
                 Zone::Command => self.command.remove(&ent),
                 Zone::Battlefield => self.battlefield.remove(&ent),
@@ -229,60 +229,61 @@ impl Game {
                     }
                     None => false,
                 },
+            }}else{
+                true
             };
             let real = card.ent_type == EntType::RealCard;
-            if removed && real {
-                props = Some((card.name, card.owner));
-            };
-            if removed && !real {
-                results.push(EventResult::MoveZones {
-                    oldent: ent,
-                    newent: None,
-                    source:origin,
-                    dest,
-                });
+            if removed{
+                if !real && origin.is_some(){
+                    results.push(EventResult::MoveZones {
+                        oldent: ent,
+                        newent: None,
+                        source: origin,
+                        dest,
+                    });
+                    return;
+                }else{
+                    let mut newcard=card.printed.as_ref().expect("set printed card").as_ref().clone();
+                    newcard.owner=card.owner;
+                    newcard.printed=Some(Box::new(newcard.clone()));
+                    let (newent, newcard) = self.cards.insert(newcard);
+                    match dest {
+                        Zone::Exile | Zone::Stack | Zone::Command | Zone::Battlefield | Zone::Graveyard => {
+                            newcard.known_to.extend(self.turn_order.iter());
+                            //Public zone
+                        }
+                        Zone::Hand => {
+                            newcard.known_to.insert(newcard.owner);
+                        } //Shuffling will destroy all knowledge of cards in the library
+                        _ => {}
+                    }
+                    match dest {
+                        Zone::Exile => {
+                            self.exile.insert(newent);
+                        }
+                        Zone::Command => {
+                            self.command.insert(newent);
+                        }
+                        Zone::Battlefield => {
+                            self.battlefield.insert(newent);
+                            newcard.etb_this_cycle=true;
+                        }
+                        Zone::Hand => {
+                            owner.hand.insert(newent);
+                        }
+                        //Handle inserting a distance from the top. Perhaps swap them afterwards?
+                        Zone::Library => owner.library.push(newent),
+                        Zone::Graveyard => owner.graveyard.push(newent),
+                        Zone::Stack => self.stack.push(newent),
+                    }
+                    results.push(EventResult::MoveZones {
+                        oldent: ent,
+                        newent: Some(newent),
+                        source: origin,
+                        dest,
+                    });
+                }
             }
-        };
-        if let Some((name, owner_id))=props 
-        && let Some(owner)= self.players.get_mut(owner_id){
-            let card = self.db.spawn_card(name, owner_id);
-            let (newent, newcard) = self.cards.insert(card);
-            //update knowledge of new card on zonemove
-            match dest {
-                Zone::Exile | Zone::Stack | Zone::Command | Zone::Battlefield | Zone::Graveyard => {
-                    newcard.known_to.extend(self.turn_order.iter());
-                    //Public zone
-                }
-                Zone::Hand => {
-                    newcard.known_to.insert(newcard.owner);
-                } //Shuffling will destroy all knowledge of cards in the library
-                _ => {}
-            }
-            match dest {
-                Zone::Exile => {
-                    self.exile.insert(newent);
-                }
-                Zone::Command => {
-                    self.command.insert(newent);
-                }
-                Zone::Battlefield => {
-                    self.battlefield.insert(newent);
-                    newcard.etb_this_cycle=true;
-                }
-                Zone::Hand => {
-                    owner.hand.insert(newent);
-                }
-                //Handle inserting a distance from the top. Perhaps swap them afterwards?
-                Zone::Library => owner.library.push(newent),
-                Zone::Graveyard => owner.graveyard.push(newent),
-                Zone::Stack => self.stack.push(newent),
-            }
-            results.push(EventResult::MoveZones {
-                oldent: ent,
-                newent: Some(newent),
-                source: origin,
-                dest,
-            });
         };
     }
 

@@ -15,9 +15,9 @@ use crate::spellabil::KeywordAbility;
 pub struct TriggeredAbility {}
 
 #[derive(Clone, Serialize, JsonSchema, Debug)]
-pub enum StaticAbilityEffect{
+pub enum StaticAbilityEffect {
     HasColor(Color),
-    GivenByKeyword
+    GivenByKeyword,
 }
 #[derive(Clone, Serialize, JsonSchema, Debug)]
 pub struct StaticAbility {
@@ -59,10 +59,10 @@ impl Ability {
             keyword: None,
         })
     }
-    pub fn from_keyword(keyword:KeywordAbility) -> Self{
+    pub fn from_keyword(keyword: KeywordAbility) -> Self {
         Ability::Static(StaticAbility {
             keyword: Some(keyword),
-            effect: StaticAbilityEffect::GivenByKeyword
+            effect: StaticAbilityEffect::GivenByKeyword,
         })
     }
 }

@@ -6,12 +6,12 @@ impl Game {
         if let Some(pl) = self.players.get(player) {
             for &card_id in &pl.hand {
                 if let Some(card) = self.cards.get(card_id) {
-                    actions.extend(self.play_land_actions(player, pl, card_id, card));
+                    actions.extend(self.play_land_actions(player, card_id, card));
                 }
             }
             for (card_id, zone) in self.cards_and_zones() {
                 if let Some(card) = self.cards.get(card_id) {
-                    actions.extend(self.ability_actions(player, pl, card_id, card, zone));
+                    actions.extend(self.ability_actions(player, card_id, card, zone));
                 }
             }
             actions.extend(self.cast_actions(pl, player));
@@ -42,7 +42,6 @@ impl Game {
     fn play_land_actions(
         &self,
         player_id: PlayerId,
-        player: &Player,
         card_id: CardId,
         card: &CardEnt,
     ) -> Vec<Action> {
@@ -57,7 +56,6 @@ impl Game {
     fn ability_actions(
         &self,
         player_id: PlayerId,
-        player: &Player,
         card_id: CardId,
         card: &CardEnt,
         zone: Zone,

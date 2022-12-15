@@ -78,7 +78,7 @@ impl<'a, 'b> Compare<&'b Tokens> for &'a Tokens {
             }
         }
     }
-    fn compare_no_case(&self, t: &'b Tokens) -> CompareResult {
+    fn compare_no_case(&self, _: &'b Tokens) -> CompareResult {
         todo!()
     }
 }

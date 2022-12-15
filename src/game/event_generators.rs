@@ -48,7 +48,7 @@ impl Game {
             if let EventResult::MoveZones {
                 oldent: _,
                 newent: Some(newent),
-                source: Zone::Hand,
+                source: Some(Zone::Hand),
                 dest: Zone::Graveyard,
             } = event
             {
@@ -59,8 +59,12 @@ impl Game {
     }
 
     pub async fn move_zones(&mut self, ent: CardId, origin: Zone, dest: Zone) -> Vec<EventResult> {
-        self.handle_event(Event::MoveZones { ent, origin, dest })
-            .await
+        self.handle_event(Event::MoveZones {
+            ent,
+            origin: Some(origin),
+            dest,
+        })
+        .await
     }
     pub async fn destroy(&mut self, id: CardId) -> Vec<EventResult> {
         self.handle_event(Event::Destroy { card: id }).await
@@ -69,7 +73,7 @@ impl Game {
     pub async fn exile(&mut self, id: CardId, origin: Zone) -> Vec<EventResult> {
         self.handle_event(Event::MoveZones {
             ent: id,
-            origin,
+            origin: Some(origin),
             dest: Zone::Exile,
         })
         .await

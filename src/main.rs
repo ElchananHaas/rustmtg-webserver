@@ -27,8 +27,8 @@ mod hashset_obj;
 mod mana;
 mod player;
 mod spellabil;
-mod write_schema;
 mod token_builder;
+mod write_schema;
 static CARDDB: OnceCell<carddb::CardDB> = OnceCell::new();
 
 type Pairing = Arc<Mutex<Option<WebSocket>>>;

@@ -1,4 +1,10 @@
-use crate::{card_types::Type, entities::TargetId, game::Game, mana::{ManaCostSymbol, Color}, token_builder::TokenAttribute};
+use crate::{
+    card_types::Type,
+    entities::TargetId,
+    game::Game,
+    mana::{Color, ManaCostSymbol},
+    token_builder::TokenAttribute,
+};
 use schemars::JsonSchema;
 use serde_derive::Serialize;
 use strum_macros::EnumString;
@@ -14,7 +20,7 @@ pub enum KeywordAbility {
     Prowess,
     Lifelink,
     Trample,
-    Reach,        //Implemented
+    Reach, //Implemented
 }
 
 #[derive(Clone, Serialize, JsonSchema, Debug)]
@@ -34,7 +40,7 @@ pub struct Clause {
 pub enum Affected {
     Controller,
     Target(Option<TargetId>),
-    ManuallySet(Option<TargetId>)
+    ManuallySet(Option<TargetId>),
 }
 impl ClauseConstraint {
     pub fn passes_constraint(&self, game: &Game, id: TargetId) -> bool {
@@ -77,5 +83,5 @@ pub enum ClauseEffect {
     DrawCard,
     Compound(Vec<Clause>),
     SetTargetController(Box<Clause>),
-    CreateToken(Vec<TokenAttribute>)
+    CreateToken(Vec<TokenAttribute>),
 }

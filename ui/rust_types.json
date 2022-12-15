@@ -159,6 +159,54 @@
         }
       }
     },
+    "Affected": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "Controller"
+          ]
+        },
+        {
+          "type": "object",
+          "required": [
+            "Target"
+          ],
+          "properties": {
+            "Target": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/TargetId"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "ManuallySet"
+          ],
+          "properties": {
+            "ManuallySet": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/TargetId"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
     "Ask": {
       "oneOf": [
         {
@@ -479,6 +527,16 @@
         "owner": {
           "$ref": "#/definitions/PlayerId"
         },
+        "printed": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CardEnt"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "printed_name": {
           "type": "string"
         },
@@ -546,15 +604,43 @@
       }
     },
     "Clause": {
+      "type": "object",
+      "required": [
+        "affected",
+        "constraints",
+        "effect"
+      ],
+      "properties": {
+        "affected": {
+          "$ref": "#/definitions/Affected"
+        },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ClauseConstraint"
+          }
+        },
+        "effect": {
+          "$ref": "#/definitions/ClauseEffect"
+        }
+      }
+    },
+    "ClauseConstraint": {
       "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "IsTapped"
+          ]
+        },
         {
           "type": "object",
           "required": [
-            "Simple"
+            "CardType"
           ],
           "properties": {
-            "Simple": {
-              "$ref": "#/definitions/ClauseEffect"
+            "CardType": {
+              "$ref": "#/definitions/Type"
             }
           },
           "additionalProperties": false
@@ -562,11 +648,14 @@
         {
           "type": "object",
           "required": [
-            "Target"
+            "Or"
           ],
           "properties": {
-            "Target": {
-              "$ref": "#/definitions/TargetClause"
+            "Or": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/ClauseConstraint"
+              }
             }
           },
           "additionalProperties": false
@@ -578,6 +667,8 @@
         {
           "type": "string",
           "enum": [
+            "Destroy",
+            "ExileBattlefield",
             "DrawCard"
           ]
         },
@@ -605,6 +696,48 @@
             "GainLife": {
               "type": "integer",
               "format": "int64"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "Compound"
+          ],
+          "properties": {
+            "Compound": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Clause"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "SetTargetController"
+          ],
+          "properties": {
+            "SetTargetController": {
+              "$ref": "#/definitions/Clause"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "CreateToken"
+          ],
+          "properties": {
+            "CreateToken": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/TokenAttribute"
+              }
             }
           },
           "additionalProperties": false
@@ -947,7 +1080,13 @@
     },
     "StaticAbility": {
       "type": "object",
+      "required": [
+        "effect"
+      ],
       "properties": {
+        "effect": {
+          "$ref": "#/definitions/StaticAbilityEffect"
+        },
         "keyword": {
           "anyOf": [
             {
@@ -959,6 +1098,28 @@
           ]
         }
       }
+    },
+    "StaticAbilityEffect": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "GivenByKeyword"
+          ]
+        },
+        {
+          "type": "object",
+          "required": [
+            "HasColor"
+          ],
+          "properties": {
+            "HasColor": {
+              "$ref": "#/definitions/Color"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
     },
     "Subphase": {
       "type": "string",
@@ -974,6 +1135,278 @@
         "EndCombat",
         "EndStep",
         "Cleanup"
+      ]
+    },
+    "Subtype": {
+      "type": "string",
+      "enum": [
+        "Advisor",
+        "Aetherborn",
+        "Ally",
+        "Angel",
+        "Antelope",
+        "Ape",
+        "Archer",
+        "Archon",
+        "Army",
+        "Artificer",
+        "Assassin",
+        "AssemblyWorker",
+        "Atog",
+        "Aurochs",
+        "Avatar",
+        "Azra",
+        "Badger",
+        "Barbarian",
+        "Bard",
+        "Basilisk",
+        "Bat",
+        "Bear",
+        "Beast",
+        "Beeble",
+        "Beholder",
+        "Berserker",
+        "Bird",
+        "Blinkmoth",
+        "Boar",
+        "Bringer",
+        "Brushwagg",
+        "Camarid",
+        "Camel",
+        "Caribou",
+        "Carrier",
+        "Cat",
+        "Centaur",
+        "Cephalid",
+        "Chimera",
+        "Citizen",
+        "Cleric",
+        "Cockatrice",
+        "Construct",
+        "Coward",
+        "Crab",
+        "Crocodile",
+        "Cyclops",
+        "Dauthi",
+        "Demigod",
+        "Demon",
+        "Deserter",
+        "Devil",
+        "Dinosaur",
+        "Djinn",
+        "Dog",
+        "Dragon",
+        "Drake",
+        "Dreadnought",
+        "Drone",
+        "Druid",
+        "Dryad",
+        "Dwarf",
+        "Efreet",
+        "Egg",
+        "Elder",
+        "Eldrazi",
+        "Elemental",
+        "Elephant",
+        "Elf",
+        "Elk",
+        "Eye",
+        "Faerie",
+        "Ferret",
+        "Fish",
+        "Flagbearer",
+        "Fox",
+        "Fractal",
+        "Frog",
+        "Fungus",
+        "Gargoyle",
+        "Germ",
+        "Giant",
+        "Gnoll",
+        "Gnome",
+        "Goat",
+        "Goblin",
+        "God",
+        "Golem",
+        "Gorgon",
+        "Graveborn",
+        "Gremlin",
+        "Griffin",
+        "Hag",
+        "Halfling",
+        "Hamster",
+        "Harpy",
+        "Hellion",
+        "Hippo",
+        "Hippogriff",
+        "Homarid",
+        "Homunculus",
+        "Horror",
+        "Horse",
+        "Human",
+        "Hydra",
+        "Hyena",
+        "Illusion",
+        "Imp",
+        "Incarnation",
+        "Inkling",
+        "Insect",
+        "Jackal",
+        "Jellyfish",
+        "Juggernaut",
+        "Kavu",
+        "Kirin",
+        "Kithkin",
+        "Knight",
+        "Kobold",
+        "Kor",
+        "Kraken",
+        "Lamia",
+        "Lammasu",
+        "Leech",
+        "Leviathan",
+        "Lhurgoyf",
+        "Licid",
+        "Lizard",
+        "Manticore",
+        "Masticore",
+        "Mercenary",
+        "Merfolk",
+        "Metathran",
+        "Minion",
+        "Minotaur",
+        "Mole",
+        "Monger",
+        "Mongoose",
+        "Monk",
+        "Monkey",
+        "Moonfolk",
+        "Mouse",
+        "Mutant",
+        "Myr",
+        "Mystic",
+        "Naga",
+        "Nautilus",
+        "Nephilim",
+        "Nightmare",
+        "Nightstalker",
+        "Ninja",
+        "Noble",
+        "Noggle",
+        "Nomad",
+        "Nymph",
+        "Octopus",
+        "Ogre",
+        "Ooze",
+        "Orb",
+        "Orc",
+        "Orgg",
+        "Otter",
+        "Ouphe",
+        "Ox",
+        "Oyster",
+        "Pangolin",
+        "Peasant",
+        "Pegasus",
+        "Pentavite",
+        "Pest",
+        "Phelddagrif",
+        "Phoenix",
+        "Phyrexian",
+        "Pilot",
+        "Pincher",
+        "Pirate",
+        "Plant",
+        "Praetor",
+        "Prism",
+        "Processor",
+        "Rabbit",
+        "Ranger",
+        "Rat",
+        "Rebel",
+        "Reflection",
+        "Rhino",
+        "Rigger",
+        "Rogue",
+        "Sable",
+        "Salamander",
+        "Samurai",
+        "Sand",
+        "Saproling",
+        "Satyr",
+        "Scarecrow",
+        "Scion",
+        "Scorpion",
+        "Scout",
+        "Sculpture",
+        "Serf",
+        "Serpent",
+        "Servo",
+        "Shade",
+        "Shaman",
+        "Shapeshifter",
+        "Shark",
+        "Sheep",
+        "Siren",
+        "Skeleton",
+        "Slith",
+        "Sliver",
+        "Slug",
+        "Snake",
+        "Soldier",
+        "Soltari",
+        "Spawn",
+        "Specter",
+        "Spellshaper",
+        "Sphinx",
+        "Spider",
+        "Spike",
+        "Spirit",
+        "Splinter",
+        "Sponge",
+        "Squid",
+        "Squirrel",
+        "Starfish",
+        "Surrakar",
+        "Survivor",
+        "Tentacle",
+        "Tetravite",
+        "Thalakos",
+        "Thopter",
+        "Thrull",
+        "Tiefling",
+        "Treefolk",
+        "Trilobite",
+        "Triskelavite",
+        "Troll",
+        "Turtle",
+        "Unicorn",
+        "Vampire",
+        "Vedalken",
+        "Viashino",
+        "Volver",
+        "Wall",
+        "Warlock",
+        "Warrior",
+        "Weird",
+        "Werewolf",
+        "Whale",
+        "Wizard",
+        "Wolf",
+        "Wolverine",
+        "Wombat",
+        "Worm",
+        "Wraith",
+        "Wurm",
+        "Yeti",
+        "Zombie",
+        "Zubera",
+        "EndCreatureMarker",
+        "Plains",
+        "Island",
+        "Swamp",
+        "Mountain",
+        "Forest"
       ]
     },
     "Subtypes": {
@@ -2074,65 +2507,73 @@
         }
       }
     },
-    "TargetClause": {
-      "type": "object",
-      "required": [
-        "constraints",
-        "effect"
-      ],
-      "properties": {
-        "constraints": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/TargetConstraint"
-          }
-        },
-        "effect": {
-          "$ref": "#/definitions/TargetClauseEffect"
-        },
-        "target": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/TargetId"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      }
+    "TargetId": {
+      "type": "integer",
+      "format": "int32"
     },
-    "TargetClauseEffect": {
-      "type": "string",
-      "enum": [
-        "Destroy"
-      ]
-    },
-    "TargetConstraint": {
+    "TokenAttribute": {
       "oneOf": [
         {
-          "type": "string",
-          "enum": [
-            "IsTapped"
-          ]
+          "type": "object",
+          "required": [
+            "PT"
+          ],
+          "properties": {
+            "PT": {
+              "$ref": "#/definitions/PT"
+            }
+          },
+          "additionalProperties": false
         },
         {
           "type": "object",
           "required": [
-            "CardType"
+            "HasColor"
           ],
           "properties": {
-            "CardType": {
+            "HasColor": {
+              "$ref": "#/definitions/Color"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "Type"
+          ],
+          "properties": {
+            "Type": {
               "$ref": "#/definitions/Type"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "Subtype"
+          ],
+          "properties": {
+            "Subtype": {
+              "$ref": "#/definitions/Subtype"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "Ability"
+          ],
+          "properties": {
+            "Ability": {
+              "$ref": "#/definitions/Ability"
             }
           },
           "additionalProperties": false
         }
       ]
-    },
-    "TargetId": {
-      "type": "integer",
-      "format": "int32"
     },
     "TriggeredAbility": {
       "type": "object"
