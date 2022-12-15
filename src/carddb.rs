@@ -13,6 +13,7 @@ use crate::spellabil::Clause;
 use crate::spellabil::ClauseConstraint;
 use crate::spellabil::ClauseEffect;
 use crate::spellabil::KeywordAbility;
+use crate::token_builder::parse_token_attributes;
 use log::debug;
 use log::info;
 use nom::branch::alt;
@@ -38,7 +39,7 @@ use std::str::FromStr;
 pub mod spawn_error;
 pub mod text_token;
 use crate::tokens;
-type Res<T, U> = IResult<T, U, VerboseError<T>>;
+pub type Res<T, U> = IResult<T, U, VerboseError<T>>;
 
 pub struct CardDB {
     scryfall: HashMap<String, ScryfallEntry>,
@@ -167,13 +168,13 @@ fn parse_keyword_ability<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, KeywordAbili
 }
 fn prune_comment<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ()> {
     let (rest, _) = opt(delimited(
-        tag(tokens!("(")),
+        tag(tokens!["("]),
         is_not(tokens!(")")),
         tag(tokens!(")")),
     ))(tokens)?;
     Ok((rest, ()))
 }
-fn parse_number<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, i64> {
+pub fn parse_number<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, i64> {
     if tokens.len() == 0 {
         return Err(nom_error(tokens, "Empty tokens when parsing integer"));
     }
@@ -211,23 +212,46 @@ fn parse_draw_a_card<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
 fn parse_body_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
     let (tokens, clause) = context(
         "parsing body line",
-        alt((parse_gain_life, parse_draw_a_card, parse_target_line)),
+        alt((parse_gain_life, parse_draw_a_card, parse_target_line, parse_create_token)),
     )(tokens)?;
     let (tokens, _) = opt(tag(tokens!(".")))(tokens)?;
     let (tokens, _) = opt(tag(tokens!("\n")))(tokens)?;
     Ok((tokens, clause))
 }
 
+fn parse_create_token<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
+    let (tokens,_)=alt((tag(tokens!["create"]),tag(tokens!["creates"])))(tokens)?;
+    let (tokens, _)=tag(tokens!["a"])(tokens)?;
+    let (tokens, attr1)= parse_token_attributes(tokens)?;
+    let (tokens, _)= tag(tokens!["token"])(tokens)?;
+    let (tokens, _)= opt(tag(tokens!["with"]))(tokens)?;
+    let (tokens, attr2)= parse_token_attributes(tokens)?;
+    let attrs=attr1.into_iter().chain(attr2.into_iter()).collect();
+    Ok((tokens,Clause{
+        effect:ClauseEffect::CreateToken(attrs),
+        affected: Affected::Controller,
+        constraints: Vec::new()
+    }))
+}
 fn parse_its_controller_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
+    println!("parsing its controller clause with {:?}",tokens);
+    let (tokens,_)=tag(tokens!["."])(tokens)?;
+    let (tokens, _) = opt(tag(tokens!("\n")))(tokens)?;
     let (tokens, _) = context(
         "parsing controller addon",
         tag(tokens!["its", "controller"]),
     )(tokens)?;
-    parse_body_line(tokens)
+    println!("remainder {:?}",tokens);
+    let (tokens,clause)=parse_body_line(tokens)?;
+    Ok((tokens,Clause{
+        affected:Affected::Target(None),
+        effect:ClauseEffect::SetTargetController(Box::new(clause)),
+        constraints:vec![],
+    }))
 }
 fn parse_target_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
     let (tokens, clause) = context(
-        "parsing target clause",
+        "parsing target line",
         alt((parse_destroy_clause, parse_exile_clause)),
     )(tokens)?;
     let (tokens, addendum) = opt(parse_its_controller_clause)(tokens)?;
@@ -254,7 +278,7 @@ fn parse_type<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Type> {
     let rest = &tokens[1..];
     if let Ok(t) = Type::from_str(first) {
         return Ok((rest, t));
-    }
+    } 
     Err(nom_error(tokens, "Not a type"))
 }
 fn parse_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseConstraint> {
@@ -274,35 +298,33 @@ fn parse_or_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseConstrai
 }
 
 fn parse_destroy_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
-    let (tokens, _) = tag(tokens!["destroy", "target"])(tokens)?;
-    let (tokens, constraints) = many1(parse_constraint)(tokens)?;
+    let (tokens, _) = context("parsing destroy target",tag(tokens!["destroy", "target"]))(tokens)?;
+    let (tokens, constraints) =many1(parse_constraint)(tokens)?;
     Ok((
         tokens,
         Clause {
             effect: ClauseEffect::Destroy,
             constraints,
-            affected: Affected::Target { target: None },
+            affected: Affected::Target(None),
         },
     ))
 }
 fn parse_exile_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
-    let (tokens, _) = tag(tokens!["exile", "target"])(tokens)?;
+    let (tokens, _) = context("parsing exile clause",tag(tokens!["exile", "target"]))(tokens)?;
     let (tokens, constraints) = many1(parse_constraint)(tokens)?;
     Ok((
         tokens,
         Clause {
             effect: ClauseEffect::ExileBattlefield,
             constraints,
-            affected: Affected::Target { target: None },
+            affected: Affected::Target(None),
         },
     ))
 }
 fn parse_body_lines<'a>(card: &mut CardEnt, tokens: &'a Tokens) -> Res<&'a Tokens, ()> {
     let (mut rest, keywords) = context("parse keywords", parse_keyword_abilities)(tokens)?;
     for keyword in keywords {
-        card.abilities.push(Ability::Static(StaticAbility {
-            keyword: Some(keyword),
-        }));
+        card.abilities.push(Ability::from_keyword(keyword));
     }
     let mut clauses = Vec::new();
     while rest.len() > 0 {
@@ -319,7 +341,7 @@ fn parse_body_lines<'a>(card: &mut CardEnt, tokens: &'a Tokens) -> Res<&'a Token
     Ok((rest, ()))
 }
 fn parse_token<'a>(mut text: &'a str) -> IResult<&str, String, ()> {
-    let special_chars = " .:,\"\n()";
+    let special_chars = " .:,\"\n()/";
     (text, _) = many0(nom::character::complete::char(' '))(text)?;
     if let Ok((rest, char)) = one_of::<_, _, ()>(special_chars)(text) {
         if char == ' ' {

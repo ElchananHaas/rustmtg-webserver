@@ -2,6 +2,7 @@ use schemars::JsonSchema;
 use serde_derive::Serialize;
 
 use crate::cost::Cost;
+use crate::mana::Color;
 use crate::mana::ManaCostSymbol;
 use crate::spellabil::Affected;
 use crate::spellabil::Clause;
@@ -14,8 +15,14 @@ use crate::spellabil::KeywordAbility;
 pub struct TriggeredAbility {}
 
 #[derive(Clone, Serialize, JsonSchema, Debug)]
+pub enum StaticAbilityEffect{
+    HasColor(Color),
+    GivenByKeyword
+}
+#[derive(Clone, Serialize, JsonSchema, Debug)]
 pub struct StaticAbility {
     pub keyword: Option<KeywordAbility>,
+    pub effect: StaticAbilityEffect,
 }
 #[derive(Clone, Serialize, JsonSchema, Debug)]
 pub struct ActivatedAbility {
@@ -50,6 +57,12 @@ impl Ability {
                 affected: Affected::Controller,
             }],
             keyword: None,
+        })
+    }
+    pub fn from_keyword(keyword:KeywordAbility) -> Self{
+        Ability::Static(StaticAbility {
+            keyword: Some(keyword),
+            effect: StaticAbilityEffect::GivenByKeyword
         })
     }
 }

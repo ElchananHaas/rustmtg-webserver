@@ -374,7 +374,7 @@ impl Game {
         if let Some(card) = self.cards.get(castopt.stack_ent) {
             for clause in &card.effect {
                 let mut selected_target = None;
-                if let Affected::Target { target } = clause.affected {
+                if let Affected::Target(target ) = clause.affected {
                     if let Some(pl) = self.players.get(castopt.player) {
                         let mut valid = Vec::new();
                         for &(card, zone) in &cards_and_zones {
@@ -407,10 +407,10 @@ impl Game {
             .get_mut(castopt.stack_ent)
             .expect("card was checked to exist");
         for (i, clause) in card.effect.iter_mut().enumerate() {
-            if let Affected::Target { target } = clause.affected {
+            if let Affected::Target(target) = clause.affected {
                 let target = selected_targets[i];
                 if let Some(t) = target {
-                    clause.affected = Affected::Target { target: Some(t) };
+                    clause.affected = Affected::Target(Some(t));
                 } else {
                     return Err(MTGError::TargetNotChosen);
                 }

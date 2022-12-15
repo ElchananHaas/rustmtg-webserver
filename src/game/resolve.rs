@@ -1,3 +1,5 @@
+use crate::{token_builder::TokenAttribute, ability::{StaticAbility, StaticAbilityEffect}};
+
 use super::*;
 impl Game {
     pub async fn resolve(&mut self, id: CardId) {
@@ -26,8 +28,15 @@ impl Game {
     async fn resolve_clause(&mut self, clause: Clause, id: CardId, controller: PlayerId) {
         let affected: TargetId = match clause.affected {
             Affected::Controller => controller.into(),
-            Affected::Target { target } => {
+            Affected::Target(target) => {
                 if let Some(x) = target {
+                    x
+                } else {
+                    return;
+                }
+            }
+            Affected::ManuallySet(x) =>{
+                if let Some(x) = x {
                     x
                 } else {
                     return;
@@ -54,7 +63,7 @@ impl Game {
             }
             ClauseEffect::DrawCard => {
                 if let TargetId::Player(pl) = affected {
-                    self.draw(controller).await;
+                    self.draw(pl).await;
                 }
             }
             ClauseEffect::Destroy => {
@@ -71,6 +80,48 @@ impl Game {
                 for mut subclause in clauses {
                     subclause.affected = clause.affected; //Propagate target to subclause
                     self.resolve_clause(subclause, id, controller).await;
+                }
+            }
+            ClauseEffect::SetTargetController(clause) => {
+                let mut clause=*clause;
+                if let TargetId::Card(affected)=affected
+                && let Some(controller)=self.get_controller(affected){
+                    clause.affected=Affected::ManuallySet(Some(controller.into()));
+                    self.resolve_clause(clause, id ,controller).await;
+                }
+            }
+            ClauseEffect::CreateToken(attributes) => {
+                if let TargetId::Player(affected)=affected{
+                    let mut ent=CardEnt::default();
+                    ent.owner=affected;
+                    ent.controller=Some(affected);
+                    ent.etb_this_cycle=true;
+                    ent.ent_type=EntType::TokenCard;
+                    for attribute in attributes{
+                        match attribute{
+                            TokenAttribute::PT(pt) => {
+                                ent.pt=Some(pt);
+                            },
+                            TokenAttribute::Type(t) => {
+                                ent.types.add(t);
+                            },
+                            TokenAttribute::Subtype(t) => {
+                                ent.subtypes.add(t);
+                            },
+                            TokenAttribute::HasColor(color) => {
+                                ent.abilities.push(Ability::Static(
+                                    StaticAbility{
+                                        keyword:None,
+                                        effect: StaticAbilityEffect::HasColor(color)
+                                    }
+                                ));
+                            }
+                            TokenAttribute::Ability(abil) => {
+                                ent.abilities.push(abil);
+                            }
+                        }
+                    }
+                    ent.printed=Some(Box::new(ent.clone()));
                 }
             }
         }

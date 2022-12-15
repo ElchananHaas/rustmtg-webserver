@@ -28,6 +28,7 @@ mod mana;
 mod player;
 mod spellabil;
 mod write_schema;
+mod token_builder;
 static CARDDB: OnceCell<carddb::CardDB> = OnceCell::new();
 
 type Pairing = Arc<Mutex<Option<WebSocket>>>;
@@ -69,8 +70,8 @@ async fn launch_game(sockets: Vec<WebSocket>) -> Result<()> {
     let db: &carddb::CardDB = CARDDB.get_or_init(|| carddb::CardDB::new());
     let mut gamebuild = GameBuilder::new();
     let mut deck = Vec::new();
-    for _ in 0..20 {
-        deck.push("Swift Response");
+    for _ in 0..10 {
+        deck.push("Angelic Ascension");
     }
     for _ in 0..20 {
         deck.push("Staunch Shieldmate");

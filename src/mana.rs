@@ -3,8 +3,10 @@ use crate::game::Game;
 use enum_map::Enum;
 use schemars::JsonSchema;
 use serde_derive::Serialize;
+use strum::EnumString;
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Enum, JsonSchema)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Enum, JsonSchema, EnumString)]
+#[strum(serialize_all = "lowercase")]
 pub enum Color {
     White,
     Blue,
