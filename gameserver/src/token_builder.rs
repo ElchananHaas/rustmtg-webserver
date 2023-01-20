@@ -1,13 +1,13 @@
 use std::str::FromStr;
 
-use crate::tokens;
 use crate::{
     ability::Ability,
     card_entities::PT,
-    card_types::{Subtype, Type},
-    carddb::{nom_error, parse_number, text_token::Tokens, Res},
+    carddb::{nom_error, parse_number,Res},
     spellabil::KeywordAbility,
 };
+use texttoken::Tokens;
+use cardtypes::{Subtype, Type};
 use common::mana::Color;
 use nom::bytes::complete::tag;
 use nom::{branch::alt, multi::many0};

@@ -1,10 +1,9 @@
-use self::text_token::Tokens;
+use texttoken::Tokens;
 use crate::ability::Ability;
 use crate::ability::StaticAbility;
 use crate::card_entities::CardEnt;
 use crate::card_entities::PT;
-use crate::card_types::Type;
-use crate::card_types::{Subtypes, Supertypes, Types};
+use cardtypes::{Type,Subtypes, Supertypes, Types};
 use crate::cost::Cost;
 use crate::entities::PlayerId;
 use common::mana::ManaCostSymbol;
@@ -37,8 +36,6 @@ use std::fmt;
 use std::fs;
 use std::str::FromStr;
 pub mod spawn_error;
-pub mod text_token;
-use crate::tokens;
 pub type Res<T, U> = IResult<T, U, VerboseError<T>>;
 
 pub struct CardDB {

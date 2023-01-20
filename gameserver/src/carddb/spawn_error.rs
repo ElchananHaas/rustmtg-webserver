@@ -1,6 +1,6 @@
 use nom::error::VerboseError;
 
-use super::text_token::Tokens;
+use texttoken::Tokens;
 
 #[derive(Debug, Clone)]
 pub enum SpawnError<'a> {

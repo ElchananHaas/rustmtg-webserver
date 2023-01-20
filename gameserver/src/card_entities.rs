@@ -1,8 +1,8 @@
 use crate::{
-    card_types::{Subtypes, Supertypes, Types},
     entities::MIN_CARDID,
     spellabil::Clause,
 };
+use cardtypes::{Subtypes, Supertypes, Types};
 use derivative::*;
 use schemars::JsonSchema;
 use serde_derive::Serialize;

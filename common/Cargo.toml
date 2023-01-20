@@ -13,3 +13,4 @@ schemars = "0.8.11"
 strum = { version = "0.24", features = ["derive"] }
 strum_macros = "0.24"
 enum-map = "2.4.0"
+nom = "7.1.0"

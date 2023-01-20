@@ -2,6 +2,8 @@
 #![feature(const_option)]
 #![feature(let_chains)]
 #![deny(unused_must_use)]
+#[macro_use]
+extern crate texttoken;
 use crate::entities::PlayerId;
 use crate::game::build_game::GameBuilder;
 use crate::player::PlayerCon;
@@ -15,7 +17,6 @@ use warp::Filter;
 mod ability;
 mod actions;
 mod card_entities;
-mod card_types;
 mod carddb;
 mod client_message;
 mod cost;

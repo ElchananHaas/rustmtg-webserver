@@ -3,4 +3,6 @@
 members=[
     "gameserver",
     "common",
+    "cardtypes",
+    "texttoken",
 ]

@@ -1,5 +1,4 @@
-use crate::carddb::nom_error;
-use crate::carddb::text_token::Tokens;
+use texttoken::Tokens;
 use nom::error::VerboseError;
 use nom::IResult;
 use paste::paste;
@@ -21,11 +20,15 @@ macro_rules! enumset{
         impl $name{
             pub fn parse<'a>(x:&'a Tokens)->IResult<&'a Tokens, Self, VerboseError<&'a Tokens>>{
                 if x.len()==0 {
-                    return Err(nom_error(x,"Empty string when parsing type"));
+                    return Err(nom::Err::Error(VerboseError {
+                        errors: vec![(x, nom::error::VerboseErrorKind::Context("Empty string when parsing type"))],
+                    }))
                 }
                 match $name::from_str(&x[0]){
                     Ok(val)=>Ok((&x[1..],val)),
-                    Err(_)=>Err(nom_error(x,"failed to parse type"))
+                    Err(_)=>Err(nom::Err::Error(VerboseError {
+                        errors: vec![(x, nom::error::VerboseErrorKind::Context("Failed to parse type"))],
+                    }))
                 }
             }
         }

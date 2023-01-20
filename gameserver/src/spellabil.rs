@@ -1,9 +1,9 @@
 use crate::{
-    card_types::Type,
     entities::TargetId,
     game::Game,
     token_builder::TokenAttribute,
 };
+use cardtypes::Type;
 use common::mana::{Color, ManaCostSymbol};
 use schemars::JsonSchema;
 use serde_derive::Serialize;
