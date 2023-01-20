@@ -1,19 +1,19 @@
-use crate::ability::Ability;
 use crate::actions::{Action, ActionFilter, CastingOption, StackActionOption};
-use crate::card_entities::{CardEnt, EntType};
 use crate::carddb::CardDB;
 use crate::client_message::{Ask, AskSelectN};
-use crate::cost::{Cost, PaidCost};
 use crate::ent_maps::EntMap;
-use crate::entities::{CardId, ManaId, PlayerId, TargetId, MIN_CARDID};
 use crate::errors::MTGError;
 use crate::event::{DiscardCause, Event, EventResult, TagEvent};
 use crate::hashset_obj::HashSetObj;
-use common::mana::{Color, Mana, ManaCostSymbol};
 use crate::player::{Player, PlayerCon};
-use crate::spellabil::{Affected, Clause, ClauseEffect, KeywordAbility};
 use anyhow::{bail, Result};
 use async_recursion::async_recursion;
+use common::ability::Ability;
+use common::card_entities::{CardEnt, EntType};
+use common::cost::{Cost, PaidCost};
+use common::entities::{CardId, ManaId, PlayerId, TargetId, MIN_CARDID};
+use common::mana::{Color, Mana, ManaCostSymbol};
+use common::spellabil::{Affected, Clause, ClauseEffect, KeywordAbility, ClauseConstraint};
 use enum_map::EnumMap;
 use futures::future;
 use rand::seq::SliceRandom;
@@ -368,6 +368,34 @@ impl Game {
         }
         order
     }
+    pub fn passes_constraint(&self, constraint: &ClauseConstraint, id: TargetId) -> bool {
+        match constraint{
+            ClauseConstraint::IsTapped => {
+                if let TargetId::Card(card)=id
+                && let Some(ent)=self.cards.get(card){
+                    ent.tapped
+                }else{
+                    false
+                }
+            },
+            ClauseConstraint::CardType(t) => {
+                if let TargetId::Card(card)=id
+                && let Some(ent)=self.cards.get(card){
+                    ent.types.get(*t)
+                }else{
+                    false
+                }                        
+            },
+            ClauseConstraint::Or(constraints) => {
+                for c in constraints{
+                    if self.passes_constraint(c, id){
+                        return true
+                    }
+                }
+                false
+            }
+        }
+    }
     async fn select_targets(&mut self, castopt: &StackActionOption) -> Result<(), MTGError> {
         let cards_and_zones = self.cards_and_zones();
         let mut selected_targets = Vec::new();
@@ -381,7 +409,7 @@ impl Game {
                             if clause
                                 .constraints
                                 .iter()
-                                .all(|x| x.passes_constraint(&self, card.into()))
+                                .all(|x| self.passes_constraint(x, card.into()))
                             {
                                 valid.push(TargetId::Card(card))
                             }
@@ -446,9 +474,9 @@ impl Game {
     //need to be expanded with real restrictions later
     fn can_spend_mana_on_action(&self, action: &StackActionOption, mana: &Mana) -> bool {
         if let Some(restriction) = &mana.restriction {
-        //TODO check if the actual restuction is met
-            match restriction{
-                _=>true
+            //TODO check if the actual restuction is met
+            match restriction {
+                _ => true,
             }
         } else {
             true

@@ -4,30 +4,25 @@
 #![deny(unused_must_use)]
 #[macro_use]
 extern crate texttoken;
-use crate::entities::PlayerId;
 use crate::game::build_game::GameBuilder;
 use crate::player::PlayerCon;
 use crate::write_schema::write_types;
 use anyhow::Result;
+use common::entities::PlayerId;
 use once_cell::sync::OnceCell;
 use std::mem;
 use std::sync::{Arc, Mutex};
 use warp::ws::WebSocket;
 use warp::Filter;
-mod ability;
 mod actions;
-mod card_entities;
 mod carddb;
 mod client_message;
-mod cost;
 mod ent_maps;
-mod entities;
 mod errors;
 mod event;
 mod game;
 mod hashset_obj;
 mod player;
-mod spellabil;
 mod token_builder;
 mod write_schema;
 static CARDDB: OnceCell<carddb::CardDB> = OnceCell::new();
@@ -98,10 +93,8 @@ mod tests {
 
     use anyhow::bail;
 
-    use crate::{
-        entities::CardId,
-        game::{Game, Zone},
-    };
+    use crate::game::{Game, Zone};
+    use common::entities::CardId;
 
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;

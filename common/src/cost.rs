@@ -1,7 +1,5 @@
-use crate::{
-    entities::{CardId, ManaId},
-};
-use common::mana::ManaCostSymbol;
+use crate::entities::{CardId, ManaId};
+use crate::mana::ManaCostSymbol;
 use schemars::JsonSchema;
 use serde_derive::Serialize;
 

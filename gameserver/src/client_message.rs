@@ -1,10 +1,12 @@
 use crate::{
     actions::Action,
-    card_entities::CardEnt,
-    entities::{CardId, PlayerId, TargetId},
     game::{Game, Zone},
     hashset_obj::HashSetObj,
     player::PlayerView,
+};
+use common::{
+    card_entities::CardEnt,
+    entities::{CardId, PlayerId, TargetId},
 };
 use schemars::JsonSchema;
 use serde::Serialize;

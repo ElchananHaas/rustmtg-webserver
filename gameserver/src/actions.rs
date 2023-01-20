@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::Serialize;
 
-use crate::{
+use common::{
     cost::Cost,
     entities::{CardId, PlayerId},
     spellabil::KeywordAbility,

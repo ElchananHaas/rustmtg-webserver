@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 
-use crate::{
-    entities::{CardId, PlayerId, TargetId},
-    game::{Phase, Subphase, Zone},
-};
+use crate::game::{Phase, Subphase, Zone};
+use common::entities::{CardId, PlayerId, TargetId};
 
 //An event tagged with replacement effects already applied to it
 #[derive(Clone, Debug)]

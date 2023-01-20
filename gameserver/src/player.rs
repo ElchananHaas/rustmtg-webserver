@@ -1,8 +1,8 @@
 use crate::client_message::{Ask, AskPair, AskSelectN, ClientMessage};
-use crate::entities::{CardId, ManaId, PlayerId};
 use crate::game::Cards;
 use crate::hashset_obj::HashSetObj;
 use anyhow::Result;
+use common::entities::{CardId, ManaId, PlayerId};
 use futures::{SinkExt, StreamExt};
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;

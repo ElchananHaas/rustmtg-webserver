@@ -3,7 +3,7 @@ use std::{collections::HashMap, hash::Hash, num::NonZeroU64};
 use schemars::JsonSchema;
 use serde::Serialize;
 
-use crate::{card_entities::CardEnt, entities::CardId, spellabil::KeywordAbility};
+use common::{card_entities::CardEnt, entities::CardId, spellabil::KeywordAbility};
 #[derive(Clone, JsonSchema, Serialize, Debug)]
 
 pub struct EntMap<K, V>

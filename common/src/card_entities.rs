@@ -1,7 +1,4 @@
-use crate::{
-    entities::MIN_CARDID,
-    spellabil::Clause,
-};
+use crate::{entities::MIN_CARDID, spellabil::Clause};
 use cardtypes::{Subtypes, Supertypes, Types};
 use derivative::*;
 use schemars::JsonSchema;

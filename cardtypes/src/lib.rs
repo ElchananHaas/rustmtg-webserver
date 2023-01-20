@@ -1,4 +1,3 @@
-use texttoken::Tokens;
 use nom::error::VerboseError;
 use nom::IResult;
 use paste::paste;
@@ -7,6 +6,7 @@ use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use std::str::FromStr;
 use strum_macros::EnumString;
+use texttoken::Tokens;
 macro_rules! enumset{
     ($name:ident, $($e:ident),*) => {
         #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize, Deserialize, JsonSchema, EnumString)]

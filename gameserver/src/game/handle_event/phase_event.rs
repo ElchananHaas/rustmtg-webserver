@@ -1,9 +1,9 @@
 use crate::{
     client_message::{Ask, AskSelectN},
-    entities::CardId,
     event::{DiscardCause, EventResult, TagEvent},
     game::{Game, Phase, Subphase},
 };
+use common::entities::CardId;
 
 impl Game {
     pub async fn phase(&mut self, _events: &mut Vec<TagEvent>, phase: Phase) {

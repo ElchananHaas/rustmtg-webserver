@@ -2,13 +2,12 @@ use std::collections::{HashMap, HashSet};
 
 use crate::{
     client_message::{Ask, AskPair, AskPairItem},
-    entities::{CardId, PlayerId, TargetId},
     event::{DamageReason, Event, EventResult, TagEvent},
     game::{Game, Subphase},
     hashset_obj::HashSetObj,
-    spellabil::KeywordAbility,
 };
-
+use common::entities::{CardId, PlayerId, TargetId};
+use common::spellabil::KeywordAbility;
 impl Game {
     pub fn attack_targets(&self, player: PlayerId) -> HashSet<TargetId> {
         self.opponents(player)

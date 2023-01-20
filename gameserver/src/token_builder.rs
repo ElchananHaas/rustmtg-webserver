@@ -1,26 +1,21 @@
 use std::str::FromStr;
 
 use crate::{
-    ability::Ability,
-    card_entities::PT,
-    carddb::{nom_error, parse_number,Res},
-    spellabil::KeywordAbility,
+
+    carddb::{nom_error, parse_number, Res},
 };
-use texttoken::Tokens;
+use common::{
+  ability::Ability,
+  card_entities::PT,
+  spellabil::KeywordAbility,
+};
 use cardtypes::{Subtype, Type};
-use common::mana::Color;
+use common::{mana::Color, token_attribute::TokenAttribute};
 use nom::bytes::complete::tag;
 use nom::{branch::alt, multi::many0};
 use schemars::JsonSchema;
 use serde::Serialize;
-#[derive(Clone, Serialize, JsonSchema, Debug)]
-pub enum TokenAttribute {
-    PT(PT),
-    HasColor(Color),
-    Type(Type),
-    Subtype(Subtype),
-    Ability(Ability),
-}
+use texttoken::Tokens;
 fn parse_pt<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, TokenAttribute> {
     let (tokens, power) = parse_number(tokens)?;
     let (tokens, _) = tag(tokens!["/"])(tokens)?;

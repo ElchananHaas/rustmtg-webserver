@@ -60,7 +60,6 @@ impl<'a> nom::InputTake for &'a Tokens {
 impl<'a> nom::UnspecializedInput for &'a Tokens {}
 
 impl<'a, 'b> Compare<&'b Tokens> for &'a Tokens {
-    #[inline(always)]
     fn compare(&self, t: &'b Tokens) -> CompareResult {
         let pos = self
             .tokens

@@ -2,7 +2,7 @@ use schemars::JsonSchema;
 use serde_derive::Serialize;
 
 use crate::cost::Cost;
-use common::mana::{Color,ManaCostSymbol};
+use crate::mana::{Color, ManaCostSymbol};
 use crate::spellabil::Affected;
 use crate::spellabil::Clause;
 use crate::spellabil::ClauseEffect;

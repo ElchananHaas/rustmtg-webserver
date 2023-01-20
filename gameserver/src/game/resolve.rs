@@ -1,8 +1,7 @@
-use crate::{
+use common::{
     ability::{StaticAbility, StaticAbilityEffect},
-    token_builder::TokenAttribute,
 };
-
+use common::token_attribute::TokenAttribute;
 use super::*;
 impl Game {
     pub async fn resolve(&mut self, id: CardId) {
@@ -47,7 +46,7 @@ impl Game {
             }
         };
         for constraint in clause.constraints {
-            if !constraint.passes_constraint(self, affected) {
+            if !self.passes_constraint(&constraint, affected) {
                 return;
             }
         }

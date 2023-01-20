@@ -1,7 +1,7 @@
 mod combat;
 mod phase_event;
 
-use crate::card_entities::EntType;
+use common::card_entities::EntType;
 use crate::game::*;
 use async_recursion::async_recursion;
 
