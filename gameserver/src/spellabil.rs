@@ -2,9 +2,9 @@ use crate::{
     card_types::Type,
     entities::TargetId,
     game::Game,
-    mana::{Color, ManaCostSymbol},
     token_builder::TokenAttribute,
 };
+use common::mana::{Color, ManaCostSymbol};
 use schemars::JsonSchema;
 use serde_derive::Serialize;
 use strum_macros::EnumString;

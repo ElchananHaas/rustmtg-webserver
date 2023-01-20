@@ -9,7 +9,7 @@ use crate::entities::{CardId, ManaId, PlayerId, TargetId, MIN_CARDID};
 use crate::errors::MTGError;
 use crate::event::{DiscardCause, Event, EventResult, TagEvent};
 use crate::hashset_obj::HashSetObj;
-use crate::mana::{Color, Mana, ManaCostSymbol};
+use common::mana::{Color, Mana, ManaCostSymbol};
 use crate::player::{Player, PlayerCon};
 use crate::spellabil::{Affected, Clause, ClauseEffect, KeywordAbility};
 use anyhow::{bail, Result};
@@ -446,7 +446,10 @@ impl Game {
     //need to be expanded with real restrictions later
     fn can_spend_mana_on_action(&self, action: &StackActionOption, mana: &Mana) -> bool {
         if let Some(restriction) = &mana.restriction {
-            restriction.approve(self, action)
+        //TODO check if the actual restuction is met
+            match restriction{
+                _=>true
+            }
         } else {
             true
         }

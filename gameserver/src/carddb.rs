@@ -7,7 +7,7 @@ use crate::card_types::Type;
 use crate::card_types::{Subtypes, Supertypes, Types};
 use crate::cost::Cost;
 use crate::entities::PlayerId;
-use crate::mana::ManaCostSymbol;
+use common::mana::ManaCostSymbol;
 use crate::spellabil::Affected;
 use crate::spellabil::Clause;
 use crate::spellabil::ClauseConstraint;
@@ -85,7 +85,7 @@ pub fn nom_error<'a>(
 
 impl CardDB {
     pub fn new() -> Self {
-        let path = "oracle-cards-20220820210234.json";
+        let path = "oracle-cards-20230118100221.json";
         let data = fs::read_to_string(path).expect("Couldn't find scryfall oracle database file");
         let desered: Vec<ScryfallEntry> = serde_json::from_str(&data).expect("failed to parse!");
         let mut byname = HashMap::new();

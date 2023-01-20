@@ -6,9 +6,9 @@ use crate::{
     card_entities::PT,
     card_types::{Subtype, Type},
     carddb::{nom_error, parse_number, text_token::Tokens, Res},
-    mana::Color,
     spellabil::KeywordAbility,
 };
+use common::mana::Color;
 use nom::bytes::complete::tag;
 use nom::{branch::alt, multi::many0};
 use schemars::JsonSchema;

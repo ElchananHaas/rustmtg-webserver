@@ -1,5 +1,6 @@
 #![feature(never_type)]
 #![feature(const_option)]
+#![feature(let_chains)]
 #![deny(unused_must_use)]
 use crate::entities::PlayerId;
 use crate::game::build_game::GameBuilder;
@@ -24,7 +25,6 @@ mod errors;
 mod event;
 mod game;
 mod hashset_obj;
-mod mana;
 mod player;
 mod spellabil;
 mod token_builder;

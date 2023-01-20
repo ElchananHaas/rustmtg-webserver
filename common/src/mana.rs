@@ -1,5 +1,3 @@
-use crate::actions::StackActionOption;
-use crate::game::Game;
 use enum_map::Enum;
 use schemars::JsonSchema;
 use serde_derive::Serialize;
@@ -22,14 +20,8 @@ pub struct Mana {
 }
 #[derive(Clone, Serialize, JsonSchema)]
 pub struct ManaRestriction {}
-impl ManaRestriction {
-    pub fn approve(&self, game: &Game, action: &StackActionOption) -> bool {
-        true //Add in restrications later
-    }
-}
 
 impl Mana {
-    //Use direct building for
     pub fn new(color: Color) -> Self {
         Self {
             color,
