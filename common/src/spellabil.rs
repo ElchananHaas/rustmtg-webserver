@@ -1,4 +1,4 @@
-use crate::mana::{Color, ManaCostSymbol};
+use crate::mana::{ManaCostSymbol};
 use crate::{entities::TargetId, token_attribute::TokenAttribute};
 use cardtypes::Type;
 use schemars::JsonSchema;

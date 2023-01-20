@@ -16,6 +16,7 @@ use nom::{branch::alt, multi::many0};
 use schemars::JsonSchema;
 use serde::Serialize;
 use texttoken::Tokens;
+use texttoken::tokens;
 fn parse_pt<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, TokenAttribute> {
     let (tokens, power) = parse_number(tokens)?;
     let (tokens, _) = tag(tokens!["/"])(tokens)?;

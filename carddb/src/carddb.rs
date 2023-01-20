@@ -1,5 +1,4 @@
 use common::ability::Ability;
-use common::ability::StaticAbility;
 use common::card_entities::CardEnt;
 use common::card_entities::PT;
 use common::cost::Cost;
@@ -29,13 +28,12 @@ use nom::sequence::delimited;
 use nom::IResult;
 use serde_derive::Deserialize;
 use serde_json;
-use spawn_error::SpawnError;
+use crate::spawn_error::SpawnError;
 use std::collections::HashMap;
 use std::fmt;
 use std::fs;
 use std::str::FromStr;
-use texttoken::Tokens;
-pub mod spawn_error;
+use texttoken::{Tokens,tokens};
 pub type Res<T, U> = IResult<T, U, VerboseError<T>>;
 
 pub struct CardDB {
