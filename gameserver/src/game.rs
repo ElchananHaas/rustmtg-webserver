@@ -13,7 +13,7 @@ use common::card_entities::{CardEnt, EntType};
 use common::cost::{Cost, PaidCost};
 use common::entities::{CardId, ManaId, PlayerId, TargetId, MIN_CARDID};
 use common::mana::{Color, Mana, ManaCostSymbol};
-use common::spellabil::{Affected, Clause, ClauseEffect, KeywordAbility, ClauseConstraint};
+use common::spellabil::{Affected, Clause, ClauseConstraint, ClauseEffect, KeywordAbility};
 use enum_map::EnumMap;
 use futures::future;
 use rand::seq::SliceRandom;
@@ -22,7 +22,6 @@ use schemars::JsonSchema;
 use serde::Serialize;
 use std::cmp::max;
 use std::collections::{HashMap, VecDeque};
-use std::num::ParseFloatError;
 
 pub mod build_game;
 mod compute_actions;

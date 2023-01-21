@@ -14,7 +14,6 @@ use std::ops::DerefMut;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use warp::filters::ws::Message;
-use warp::http::response;
 use warp::ws::WebSocket;
 #[derive(Clone, JsonSchema)]
 pub struct Player {

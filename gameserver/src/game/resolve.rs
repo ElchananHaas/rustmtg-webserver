@@ -1,8 +1,6 @@
-use common::{
-    ability::{StaticAbility, StaticAbilityEffect},
-};
-use common::token_attribute::TokenAttribute;
 use super::*;
+use common::ability::{StaticAbility, StaticAbilityEffect};
+use common::token_attribute::TokenAttribute;
 impl Game {
     pub async fn resolve(&mut self, id: CardId) {
         let effects;

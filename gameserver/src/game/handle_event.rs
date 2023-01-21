@@ -1,9 +1,9 @@
 mod combat;
 mod phase_event;
 
-use common::card_entities::EntType;
 use crate::game::*;
 use async_recursion::async_recursion;
+use common::card_entities::EntType;
 
 impl Game {
     /*
@@ -77,7 +77,7 @@ impl Game {
                         },
                     );
                 }
-                Event::PlayLand { player, land } => {
+                Event::PlayLand { player: _, land } => {
                     if let Some(zone) = self.locate_zone(land) {
                         self.lands_played_this_turn += 1;
                         Game::add_event(
