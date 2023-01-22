@@ -1,11 +1,13 @@
+use crate::parse_clauseeffect::parse_action_first_effect;
+use crate::parse_clauseeffect::parse_action_second_effect;
+use crate::parse_non_body::parse_cost_line;
+use crate::parse_non_body::parse_pt;
+use crate::parse_non_body::parse_type_line;
 use crate::spawn_error::SpawnError;
-use crate::token_builder::parse_token_attributes;
 use crate::tokenize::tokenize;
-use cardtypes::{Subtypes, Supertypes, Type, Types};
+use cardtypes::Type;
 use common::ability::Ability;
 use common::card_entities::CardEnt;
-use common::card_entities::PT;
-use common::cost::Cost;
 use common::entities::PlayerId;
 use common::mana::ManaCostSymbol;
 use common::spellabil::Affected;
@@ -47,27 +49,27 @@ impl fmt::Debug for CardDB {
 }
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
-struct ScryfallImageUrls {
-    small: Option<String>,
-    normal: Option<String>,
-    large: Option<String>,
+pub struct ScryfallImageUrls {
+    pub small: Option<String>,
+    pub normal: Option<String>,
+    pub large: Option<String>,
 }
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
-struct ScryfallEntry {
-    object: Option<String>,
-    name: String,
-    image_uris: Option<ScryfallImageUrls>,
-    mana_cost: Option<String>,
-    type_line: Option<String>,
-    tokenized_type_line: Option<Vec<String>>, //Will be tokeized upon construction
-    lang: Option<String>,
-    color_identity: Option<Vec<String>>,
-    cmc: Option<f64>,
-    power: Option<String>,
-    toughness: Option<String>,
-    oracle_text: Option<String>,
-    tokenized_oracle_text: Option<Vec<String>>, //Will be tokeized upon construction
+pub struct ScryfallEntry {
+    pub object: Option<String>,
+    pub name: String,
+    pub image_uris: Option<ScryfallImageUrls>,
+    pub mana_cost: Option<String>,
+    pub type_line: Option<String>,
+    pub tokenized_type_line: Option<Vec<String>>, //Will be tokeized upon construction
+    pub lang: Option<String>,
+    pub color_identity: Option<Vec<String>>,
+    pub cmc: Option<f64>,
+    pub power: Option<String>,
+    pub toughness: Option<String>,
+    pub oracle_text: Option<String>,
+    pub tokenized_oracle_text: Option<Vec<String>>, //Will be tokeized upon construction
 }
 pub fn nom_error<'a>(
     tokens: &'a Tokens,
@@ -169,25 +171,11 @@ fn prune_comment<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ()> {
     ))(tokens)?;
     Ok((rest, ()))
 }
-pub fn parse_number<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, i64> {
-    if tokens.len() == 0 {
-        return Err(nom_error(tokens, "Empty tokens when parsing integer"));
-    }
-    let first_token = &tokens[0];
-    if let Ok(num) = i64::from_str(&first_token) {
-        Ok((&tokens[1..], num))
-    } else {
-        Err(nom_error(tokens, "Failed to parse integer"))
-    }
-}
-fn parse_draw_a_card<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseEffect> {
-    let (tokens, _) = tag(tokens!("draw", "a", "card"))(tokens)?;
-    Ok((tokens, ClauseEffect::DrawCard))
-}
+
 fn parse_body_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
     let (tokens, clause) = context(
         "parsing body line",
-        alt((parse_you_clause, parse_target_line)),
+        alt((parse_you_clause, parse_action_target_line, parse_target_action_line)),
     )(tokens)?;
     let (tokens, _) = opt(tag(tokens!(".")))(tokens)?;
     let (tokens, _) = opt(tag(tokens!("\n")))(tokens)?;
@@ -198,7 +186,7 @@ fn parse_you_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
     //Sometimes MTG
     //Implicitly has a clause mean you if it is left out.
     //For example, "draw a card" vs. "you draw a card"
-    let (tokens, effect) = parse_clause_effect(tokens)?;
+    let (tokens, effect) = parse_action_second_effect(tokens)?;
     Ok((
         tokens,
         Clause {
@@ -207,25 +195,6 @@ fn parse_you_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
             constraints: Vec::new(),
         },
     ))
-}
-fn parse_clause_effect<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseEffect> {
-    alt((parse_gain_life, parse_draw_a_card, parse_create_token))(tokens)
-}
-fn parse_gain_life<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseEffect> {
-    let (tokens, _) = tag(tokens!["gain"])(tokens)?;
-    let (tokens, value) = parse_number(tokens)?;
-    let (tokens, _) = tag(tokens!["life"])(tokens)?;
-    Ok((tokens, ClauseEffect::GainLife(value)))
-}
-fn parse_create_token<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseEffect> {
-    let (tokens, _) = (tag(tokens!["create"]))(tokens)?;
-    let (tokens, _) = tag(tokens!["a"])(tokens)?;
-    let (tokens, attr1) = parse_token_attributes(tokens)?;
-    let (tokens, _) = tag(tokens!["token"])(tokens)?;
-    let (tokens, _) = opt(tag(tokens!["with"]))(tokens)?;
-    let (tokens, attr2) = parse_token_attributes(tokens)?;
-    let attrs = attr1.into_iter().chain(attr2.into_iter()).collect();
-    Ok((tokens, ClauseEffect::CreateToken(attrs)))
 }
 fn parse_its_controller_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
     let (tokens, _) = tag(tokens!["."])(tokens)?;
@@ -244,19 +213,20 @@ fn parse_its_controller_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause
         },
     ))
 }
-fn parse_destroy_effect<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseEffect> {
-    let (tokens, _) = tag(tokens!["destroy"])(tokens)?;
-    Ok((tokens, ClauseEffect::Destroy))
+fn parse_target_action_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
+    let (tokens, _) = tag(tokens!["target"])(tokens)?;
+    let (tokens, constraints) = many1(parse_constraint)(tokens)?;
+    let (tokens, effect) = context("parsing target line", parse_action_second_effect)(tokens)?;
+    let clause=Clause {
+        effect,
+        affected: Affected::Target(None),
+        constraints,
+    };
+    Ok((tokens,clause))
 }
-fn parse_exile_effect<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseEffect> {
-    let (tokens, _) = tag(tokens!["exile"])(tokens)?;
-    Ok((tokens, ClauseEffect::ExileBattlefield))
-}
-fn parse_target_effect<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseEffect> {
-    alt((parse_destroy_effect, parse_exile_effect))(tokens)
-}
-fn parse_target_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
-    let (tokens, effect) = context("parsing target line", parse_target_effect)(tokens)?;
+
+fn parse_action_target_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
+    let (tokens, effect) = context("parsing target line", parse_action_first_effect)(tokens)?;
     let (tokens, _) = tag(tokens!["target"])(tokens)?;
     let (tokens, constraints) = many1(parse_constraint)(tokens)?;
     let (tokens, addendum) = opt(parse_its_controller_clause)(tokens)?;
@@ -319,44 +289,6 @@ fn parse_body_lines<'a>(card: &mut CardEnt, tokens: &'a Tokens) -> Res<&'a Token
     Ok((rest, ()))
 }
 
-fn parse_pt<'a>(card: &mut CardEnt, entry: &'a ScryfallEntry) {
-    if let Some(power)=entry.power.as_ref()
-    && let Some(toughness)=entry.toughness.as_ref(){
-        let res;
-        if let Ok(power)=power.parse::<i64>()
-        && let Ok(toughness)=toughness.parse::<i64>(){
-            res=(power,toughness)
-        }else{
-            res=(0,0)
-        }
-        card.pt = Some(PT {
-            power: res.0,
-            toughness: res.1,
-        });
-    };
-}
-fn parse_cost_line<'a>(
-    card: &mut CardEnt,
-    entry: &'a ScryfallEntry,
-) -> Result<(), nom::Err<VerboseError<&'a str>>> {
-    if let Some(manatext) = entry.mana_cost.as_ref() {
-        let (rest, manas) = parse_mana(&manatext)?;
-        if rest.len() > 0 {
-            panic!("parser error!");
-        }
-        for mana in manas {
-            card.costs.push(Cost::Mana(mana));
-        }
-        Ok(())
-    } else {
-        Err(nom::Err::Error(VerboseError {
-            errors: vec![(
-                "",
-                nom::error::VerboseErrorKind::Context("card had no cost line"),
-            )],
-        }))
-    }
-}
 
 fn parse_manasymbol_contents(input: &str) -> Res<&str, Vec<ManaCostSymbol>> {
     if let Ok((rest, symbol)) = complete::one_of::<_, _, (&str, ErrorKind)>("WUBRG")(input) {
@@ -381,34 +313,6 @@ fn parse_manasymbol(input: &str) -> Res<&str, Vec<ManaCostSymbol>> {
     )(input)
 }
 
-fn parse_mana(input: &str) -> Res<&str, Vec<ManaCostSymbol>> {
+pub fn parse_mana(input: &str) -> Res<&str, Vec<ManaCostSymbol>> {
     many0(parse_manasymbol)(input).map(|(rest, x)| (rest, x.into_iter().flatten().collect()))
-}
-
-fn parse_type_line<'a>(card: &mut CardEnt, entry: &'a ScryfallEntry) -> Res<&'a Tokens, ()> {
-    if let Some(tokenized) = entry.tokenized_type_line.as_ref() {
-        let tokens = Tokens::from_array(&tokenized);
-        let (rest, (types, subtypes, supertypes)) = parse_type_line_h(&tokens)?;
-        if rest.len() == 0 {
-            card.types = types;
-            card.supertypes = supertypes;
-            card.subtypes = subtypes;
-            Ok((rest, ()))
-        } else {
-            Err(nom_error(rest, "failed to parse complete type line"))
-        }
-    } else {
-        Err(nom_error(
-            &Tokens::empty(),
-            "scryfall entry had no type line",
-        ))
-    }
-}
-fn parse_type_line_h<'a>(text: &'a Tokens) -> Res<&'a Tokens, (Types, Subtypes, Supertypes)> {
-    let (text, supertypes) = Supertypes::parse(text)?;
-    let (text, types) = Types::parse(text)?;
-    let (text, _) = opt(tag(Tokens::from_array(&["—".to_owned()])))(text)?;
-    let (text, subtypes) = Subtypes::parse(text)?;
-    let (text, _) = opt(tag(Tokens::from_array(&["\n".to_owned()])))(text)?;
-    Ok((text, (types, subtypes, supertypes)))
 }

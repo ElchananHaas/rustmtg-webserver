@@ -134,6 +134,9 @@ impl Game {
                     println!("zone move results: {:?}", results);
                 }
             }
+            ClauseEffect::UntilEndTurn(conteffect) => {
+                todo!();
+            }
         }
     }
 }

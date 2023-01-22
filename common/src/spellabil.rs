@@ -1,3 +1,6 @@
+use std::ops::Add;
+
+use crate::card_entities::PT;
 use crate::mana::ManaCostSymbol;
 use crate::{entities::TargetId, token_attribute::TokenAttribute};
 use cardtypes::Type;
@@ -40,7 +43,10 @@ pub enum Affected {
 }
 
 #[derive(Clone, Serialize, JsonSchema, Debug)]
-
+pub enum ContEffect{
+    ModifyPT(PT)
+}
+#[derive(Clone, Serialize, JsonSchema, Debug)]
 pub enum ClauseEffect {
     Destroy,
     ExileBattlefield,
@@ -50,4 +56,5 @@ pub enum ClauseEffect {
     Compound(Vec<Clause>),
     SetTargetController(Box<Clause>),
     CreateToken(Vec<TokenAttribute>),
+    UntilEndTurn(ContEffect),
 }
