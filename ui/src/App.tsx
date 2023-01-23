@@ -1,7 +1,7 @@
 import './style.css';
 import React from 'react';
 import { ArcherContainer } from 'react-archer';
-import { phase_image_map, PhaseImages } from './Phases';
+import { PhaseImages } from './Phases';
 import {
     Ask,
     AskSelectNFor_Action,
@@ -291,7 +291,7 @@ class Game extends React.Component<IProps, IState>{
             return (
                 <ArcherContainer strokeColor="red" svgContainerStyle={{ zIndex: "10" }}>
                     <div className="full-size" style={{ height: "98vh" }}>
-                        <PhaseImages phase_image_map={phase_image_map} phase={this.state.game.phase} subphase={this.state.game.subphase} />
+                        <PhaseImages phase={this.state.game.phase} subphase={this.state.game.subphase} />
                         <Stack card_width={this.state.card_width} />
                         <PlayerBoxes game={this.state.game}
                             width={this.state.playerbox_width}

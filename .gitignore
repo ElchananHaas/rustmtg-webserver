@@ -10,3 +10,4 @@ flamegraph.svg
 /ui/node_modules
 /ui/build
 /ui/precache-manifest*
+*.msi

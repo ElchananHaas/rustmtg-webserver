@@ -34,6 +34,7 @@ use serde_json;
 use std::collections::HashMap;
 use std::fmt;
 use std::fs;
+use std::path::PathBuf;
 use std::str::FromStr;
 use texttoken::{tokens, Tokens};
 pub type Res<T, U> = IResult<T, U, VerboseError<T>>;
@@ -80,10 +81,31 @@ pub fn nom_error<'a>(
     })
 }
 
+fn find_path()->Result<PathBuf, std::io::Error>{
+    //let path = "../oracle-cards-20230120100202.json";
+    let current_dir = std::env::current_dir()?;
+    let dir_copy=current_dir.clone();
+    let parent_dir=dir_copy.parent().unwrap();
+    for entry in fs::read_dir(current_dir)?.chain(
+        fs::read_dir(parent_dir)?
+    ){
+        let entry=entry?;
+        let path=entry.path();
+        let last=path.file_stem();
+        if let Some(last)=last{
+            if let Some(last)=last.to_str(){
+                if last.contains("oracle-cards-"){
+                    return Ok(path);
+                }
+            }
+        }
+    }
+    panic!("Failed to find scryfall oracle database");
+}
 impl CardDB {
     pub fn new() -> Self {
-        let path = "../oracle-cards-20230120100202.json";
-        let data = fs::read_to_string(path).expect("Couldn't find scryfall oracle database file");
+        let path=find_path().expect("Failed to find scryfall oracle database");
+        let data = fs::read_to_string(path).expect("Couldn't open file");
         let desered: Vec<ScryfallEntry> = serde_json::from_str(&data).expect("failed to parse!");
         let mut byname = HashMap::new();
         for mut card in desered {

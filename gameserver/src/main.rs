@@ -64,7 +64,7 @@ async fn launch_game(sockets: Vec<WebSocket>) -> Result<()> {
     let mut gamebuild = GameBuilder::new();
     let mut deck = Vec::new();
     for _ in 0..10 {
-        deck.push("Angelic Ascension");
+        deck.push("Defiant Strike");
     }
     for _ in 0..20 {
         deck.push("Staunch Shieldmate");

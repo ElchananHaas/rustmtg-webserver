@@ -56,10 +56,9 @@ function PhaseImage(props: PhaseImageProps) {
 type PhaseImagesProps = {
     phase?: string | null,
     subphase?: string | null,
-    phase_image_map: { [key: string]: string },
 };
 export function PhaseImages(props: PhaseImagesProps) {
-    const entries = Object.entries(props.phase_image_map);
+    const entries = Object.entries(phase_image_map);
     const current_phase = phase_image_key(props.phase, props.subphase);
     return (
         <div className="vertical-flexbox black-border">

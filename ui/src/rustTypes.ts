@@ -63,6 +63,9 @@ export type ClauseEffect =
     }
   | {
       CreateToken: TokenAttribute[];
+    }
+  | {
+      UntilEndTurn: ContEffect;
     };
 export type TokenAttribute =
   | {
@@ -349,6 +352,9 @@ export type Subtype =
   | "Swamp"
   | "Mountain"
   | "Forest";
+export type ContEffect = {
+  ModifyPT: PT;
+};
 export type KeywordAbility =
   | "FirstStrike"
   | "Haste"
@@ -366,6 +372,7 @@ export type StaticAbilityEffect =
     };
 export type CardId = number;
 export type EntType = "RealCard" | "TokenCard" | "ActivatedAbility" | "TriggeredAbility";
+export type ContDuration = "Perpetual" | "EndOfTurn";
 export type GameOutcome =
   | ("Ongoing" | "Tie")
   | {
@@ -424,6 +431,7 @@ export interface GameState {
     [k: string]: CardEnt;
   };
   command: MapOf_Null;
+  cont_effects: Continuous[];
   exile: MapOf_Null;
   extra_turns: PlayerId[];
   land_play_limit: number;
@@ -781,6 +789,14 @@ export interface Types {
   land: boolean;
   planeswalker: boolean;
   sorcery: boolean;
+  [k: string]: unknown;
+}
+export interface Continuous {
+  affected: Affected;
+  constraints: ClauseConstraint[];
+  controller: PlayerId;
+  duration: ContDuration;
+  effect: ContEffect;
   [k: string]: unknown;
 }
 export interface EntMapFor_ManaIdAnd_Mana {

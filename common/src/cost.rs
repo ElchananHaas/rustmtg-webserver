@@ -7,7 +7,7 @@ use serde_derive::Serialize;
 !!!!!!!!!TODO
 Allow the game to interactively ask for costs to be paid
 */
-#[derive(Clone, Copy, Debug, Serialize, JsonSchema)]
+#[derive(Clone, Copy, Debug, Serialize, JsonSchema, PartialEq, Eq)]
 pub enum Cost {
     Mana(ManaCostSymbol),
     Selftap,

@@ -121,6 +121,7 @@ impl Game {
             }
         }
         self.lands_played_this_turn = 0;
+        //Remove until end of turn effects
         self.cont_effects = self
             .cont_effects
             .clone()

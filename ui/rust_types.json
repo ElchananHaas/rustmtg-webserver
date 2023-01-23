@@ -741,6 +741,18 @@
             }
           },
           "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "UntilEndTurn"
+          ],
+          "properties": {
+            "UntilEndTurn": {
+              "$ref": "#/definitions/ContEffect"
+            }
+          },
+          "additionalProperties": false
         }
       ]
     },
@@ -754,6 +766,59 @@
         "Green",
         "Colorless"
       ]
+    },
+    "ContDuration": {
+      "type": "string",
+      "enum": [
+        "Perpetual",
+        "EndOfTurn"
+      ]
+    },
+    "ContEffect": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "ModifyPT"
+          ],
+          "properties": {
+            "ModifyPT": {
+              "$ref": "#/definitions/PT"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Continuous": {
+      "type": "object",
+      "required": [
+        "affected",
+        "constraints",
+        "controller",
+        "duration",
+        "effect"
+      ],
+      "properties": {
+        "affected": {
+          "$ref": "#/definitions/Affected"
+        },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ClauseConstraint"
+          }
+        },
+        "controller": {
+          "$ref": "#/definitions/PlayerId"
+        },
+        "duration": {
+          "$ref": "#/definitions/ContDuration"
+        },
+        "effect": {
+          "$ref": "#/definitions/ContEffect"
+        }
+      }
     },
     "Cost": {
       "oneOf": [
@@ -830,6 +895,7 @@
         "battlefield",
         "cards",
         "command",
+        "cont_effects",
         "exile",
         "extra_turns",
         "land_play_limit",
@@ -859,6 +925,12 @@
         },
         "command": {
           "$ref": "#/definitions/Map_of_Null"
+        },
+        "cont_effects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Continuous"
+          }
         },
         "exile": {
           "$ref": "#/definitions/Map_of_Null"

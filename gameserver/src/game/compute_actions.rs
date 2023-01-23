@@ -1,6 +1,83 @@
 use crate::game::*;
 
+fn mana_from_clause(clause: &Clause) -> Vec<ManaCostSymbol>{
+    if let ClauseEffect::AddMana(mana) =  &clause.effect{
+        return mana.clone();
+    }
+    if let ClauseEffect::Compound(clauses)=&clause.effect{
+        let mut res=vec![];
+        for clause in clauses{
+            res.append(&mut mana_from_clause(clause));
+        }
+        return res;
+    }
+    vec![]
+}
+
 impl Game {
+    //For now, only count mana from tap abilities.
+    //Add in sac and other abilities later.
+
+    fn mana_tap_abils(&self,ent:CardId) -> Vec<Vec<ManaCostSymbol>>{
+        let mut res=vec![];
+        if let Some(ent) = self.cards.get(ent) {
+            for abil in &ent.abilities{
+                if let Ability::Activated(abil) = abil 
+                && abil.costs.contains(&Cost::Selftap)
+                && !ent.tapped{
+                    let mut mana_produced=vec![];
+                    for clause in &abil.effect{
+                        let mut mana=mana_from_clause(clause);
+                        mana_produced.append(&mut mana);
+                    }
+                    if mana_produced.len()>0 {
+                        res.push(mana_produced);
+                    }
+                }
+            }
+        }
+        res
+    }
+    fn max_mana_produce(&self, ent: CardId) -> i64 {
+        //TODO get more fine grained color support
+        let mut mana_produce = 0;
+        for manas in self.mana_tap_abils(ent){
+            mana_produce=max(mana_produce,manas.len() as i64);
+        }
+        mana_produce
+    }
+    //Don't prompt players to cast spells they can't pay for
+    fn maybe_can_pay(&self, costs: &Vec<Cost>, player_id: PlayerId, card_id: CardId) -> bool {
+        if let Some(player) = self.players.get(player_id) {
+            let mut available_mana: i64 = 0;
+            //TODO make this take into account costs more accurately,
+             //including handling colors of available mana, no just the quanitity
+            for perm in self.players_permanents(player_id) {
+                available_mana += self.max_mana_produce(perm);
+            }
+            available_mana += player.mana_pool.len() as i64;
+            for cost in costs {
+                let can_pay = match cost {
+                    Cost::Selftap => self.battlefield.contains(&card_id) && self.can_tap(card_id),
+                    Cost::Mana(_mana) => {
+                        if available_mana <= 0 {
+                            false
+                        } else {
+                            available_mana -= 1;
+                            true
+                        }
+                    }
+                };
+                if !can_pay {
+                    return false;
+                }
+            }
+            true
+        } else {
+            false
+        }
+    }
+
     pub fn compute_actions(&self, player: PlayerId) -> Vec<Action> {
         let mut actions = Vec::new();
         if let Some(pl) = self.players.get(player) {

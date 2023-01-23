@@ -17,7 +17,6 @@ impl Game {
     }
 
     pub async fn attackers(&mut self, _results: &mut Vec<EventResult>, events: &mut Vec<TagEvent>) {
-        self.cycle_priority().await;
         self.backup();
         //Only allow creatures that have haste or don't have summoning sickness to attack
         let legal_attackers = self
@@ -90,6 +89,7 @@ impl Game {
             }
             break;
         }
+        self.cycle_priority().await;
     }
 
     pub async fn blockers(&mut self, _results: &mut Vec<EventResult>, events: &mut Vec<TagEvent>) {
@@ -164,6 +164,7 @@ impl Game {
         {
             Game::add_event(events, Event::AttackUnblocked { attacker });
         }
+        self.cycle_priority().await;
         println!("exiting blockers");
     }
 
@@ -174,7 +175,8 @@ impl Game {
         subphase: Subphase,
     ) {
         //Handle first strike and normal strike
-        for attacker in self.damage_phase_permanents(self.active_player, subphase) {
+        let attacks=self.damage_phase_permanents(self.active_player, subphase);
+        for &attacker in &attacks{
             if let Some(attack) = self.cards.get_mut(attacker) {
                 attack.already_dealt_damage = true;
             }
@@ -198,11 +200,14 @@ impl Game {
             };
         }
         for player in self.opponents(self.active_player) {
-            for blocker in self.damage_phase_permanents(player, subphase) {
+            for blocker in self.players_creatures(player) {
                 if let Some(card) = self.cards.get(blocker) && card.blocking.len()>0 {
                     self.spread_damage(events, blocker, &card.blocking).await;
                 }
             }
+        }
+        if attacks.len()>0{
+            self.cycle_priority().await;
         }
     }
 

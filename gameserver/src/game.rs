@@ -632,53 +632,7 @@ impl Game {
             && self.stack.is_empty()
             && (self.phase == Some(Phase::FirstMain) || self.phase == Some(Phase::SecondMain))
     }
-    pub fn maybe_can_pay(&self, costs: &Vec<Cost>, player_id: PlayerId, card_id: CardId) -> bool {
-        if let Some(player) = self.players.get(player_id) {
-            let mut available_mana: i64 = 0; //TODO make this take into account costs more accurately,
-                                             //including handling colors of available mana, no just the quanitity
-            for perm in self.players_permanents(player_id) {
-                available_mana += self.max_mana_produce(perm);
-            }
-            available_mana += player.mana_pool.len() as i64;
-            for cost in costs {
-                let can_pay = match cost {
-                    Cost::Selftap => self.battlefield.contains(&card_id) && self.can_tap(card_id),
-                    Cost::Mana(_mana) => {
-                        if available_mana <= 0 {
-                            false
-                        } else {
-                            available_mana -= 1;
-                            true
-                        }
-                    }
-                };
-                if !can_pay {
-                    return false;
-                }
-            }
-            true
-        } else {
-            false
-        }
-    }
-    fn max_mana_produce(&self, ent: CardId) -> i64 {
-        //TODO get more fine grained color support
-        let mut mana_produce = 0;
-        if let Some(ent) = self.cards.get(ent) {
-            for ability in &ent.abilities {
-                if let Ability::Activated(abil) = ability {
-                    let mut abil_mana: i64 = 0;
-                    for clause in &abil.effect {
-                        if let ClauseEffect::AddMana(mana) = &clause.effect {
-                            abil_mana += mana.len() as i64;
-                        }
-                    }
-                    mana_produce = max(mana_produce, abil_mana);
-                }
-            }
-        }
-        return mana_produce;
-    }
+    
     pub fn opponents(&self, player: PlayerId) -> Vec<PlayerId> {
         self.turn_order
             .iter()
