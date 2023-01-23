@@ -1,9 +1,12 @@
-use cardtypes::{Supertypes, Types, Subtypes};
-use common::{card_entities::{CardEnt, PT}, cost::Cost};
-use nom::{error::VerboseError, bytes::complete::tag, combinator::opt};
+use cardtypes::{Subtypes, Supertypes, Types};
+use common::{
+    card_entities::{CardEnt, PT},
+    cost::Cost,
+};
+use nom::{bytes::complete::tag, combinator::opt, error::VerboseError};
 use texttoken::Tokens;
 
-use crate::carddb::{ScryfallEntry, parse_mana, Res, nom_error};
+use crate::carddb::{nom_error, parse_mana, Res, ScryfallEntry};
 
 pub fn parse_pt<'a>(card: &mut CardEnt, entry: &'a ScryfallEntry) {
     if let Some(power)=entry.power.as_ref()
@@ -21,7 +24,6 @@ pub fn parse_pt<'a>(card: &mut CardEnt, entry: &'a ScryfallEntry) {
         });
     };
 }
-
 
 pub fn parse_cost_line<'a>(
     card: &mut CardEnt,

@@ -13,7 +13,9 @@ use common::card_entities::{CardEnt, EntType};
 use common::cost::{Cost, PaidCost};
 use common::entities::{CardId, ManaId, PlayerId, TargetId, MIN_CARDID};
 use common::mana::{Color, Mana, ManaCostSymbol};
-use common::spellabil::{Affected, Clause, ClauseConstraint, ClauseEffect, KeywordAbility};
+use common::spellabil::{
+    Affected, Clause, ClauseConstraint, ClauseEffect, Continuous, KeywordAbility,
+};
 use enum_map::EnumMap;
 use futures::future;
 use rand::seq::SliceRandom;
@@ -56,6 +58,8 @@ pub struct Game {
     pub land_play_limit: u32,
     pub priority: PlayerId,
     pub active_player: PlayerId,
+    pub cont_effects: Vec<Continuous>, //Holds continuous effects
+    //that are perpertual or time-driven
     #[serde(skip)]
     db: &'static CardDB,
     #[serde(skip)]

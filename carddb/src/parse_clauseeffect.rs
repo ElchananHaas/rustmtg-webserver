@@ -1,5 +1,7 @@
-
-use common::{spellabil::{ClauseEffect, ContEffect}, card_entities::PT};
+use common::{
+    card_entities::PT,
+    spellabil::{ClauseEffect, ContEffect},
+};
 
 use nom::branch::alt;
 use nom::bytes::complete::tag;
@@ -10,7 +12,12 @@ use texttoken::{tokens, Tokens};
 use crate::{carddb::Res, token_builder::parse_token_attributes, util::parse_number};
 
 pub fn parse_action_second_effect<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseEffect> {
-    alt((parse_gain_life, parse_draw_a_card, parse_create_token, parse_until_end_turn))(tokens)
+    alt((
+        parse_gain_life,
+        parse_draw_a_card,
+        parse_create_token,
+        parse_until_end_turn,
+    ))(tokens)
 }
 fn parse_gain_life<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseEffect> {
     let (tokens, _) = tag(tokens!["gain"])(tokens)?;
@@ -48,8 +55,8 @@ fn parse_draw_a_card<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseEffect> {
 
 fn parse_until_end_turn<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseEffect> {
     let (tokens, effect) = parse_cont_effect(tokens)?;
-    let (tokens, _) = tag(tokens!["until","end","of","turn"])(tokens)?;
-    Ok((tokens,ClauseEffect::UntilEndTurn(effect)))
+    let (tokens, _) = tag(tokens!["until", "end", "of", "turn"])(tokens)?;
+    Ok((tokens, ClauseEffect::UntilEndTurn(effect)))
 }
 
 fn parse_cont_effect<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ContEffect> {
@@ -60,8 +67,5 @@ fn parse_pt_modification<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ContEffect> 
     let (tokens, power) = parse_number(tokens)?;
     let (tokens, _) = tag(tokens!["/"])(tokens)?;
     let (tokens, toughness) = parse_number(tokens)?;
-    Ok((tokens, ContEffect::ModifyPT(PT{
-        power,
-        toughness
-    })))
+    Ok((tokens, ContEffect::ModifyPT(PT { power, toughness })))
 }

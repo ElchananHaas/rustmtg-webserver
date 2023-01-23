@@ -175,7 +175,11 @@ fn prune_comment<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ()> {
 fn parse_body_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
     let (tokens, clause) = context(
         "parsing body line",
-        alt((parse_you_clause, parse_action_target_line, parse_target_action_line)),
+        alt((
+            parse_you_clause,
+            parse_action_target_line,
+            parse_target_action_line,
+        )),
     )(tokens)?;
     let (tokens, _) = opt(tag(tokens!(".")))(tokens)?;
     let (tokens, _) = opt(tag(tokens!("\n")))(tokens)?;
@@ -217,12 +221,12 @@ fn parse_target_action_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
     let (tokens, _) = tag(tokens!["target"])(tokens)?;
     let (tokens, constraints) = many1(parse_constraint)(tokens)?;
     let (tokens, effect) = context("parsing target line", parse_action_second_effect)(tokens)?;
-    let clause=Clause {
+    let clause = Clause {
         effect,
         affected: Affected::Target(None),
         constraints,
     };
-    Ok((tokens,clause))
+    Ok((tokens, clause))
 }
 
 fn parse_action_target_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
@@ -288,7 +292,6 @@ fn parse_body_lines<'a>(card: &mut CardEnt, tokens: &'a Tokens) -> Res<&'a Token
     let (rest, _) = nom::combinator::opt(tag(tokens!["\n"]))(rest)?;
     Ok((rest, ()))
 }
-
 
 fn parse_manasymbol_contents(input: &str) -> Res<&str, Vec<ManaCostSymbol>> {
     if let Ok((rest, symbol)) = complete::one_of::<_, _, (&str, ErrorKind)>("WUBRG")(input) {

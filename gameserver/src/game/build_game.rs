@@ -72,6 +72,7 @@ impl GameBuilder {
             outcome: GameOutcome::Ongoing,
             backup: None,
             rng: rand::rngs::StdRng::from_entropy(),
+            cont_effects: Vec::new(),
         })
     }
 }

@@ -1,17 +1,18 @@
-
-use texttoken::{Tokens};
+use crate::carddb::{nom_error, Res};
 use std::str::FromStr;
-use crate::{carddb::{Res, nom_error}};
+use texttoken::Tokens;
 
-fn to_int(number:&str) -> Option<i64>{
-    if let Ok(num) = i64::from_str(number){
+fn to_int(number: &str) -> Option<i64> {
+    if let Ok(num) = i64::from_str(number) {
         return Some(num);
     }
-    let first=number.chars().next()?;
-    let sign=match first {
-        '+'=>1,
-        '-'=>-1,
-        _=>{return None;}
+    let first = number.chars().next()?;
+    let sign = match first {
+        '+' => 1,
+        '-' => -1,
+        _ => {
+            return None;
+        }
     };
     Some(sign * i64::from_str(&number[1..]).ok()?)
 }

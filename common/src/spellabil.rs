@@ -1,6 +1,5 @@
-use std::ops::Add;
-
 use crate::card_entities::PT;
+use crate::entities::PlayerId;
 use crate::mana::ManaCostSymbol;
 use crate::{entities::TargetId, token_attribute::TokenAttribute};
 use cardtypes::Type;
@@ -41,10 +40,24 @@ pub enum Affected {
     Target(Option<TargetId>),
     ManuallySet(Option<TargetId>),
 }
+#[derive(Clone, Serialize, JsonSchema, Debug, PartialEq, Eq)]
+pub enum ContDuration {
+    Perpetual,
+    EndOfTurn,
+}
+#[derive(Clone, Serialize, JsonSchema, Debug)]
+pub struct Continuous {
+    pub effect: ContEffect,
+    pub affected: Affected,
+    pub constraints: Vec<ClauseConstraint>,
+    pub duration: ContDuration,
+    pub controller: PlayerId, //The player controlling the spell, ability or permanent
+                              //that generated this continuous effect.
+}
 
 #[derive(Clone, Serialize, JsonSchema, Debug)]
-pub enum ContEffect{
-    ModifyPT(PT)
+pub enum ContEffect {
+    ModifyPT(PT),
 }
 #[derive(Clone, Serialize, JsonSchema, Debug)]
 pub enum ClauseEffect {

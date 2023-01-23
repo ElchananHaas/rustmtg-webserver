@@ -1,5 +1,6 @@
 use super::*;
 use common::ability::{StaticAbility, StaticAbilityEffect};
+use common::spellabil::ContDuration;
 use common::token_attribute::TokenAttribute;
 impl Game {
     pub async fn resolve(&mut self, id: CardId) {
@@ -23,57 +24,82 @@ impl Game {
         };
         self.move_zones(id, Zone::Stack, dest).await;
     }
-    #[async_recursion]
-    #[must_use]
-    async fn resolve_clause(&mut self, clause: Clause, id: CardId, controller: PlayerId) {
-        let affected: TargetId = match clause.affected {
-            Affected::Controller => controller.into(),
+    pub fn calculate_affected(
+        &self,
+        affected: &Affected,
+        constraints: &Vec<ClauseConstraint>,
+        controller: PlayerId,
+    ) -> Vec<TargetId> {
+        let affected: Vec<TargetId> = match affected {
+            Affected::Controller => vec![controller.into()],
             Affected::Target(target) => {
-                if let Some(x) = target {
-                    x
+                if let Some(x) = *target {
+                    vec![x]
                 } else {
-                    return;
+                    vec![]
                 }
             }
             Affected::ManuallySet(x) => {
-                if let Some(x) = x {
-                    x
+                if let Some(x) = *x {
+                    vec![x]
                 } else {
-                    return;
+                    vec![]
                 }
             }
         };
-        for constraint in clause.constraints {
-            if !self.passes_constraint(&constraint, affected) {
-                return;
-            }
+        return affected
+            .into_iter()
+            .filter(|&target| {
+                constraints
+                    .into_iter()
+                    .all(|constraint| self.passes_constraint(constraint, target))
+            })
+            .collect();
+    }
+    #[async_recursion]
+    #[must_use]
+    async fn resolve_clause(&mut self, clause: Clause, id: CardId, controller: PlayerId) {
+        let affected: Vec<TargetId> =
+            self.calculate_affected(&clause.affected, &clause.constraints, controller);
+        if affected.len() == 0 {
+            return;
         }
         match clause.effect {
             ClauseEffect::AddMana(manas) => {
-                if let TargetId::Player(pl) = affected {
-                    for mana in manas {
-                        self.add_mana(pl, mana).await;
+                for aff in affected {
+                    if let TargetId::Player(pl) = aff {
+                        for &mana in &manas {
+                            self.add_mana(pl, mana).await;
+                        }
                     }
                 }
             }
             ClauseEffect::GainLife(amount) => {
-                if let TargetId::Player(pl) = affected {
-                    self.gain_life(pl, amount).await;
+                for aff in affected {
+                    if let TargetId::Player(pl) = aff {
+                        self.gain_life(pl, amount).await;
+                    }
                 }
             }
             ClauseEffect::DrawCard => {
-                if let TargetId::Player(pl) = affected {
-                    self.draw(pl).await;
+                for aff in affected {
+                    if let TargetId::Player(pl) = aff {
+                        self.draw(pl).await;
+                    }
                 }
             }
             ClauseEffect::Destroy => {
-                if let TargetId::Card(card) = affected {
-                    self.destroy(card).await;
+                for aff in affected {
+                    if let TargetId::Card(card) = aff {
+                        self.destroy(card).await;
+                    }
                 }
             }
             ClauseEffect::ExileBattlefield => {
-                if let TargetId::Card(card) = affected {
-                    self.exile(card, Zone::Battlefield).await;
+                for aff in affected {
+                    if let TargetId::Card(card) = aff {
+                        self.exile(card, Zone::Battlefield).await;
+                    }
                 }
             }
             ClauseEffect::Compound(clauses) => {
@@ -83,60 +109,67 @@ impl Game {
                 }
             }
             ClauseEffect::SetTargetController(clause) => {
-                let mut clause = *clause;
-                if let TargetId::Card(affected)=affected
-                && let Some(controller)=self.get_controller(affected){
-                    clause.affected=Affected::ManuallySet(Some(controller.into()));
-                    self.resolve_clause(clause, id ,controller).await;
+                for aff in affected {
+                    let mut clause = *clause.clone();
+                    if let TargetId::Card(affected)=aff
+                    && let Some(controller)=self.get_controller(affected){
+                        clause.affected=Affected::ManuallySet(Some(controller.into()));
+                        self.resolve_clause(clause, id ,controller).await;
+                    }
                 }
             }
             ClauseEffect::CreateToken(attributes) => {
-                println!("creating token");
-                println!("{:?} : \n {:?}", attributes, affected);
-                if let TargetId::Player(affected) = affected {
-                    let mut ent = CardEnt::default();
-                    ent.owner = affected;
-                    ent.controller = Some(affected);
-                    ent.etb_this_cycle = true;
-                    ent.ent_type = EntType::TokenCard;
-                    for attribute in attributes {
-                        match attribute {
-                            TokenAttribute::PT(pt) => {
-                                ent.pt = Some(pt);
-                            }
-                            TokenAttribute::Type(t) => {
-                                ent.types.add(t);
-                            }
-                            TokenAttribute::Subtype(t) => {
-                                ent.subtypes.add(t);
-                            }
-                            TokenAttribute::HasColor(color) => {
-                                ent.abilities.push(Ability::Static(StaticAbility {
-                                    keyword: None,
-                                    effect: StaticAbilityEffect::HasColor(color),
-                                }));
-                            }
-                            TokenAttribute::Ability(abil) => {
-                                ent.abilities.push(abil);
+                for aff in affected {
+                    println!("creating token");
+                    println!("{:?} : \n {:?}", attributes.clone(), aff);
+                    if let TargetId::Player(affected) = aff {
+                        let mut ent = CardEnt::default();
+                        ent.owner = affected;
+                        ent.controller = Some(affected);
+                        ent.etb_this_cycle = true;
+                        ent.ent_type = EntType::TokenCard;
+                        for attribute in attributes.clone() {
+                            match attribute {
+                                TokenAttribute::PT(pt) => {
+                                    ent.pt = Some(pt);
+                                }
+                                TokenAttribute::Type(t) => {
+                                    ent.types.add(t);
+                                }
+                                TokenAttribute::Subtype(t) => {
+                                    ent.subtypes.add(t);
+                                }
+                                TokenAttribute::HasColor(color) => {
+                                    ent.abilities.push(Ability::Static(StaticAbility {
+                                        keyword: None,
+                                        effect: StaticAbilityEffect::HasColor(color),
+                                    }));
+                                }
+                                TokenAttribute::Ability(abil) => {
+                                    ent.abilities.push(abil);
+                                }
                             }
                         }
+                        ent.printed = Some(Box::new(ent.clone()));
+                        let (id, _ent) = self.cards.insert(ent);
+                        let results = self
+                            .handle_event(Event::MoveZones {
+                                ent: id,
+                                origin: None,
+                                dest: Zone::Battlefield,
+                            })
+                            .await;
+                        println!("zone move results: {:?}", results);
                     }
-                    ent.printed = Some(Box::new(ent.clone()));
-                    let (id, ent) = self.cards.insert(ent);
-                    let results = self
-                        .handle_event(Event::MoveZones {
-                            ent: id,
-                            origin: None,
-                            dest: Zone::Battlefield,
-                        })
-                        .await; //This will need to be modified to use proper
-                                //triggers/zonemove
-                    println!("zone move results: {:?}", results);
                 }
             }
-            ClauseEffect::UntilEndTurn(conteffect) => {
-                todo!();
-            }
+            ClauseEffect::UntilEndTurn(conteffect) => self.cont_effects.push(Continuous {
+                affected: clause.affected,
+                effect: conteffect,
+                constraints: clause.constraints.clone(),
+                duration: ContDuration::EndOfTurn,
+                controller,
+            }),
         }
     }
 }

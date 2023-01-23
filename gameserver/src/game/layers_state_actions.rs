@@ -1,3 +1,5 @@
+use common::spellabil::ContEffect;
+
 use crate::game::*;
 pub enum Layer {
     OneA, //Copiable effects (Copy, As ETB,)
@@ -40,6 +42,7 @@ impl Game {
     fn layers(&mut self) {
         self.layer_zero();
         self.layer_four();
+        self.layer_seven();
     }
     //Handles the printed charachteristics of cards
     //and sets their controller to be their owner
@@ -88,6 +91,30 @@ impl Game {
                         self.add_ability(ent, abil);
                     }
                 };
+            }
+        }
+    }
+    fn layer_seven(&mut self) {
+        for effect in self.cont_effects.clone() {
+            match effect.effect {
+                ContEffect::ModifyPT(pt) => {
+                    for affected in self
+                        .calculate_affected(
+                            &effect.affected,
+                            &effect.constraints,
+                            effect.controller,
+                        )
+                        .clone()
+                    {
+                        if let TargetId::Card(id)=affected
+                            && let Some(card)=self.cards.get_mut(id)
+                            && let Some(mut card_pt)=card.pt{
+                                card_pt.power+=pt.power;
+                                card_pt.toughness+=pt.toughness
+
+                            }
+                    }
+                }
             }
         }
     }

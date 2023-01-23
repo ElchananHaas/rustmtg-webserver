@@ -3,7 +3,7 @@ use crate::{
     event::{DiscardCause, EventResult, TagEvent},
     game::{Game, Phase, Subphase},
 };
-use common::entities::CardId;
+use common::{entities::CardId, spellabil::ContDuration};
 
 impl Game {
     pub async fn phase(&mut self, _events: &mut Vec<TagEvent>, phase: Phase) {
@@ -121,6 +121,12 @@ impl Game {
             }
         }
         self.lands_played_this_turn = 0;
+        self.cont_effects = self
+            .cont_effects
+            .clone()
+            .into_iter()
+            .filter(|effect| effect.duration != ContDuration::EndOfTurn)
+            .collect();
         //TODO handle priority being given in cleanup step by giving
         //another cleanup step afterwards
     }
