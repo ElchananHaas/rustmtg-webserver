@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use cardtypes::Subtype;
+use common::cardtypes::Subtype;
 use common::spellabil::KeywordAbility;
 use nom::{bytes::complete::is_not, character::complete::one_of, multi::many0, IResult};
 
@@ -22,7 +22,7 @@ fn lemmatize(word: &str) -> String {
     return word;
 }
 fn parse_token<'a>(mut text: &'a str) -> IResult<&str, String, ()> {
-    let special_chars = " .:,\"\n()/";
+    let special_chars = " .:,\"\n()/{}";
     (text, _) = many0(nom::character::complete::char(' '))(text)?;
     if let Ok((rest, char)) = one_of::<_, _, ()>(special_chars)(text) {
         if char == ' ' {

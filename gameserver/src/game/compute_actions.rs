@@ -1,12 +1,12 @@
 use crate::game::*;
 
-fn mana_from_clause(clause: &Clause) -> Vec<ManaCostSymbol>{
-    if let ClauseEffect::AddMana(mana) =  &clause.effect{
+fn mana_from_clause(clause: &Clause) -> Vec<ManaCostSymbol> {
+    if let ClauseEffect::AddMana(mana) = &clause.effect {
         return mana.clone();
     }
-    if let ClauseEffect::Compound(clauses)=&clause.effect{
-        let mut res=vec![];
-        for clause in clauses{
+    if let ClauseEffect::Compound(clauses) = &clause.effect {
+        let mut res = vec![];
+        for clause in clauses {
             res.append(&mut mana_from_clause(clause));
         }
         return res;
@@ -18,10 +18,10 @@ impl Game {
     //For now, only count mana from tap abilities.
     //Add in sac and other abilities later.
 
-    fn mana_tap_abils(&self,ent:CardId) -> Vec<Vec<ManaCostSymbol>>{
-        let mut res=vec![];
+    fn mana_tap_abils(&self, ent: CardId) -> Vec<Vec<ManaCostSymbol>> {
+        let mut res = vec![];
         if let Some(ent) = self.cards.get(ent) {
-            for abil in &ent.abilities{
+            for abil in &ent.abilities {
                 if let Ability::Activated(abil) = abil 
                 && abil.costs.contains(&Cost::Selftap)
                 && !ent.tapped{
@@ -41,8 +41,8 @@ impl Game {
     fn max_mana_produce(&self, ent: CardId) -> i64 {
         //TODO get more fine grained color support
         let mut mana_produce = 0;
-        for manas in self.mana_tap_abils(ent){
-            mana_produce=max(mana_produce,manas.len() as i64);
+        for manas in self.mana_tap_abils(ent) {
+            mana_produce = max(mana_produce, manas.len() as i64);
         }
         mana_produce
     }
@@ -51,7 +51,7 @@ impl Game {
         if let Some(player) = self.players.get(player_id) {
             let mut available_mana: i64 = 0;
             //TODO make this take into account costs more accurately,
-             //including handling colors of available mana, no just the quanitity
+            //including handling colors of available mana, no just the quanitity
             for perm in self.players_permanents(player_id) {
                 available_mana += self.max_mana_produce(perm);
             }
@@ -100,7 +100,7 @@ impl Game {
         let mut actions = Vec::new();
         for &card_id in pl.hand.iter() {
             if let Some(card) = self.cards.get(card_id) {
-                if card.costs.len() > 0 && (card.types.instant || self.sorcery_speed(player)) {
+                if card.costs.len() > 0 && (card.types.is_instant() || self.sorcery_speed(player)) {
                     let maybe_pay = self.maybe_can_pay(&card.costs, player, card_id);
                     actions.push(Action::Cast(CastingOption {
                         source_card: card_id,
@@ -124,7 +124,10 @@ impl Game {
     ) -> Vec<Action> {
         let mut actions = Vec::new();
         let play_sorcery = self.sorcery_speed(player_id);
-        if card.types.land && play_sorcery && self.land_play_limit > self.lands_played_this_turn {
+        if card.types.is_land()
+            && play_sorcery
+            && self.land_play_limit > self.lands_played_this_turn
+        {
             actions.push(Action::PlayLand(card_id));
         }
         actions

@@ -1,118 +1,109 @@
 use nom::error::VerboseError;
 use nom::IResult;
-use paste::paste;
 use schemars::JsonSchema;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
+use std::hash::Hash;
 use std::str::FromStr;
 use strum_macros::EnumString;
 use texttoken::Tokens;
-macro_rules! enumset{
-    ($name:ident, $($e:ident),*) => {
-        #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize, Deserialize, JsonSchema, EnumString)]
-        #[strum(serialize_all = "lowercase")]
-        #[allow(dead_code)] //allow dead code to reduce warnings noise on each variant
-        #[repr(u32)]
-        pub enum $name{
-            $($e,)*
-        }
-        #[allow(dead_code)]
-        impl $name{
-            pub fn parse<'a>(x:&'a Tokens)->IResult<&'a Tokens, Self, VerboseError<&'a Tokens>>{
-                if x.len()==0 {
-                    return Err(nom::Err::Error(VerboseError {
-                        errors: vec![(x, nom::error::VerboseErrorKind::Context("Empty string when parsing type"))],
-                    }))
-                }
-                match $name::from_str(&x[0]){
-                    Ok(val)=>Ok((&x[1..],val)),
-                    Err(_)=>Err(nom::Err::Error(VerboseError {
-                        errors: vec![(x, nom::error::VerboseErrorKind::Context("Failed to parse type"))],
-                    }))
-                }
-            }
-        }
-        paste!{
-            #[derive(Default)]
-            #[derive(Clone, Copy, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
-            pub struct [<$name s>]{
-                $(
-                    pub [<$e:lower>]:bool,
-                )*
-            }
-            impl std::fmt::Debug for [<$name s>]{
-                fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-                    write!(f, "[")?;
-                    $(
-                        if(self.[<$e:lower>]){
-                            $name::$e.fmt(f)?;
-                           write!(f, ",")?;
-                        }
 
-                    )*
-                    write!(f, "]")?;
-                    Ok(())
+use crate::hashset_obj::HashSetObj;
 
-                }
-            }
-            #[allow(dead_code)]
-            impl [<$name s>]{
-                pub fn new()->Self{
-                    Self::default()
-                }
-                pub fn get(&self,x:$name)->bool{
-                    match x{
-                        $(
-                            $name::$e=>self.[<$e:lower>],
-                        )*
-                    }
-                }
-                pub fn add(&mut self,x:$name){
-                    match x{
-                        $(
-                            $name::$e=>{self.[<$e:lower>]=true},
-                        )*
-                    }
-                }
-                pub fn remove(&mut self,x:$name){
-                    match x{
-                        $(
-                            $name::$e=>{self.[<$e:lower>]=false},
-                        )*
-                    }
-                }
-                pub fn parse<'a>(x:&'a Tokens)->IResult<&'a Tokens, Self, VerboseError<&'a Tokens>>{
-                    let mut res=Self::new();
-                    let typed:IResult<&'a Tokens,Vec<$name>,VerboseError<&'a Tokens>>=nom::multi::many0($name::parse)(x);
-                    match typed{
-                        Ok((rest,types))=>{
-                            for t in types{
-                                res.add(t);
-                            }
-                            return Ok((rest,res))
-                        },
-                        Err(e)=>{
-                            return Err(e)
-                        }
-                    }
-                }
-            }
+pub trait ParseType {
+    fn parse<'a>(x: &'a Tokens) -> IResult<&'a Tokens, Self, VerboseError<&'a Tokens>>
+    where
+        Self: Sized,
+        Self: FromStr,
+    {
+        if x.len() == 0 {
+            return Err(nom::Err::Error(VerboseError {
+                errors: vec![(
+                    x,
+                    nom::error::VerboseErrorKind::Context("Empty string when parsing type"),
+                )],
+            }));
         }
-    };
+        match Self::from_str(&x[0]) {
+            Ok(val) => Ok((&x[1..], val)),
+            Err(_) => Err(nom::Err::Error(VerboseError {
+                errors: vec![(
+                    x,
+                    nom::error::VerboseErrorKind::Context("Failed to parse type"),
+                )],
+            })),
+        }
+    }
+    fn parse_set<'a>(
+        x: &'a Tokens,
+    ) -> IResult<&'a Tokens, HashSetObj<Self>, VerboseError<&'a Tokens>>
+    where
+        Self: Sized,
+        Self: FromStr,
+        Self: Hash,
+        Self: Eq,
+    {
+        let (x, types) = nom::multi::many0(Self::parse)(x)?;
+        return Ok((x, types.into_iter().collect()));
+    }
 }
-enumset!(
-    Type,
+impl ParseType for Type {}
+impl ParseType for Supertype {}
+impl ParseType for Subtype {}
+pub type Types = HashSetObj<Type>;
+pub type Subtypes = HashSetObj<Subtype>;
+pub type Supertypes = HashSetObj<Supertype>;
+impl HashSetObj<Type> {
+    pub fn is_creature(&self) -> bool {
+        self.contains(&Type::Creature)
+    }
+    pub fn is_land(&self) -> bool {
+        self.contains(&Type::Land)
+    }
+    pub fn is_instant(&self) -> bool {
+        self.contains(&Type::Instant)
+    }
+    pub fn is_sorcery(&self) -> bool {
+        self.contains(&Type::Sorcery)
+    }
+    pub fn is_artifact(&self) -> bool {
+        self.contains(&Type::Artifact)
+    }
+    pub fn is_enchantment(&self) -> bool {
+        self.contains(&Type::Enchantment)
+    }
+    pub fn is_planeswalker(&self) -> bool {
+        self.contains(&Type::Planeswalker)
+    }
+}
+#[derive(
+    Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize, Deserialize, JsonSchema, EnumString,
+)]
+#[strum(serialize_all = "lowercase")]
+pub enum Type {
     Artifact,
     Enchantment,
     Planeswalker,
     Land,
     Creature,
     Instant,
-    Sorcery
-);
-enumset!(Supertype, Basic, World, Legendary, Snow);
-enumset!(
-    Subtype,
+    Sorcery,
+}
+#[derive(
+    Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize, Deserialize, JsonSchema, EnumString,
+)]
+#[strum(serialize_all = "lowercase")]
+pub enum Supertype {
+    Basic,
+    World,
+    Legendary,
+    Snow,
+}
+#[derive(
+    Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize, Deserialize, JsonSchema, EnumString,
+)]
+#[strum(serialize_all = "lowercase")]
+pub enum Subtype {
     Advisor,
     Aetherborn,
     Ally,
@@ -379,5 +370,5 @@ enumset!(
     Island,
     Swamp,
     Mountain,
-    Forest
-);
+    Forest,
+}

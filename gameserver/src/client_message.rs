@@ -1,7 +1,8 @@
-use crate::{actions::Action, game::Game, hashset_obj::HashSetObj, player::PlayerView};
+use crate::{actions::Action, game::Game, player::PlayerView};
 use common::{
     card_entities::CardEnt,
     entities::{CardId, PlayerId, TargetId},
+    hashset_obj::HashSetObj,
 };
 use schemars::JsonSchema;
 use serde::Serialize;

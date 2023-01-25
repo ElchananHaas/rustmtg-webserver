@@ -42,6 +42,10 @@ fn swift_response_test() {
 fn angelic_ascension_test() {
     test_card(db(), "Angelic Ascension");
 }
+#[test_log::test]
+fn anointed_chorister_test() {
+    test_card(db(), "Anointed Chorister");
+}
 #[allow(dead_code)]
 fn test_card(db: &CardDB, card_name: &'static str) -> CardEnt {
     let spawned = db.try_spawn_card(card_name, PlayerId::from(NonZeroU64::new(1).unwrap()));

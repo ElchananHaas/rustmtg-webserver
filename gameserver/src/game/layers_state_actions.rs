@@ -25,7 +25,7 @@ impl Game {
     async fn state_based_actions(&mut self) {
         for &cardid in &self.battlefield.clone() {
             if let Some(card)=self.cards.get(cardid) &&
-            let Some(pt)=card.pt{
+            let Some(pt)=&card.pt{
                 if pt.toughness<=0{
                     self.move_zones(cardid, Zone::Battlefield, Zone::Graveyard).await;
                 }
@@ -59,6 +59,7 @@ impl Game {
                 card.name = base.name;
                 card.abilities = base.abilities;
                 card.costs = base.costs;
+                card.pt = base.pt;
                 if zone == Zone::Battlefield || zone == Zone::Stack {
                     card.controller = Some(card.owner);
                 } else {
@@ -72,19 +73,19 @@ impl Game {
             if zone == Zone::Battlefield {
                 if let Some(card) = self.cards.get_mut(ent) {
                     let mut abils = Vec::new();
-                    if card.subtypes.plains {
+                    if card.subtypes.contains(&Subtype::Plains) {
                         abils.push(Ability::tap_for_mana(vec![ManaCostSymbol::White]));
                     }
-                    if card.subtypes.mountain {
+                    if card.subtypes.contains(&Subtype::Mountain) {
                         abils.push(Ability::tap_for_mana(vec![ManaCostSymbol::Red]));
                     }
-                    if card.subtypes.island {
+                    if card.subtypes.contains(&Subtype::Island) {
                         abils.push(Ability::tap_for_mana(vec![ManaCostSymbol::Blue]));
                     }
-                    if card.subtypes.swamp {
+                    if card.subtypes.contains(&Subtype::Swamp) {
                         abils.push(Ability::tap_for_mana(vec![ManaCostSymbol::Black]));
                     }
-                    if card.subtypes.forest {
+                    if card.subtypes.contains(&Subtype::Forest) {
                         abils.push(Ability::tap_for_mana(vec![ManaCostSymbol::Green]));
                     }
                     for abil in abils {
@@ -108,10 +109,10 @@ impl Game {
                     {
                         if let TargetId::Card(id)=affected
                             && let Some(card)=self.cards.get_mut(id)
-                            && let Some(mut card_pt)=card.pt{
+                            && let Some(card_pt)=&mut card.pt{
                                 card_pt.power+=pt.power;
-                                card_pt.toughness+=pt.toughness
-
+                                card_pt.toughness+=pt.toughness;
+                                println!("{:?}",card_pt.power);
                             }
                     }
                 }

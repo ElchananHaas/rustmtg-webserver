@@ -93,7 +93,6 @@ name = "carddb"
 version = "0.1.0"
 dependencies = [
  "async-recursion",
- "cardtypes",
  "common",
  "derivative",
  "env_logger",
@@ -111,36 +110,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cardtypes"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-recursion",
- "count_tts",
- "derivative",
- "enum-map",
- "env_logger",
- "futures",
- "futures-util",
- "log",
- "nom",
- "once_cell",
- "paste",
- "rand",
- "schemars",
- "serde",
- "serde_derive",
- "serde_json",
- "strum",
- "strum_macros",
- "test-log",
- "texttoken",
- "tokio",
- "variant_count",
- "warp",
-]
-
-[[package]]
 name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -150,7 +119,6 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 name = "common"
 version = "0.1.0"
 dependencies = [
- "cardtypes",
  "derivative",
  "enum-map",
  "nom",
@@ -160,6 +128,7 @@ dependencies = [
  "serde_json",
  "strum",
  "strum_macros",
+ "texttoken",
 ]
 
 [[package]]
@@ -626,7 +595,6 @@ dependencies = [
  "anyhow",
  "async-recursion",
  "carddb",
- "cardtypes",
  "common",
  "count_tts",
  "derivative",

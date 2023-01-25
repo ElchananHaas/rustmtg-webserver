@@ -4,7 +4,7 @@ use schemars::JsonSchema;
 use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
 use std::hash::Hash;
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct HashSetObj<T>
 where
     T: Hash + Eq,
@@ -19,6 +19,9 @@ where
     pub fn insert(&mut self, value: T) -> bool {
         self.base.insert(value, ()).is_some()
     }
+    pub fn add(&mut self, value: T) -> bool {
+        self.insert(value)
+    }
     pub fn remove(&mut self, value: &T) -> bool {
         self.base.remove(value).is_some()
     }
@@ -29,6 +32,9 @@ where
     }
     pub fn contains(&self, value: &T) -> bool {
         self.base.contains_key(value)
+    }
+    pub fn get(&self, value: &T) -> bool {
+        self.contains(value)
     }
     pub fn len(&self) -> usize {
         self.base.len()
@@ -42,7 +48,16 @@ where
         true
     }
 }
-
+impl<T> Default for HashSetObj<T>
+where
+    T: Hash + Eq,
+{
+    fn default() -> Self {
+        Self {
+            base: Default::default(),
+        }
+    }
+}
 impl<'a, T> HashSetObj<T>
 where
     T: Hash + Eq,

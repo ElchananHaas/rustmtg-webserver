@@ -1,5 +1,9 @@
-use crate::{entities::MIN_CARDID, spellabil::Clause};
-use cardtypes::{Subtypes, Supertypes, Types};
+use crate::{
+    cardtypes::{Subtype, Subtypes, Supertypes, Type, Types},
+    entities::MIN_CARDID,
+    hashset_obj::HashSetObj,
+    spellabil::Clause,
+};
 use derivative::*;
 use schemars::JsonSchema;
 use serde_derive::Serialize;
@@ -70,7 +74,7 @@ impl CardEnt {
         }
     }
 }
-#[derive(Clone, Copy, Debug, Serialize, JsonSchema)]
+#[derive(Clone, Debug, Serialize, JsonSchema)]
 pub struct PT {
     pub power: i64,
     pub toughness: i64,

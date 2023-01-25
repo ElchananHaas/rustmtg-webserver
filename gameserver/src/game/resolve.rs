@@ -17,7 +17,7 @@ impl Game {
         for effect in effects {
             self.resolve_clause(effect, id, controller).await;
         }
-        let dest = if types.instant || types.sorcery {
+        let dest = if types.is_instant() || types.is_sorcery() {
             Zone::Graveyard
         } else {
             Zone::Battlefield
@@ -163,13 +163,16 @@ impl Game {
                     }
                 }
             }
-            ClauseEffect::UntilEndTurn(conteffect) => self.cont_effects.push(Continuous {
-                affected: clause.affected,
-                effect: conteffect,
-                constraints: clause.constraints.clone(),
-                duration: ContDuration::EndOfTurn,
-                controller,
-            }),
+            ClauseEffect::UntilEndTurn(conteffect) => {
+                let cont_effect = Continuous {
+                    affected: clause.affected,
+                    effect: conteffect,
+                    constraints: clause.constraints.clone(),
+                    duration: ContDuration::EndOfTurn,
+                    controller,
+                };
+                self.cont_effects.push(cont_effect);
+            }
         }
     }
 }

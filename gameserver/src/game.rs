@@ -4,14 +4,15 @@ use crate::client_message::{Ask, AskSelectN};
 use crate::ent_maps::EntMap;
 use crate::errors::MTGError;
 use crate::event::{DiscardCause, Event, EventResult, TagEvent};
-use crate::hashset_obj::HashSetObj;
 use crate::player::{Player, PlayerCon};
 use anyhow::{bail, Result};
 use async_recursion::async_recursion;
 use common::ability::Ability;
 use common::card_entities::{CardEnt, EntType};
+use common::cardtypes::{Subtype, Supertype, Type};
 use common::cost::{Cost, PaidCost};
 use common::entities::{CardId, ManaId, PlayerId, TargetId, MIN_CARDID};
+use common::hashset_obj::HashSetObj;
 use common::mana::{Color, Mana, ManaCostSymbol};
 use common::spellabil::{
     Affected, Clause, ClauseConstraint, ClauseEffect, Continuous, KeywordAbility,
@@ -203,7 +204,7 @@ impl Game {
         self.battlefield.clone().into_iter().filter(move |&ent| {
             self.cards
                 .get(ent)
-                .filter(|&card| card.types.creature)
+                .filter(|&card| card.types.is_creature())
                 .is_some()
         })
     }
@@ -214,7 +215,9 @@ impl Game {
             if card.tapped {
                 return false;
             }
-            !card.types.creature || card.has_keyword(KeywordAbility::Haste) || !card.etb_this_cycle
+            !card.types.is_creature()
+                || card.has_keyword(KeywordAbility::Haste)
+                || !card.etb_this_cycle
         } else {
             false
         }
@@ -384,7 +387,7 @@ impl Game {
             ClauseConstraint::CardType(t) => {
                 if let TargetId::Card(card)=id
                 && let Some(ent)=self.cards.get(card){
-                    ent.types.get(*t)
+                    ent.types.get(t)
                 }else{
                     false
                 }                        
@@ -632,7 +635,7 @@ impl Game {
             && self.stack.is_empty()
             && (self.phase == Some(Phase::FirstMain) || self.phase == Some(Phase::SecondMain))
     }
-    
+
     pub fn opponents(&self, player: PlayerId) -> Vec<PlayerId> {
         self.turn_order
             .iter()
@@ -641,9 +644,11 @@ impl Game {
     }
 
     pub fn remaining_lethal(&self, ent: CardId) -> Option<i64> {
-        self.cards
-            .get(ent)
-            .and_then(|card| card.pt.map(|pt| max(pt.toughness - card.damaged, 0)))
+        self.cards.get(ent).and_then(|card| {
+            card.pt
+                .as_ref()
+                .map(|pt| max(pt.toughness - card.damaged, 0))
+        })
     }
     pub fn add_ability(&mut self, ent: CardId, ability: Ability) {
         //Assume the builder has already added a vector of abilities

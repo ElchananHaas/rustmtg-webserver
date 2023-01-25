@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use crate::carddb::{nom_error, Res};
 use crate::util::parse_number;
-use cardtypes::{Subtype, Type};
+use common::cardtypes::{Subtype, Type};
 use common::{ability::Ability, card_entities::PT, spellabil::KeywordAbility};
 use common::{mana::Color, token_attribute::TokenAttribute};
 use nom::bytes::complete::tag;

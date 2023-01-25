@@ -1,25 +1,23 @@
-use crate::parse_clauseeffect::parse_action_first_effect;
-use crate::parse_clauseeffect::parse_action_second_effect;
+use crate::parse_clause::parse_clause;
 use crate::parse_non_body::parse_cost_line;
 use crate::parse_non_body::parse_pt;
 use crate::parse_non_body::parse_type_line;
 use crate::spawn_error::SpawnError;
 use crate::tokenize::tokenize;
-use cardtypes::Type;
 use common::ability::Ability;
+use common::ability::ActivatedAbility;
 use common::card_entities::CardEnt;
+use common::cost::Cost;
 use common::entities::PlayerId;
 use common::mana::ManaCostSymbol;
-use common::spellabil::Affected;
 use common::spellabil::Clause;
-use common::spellabil::ClauseConstraint;
-use common::spellabil::ClauseEffect;
 use common::spellabil::KeywordAbility;
 use log::debug;
 use log::info;
 use nom::branch::alt;
 use nom::bytes::complete::is_not;
 use nom::bytes::complete::tag;
+use nom::bytes::complete::take;
 use nom::character::complete;
 use nom::combinator::opt;
 use nom::error::context;
@@ -34,11 +32,16 @@ use serde_json;
 use std::collections::HashMap;
 use std::fmt;
 use std::fs;
+use std::iter::Flatten;
 use std::path::PathBuf;
 use std::str::FromStr;
 use texttoken::{tokens, Tokens};
 pub type Res<T, U> = IResult<T, U, VerboseError<T>>;
 
+enum ParsedLine {
+    Clause(Clause),
+    Abil(Ability),
+}
 pub struct CardDB {
     scryfall: HashMap<String, ScryfallEntry>,
 }
@@ -81,20 +84,18 @@ pub fn nom_error<'a>(
     })
 }
 
-fn find_path()->Result<PathBuf, std::io::Error>{
+fn find_path() -> Result<PathBuf, std::io::Error> {
     //let path = "../oracle-cards-20230120100202.json";
     let current_dir = std::env::current_dir()?;
-    let dir_copy=current_dir.clone();
-    let parent_dir=dir_copy.parent().unwrap();
-    for entry in fs::read_dir(current_dir)?.chain(
-        fs::read_dir(parent_dir)?
-    ){
-        let entry=entry?;
-        let path=entry.path();
-        let last=path.file_stem();
-        if let Some(last)=last{
-            if let Some(last)=last.to_str(){
-                if last.contains("oracle-cards-"){
+    let dir_copy = current_dir.clone();
+    let parent_dir = dir_copy.parent().unwrap();
+    for entry in fs::read_dir(current_dir)?.chain(fs::read_dir(parent_dir)?) {
+        let entry = entry?;
+        let path = entry.path();
+        let last = path.file_stem();
+        if let Some(last) = last {
+            if let Some(last) = last.to_str() {
+                if last.contains("oracle-cards-") {
                     return Ok(path);
                 }
             }
@@ -104,7 +105,7 @@ fn find_path()->Result<PathBuf, std::io::Error>{
 }
 impl CardDB {
     pub fn new() -> Self {
-        let path=find_path().expect("Failed to find scryfall oracle database");
+        let path = find_path().expect("Failed to find scryfall oracle database");
         let data = fs::read_to_string(path).expect("Couldn't open file");
         let desered: Vec<ScryfallEntry> = serde_json::from_str(&data).expect("failed to parse!");
         let mut byname = HashMap::new();
@@ -186,133 +187,103 @@ fn parse_keyword_ability<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, KeywordAbili
     }
 }
 fn prune_comment<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ()> {
-    let (rest, _) = opt(delimited(
+    let (tokens, _) = opt(delimited(
         tag(tokens!["("]),
         is_not(tokens!(")")),
         tag(tokens!(")")),
     ))(tokens)?;
-    Ok((rest, ()))
+    let (tokens, _) = opt(tag(tokens!["\n"]))(tokens)?;
+    Ok((tokens, ()))
 }
-
-fn parse_body_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
-    let (tokens, clause) = context(
-        "parsing body line",
-        alt((
-            parse_you_clause,
-            parse_action_target_line,
-            parse_target_action_line,
-        )),
-    )(tokens)?;
-    let (tokens, _) = opt(tag(tokens!(".")))(tokens)?;
-    let (tokens, _) = opt(tag(tokens!("\n")))(tokens)?;
-    Ok((tokens, clause))
-}
-fn parse_you_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
-    let (tokens, _) = opt(tag(tokens!["you"]))(tokens)?;
-    //Sometimes MTG
-    //Implicitly has a clause mean you if it is left out.
-    //For example, "draw a card" vs. "you draw a card"
-    let (tokens, effect) = parse_action_second_effect(tokens)?;
-    Ok((
-        tokens,
-        Clause {
-            effect,
-            affected: Affected::Controller,
-            constraints: Vec::new(),
-        },
-    ))
-}
-fn parse_its_controller_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
-    let (tokens, _) = tag(tokens!["."])(tokens)?;
-    let (tokens, _) = opt(tag(tokens!("\n")))(tokens)?;
-    let (tokens, _) = context(
-        "parsing controller addon",
-        tag(tokens!["its", "controller"]),
-    )(tokens)?;
-    let (tokens, clause) = parse_body_line(tokens)?;
-    Ok((
-        tokens,
-        Clause {
-            affected: Affected::Target(None),
-            effect: ClauseEffect::SetTargetController(Box::new(clause)),
-            constraints: vec![],
-        },
-    ))
-}
-fn parse_target_action_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
-    let (tokens, _) = tag(tokens!["target"])(tokens)?;
-    let (tokens, constraints) = many1(parse_constraint)(tokens)?;
-    let (tokens, effect) = context("parsing target line", parse_action_second_effect)(tokens)?;
-    let clause = Clause {
-        effect,
-        affected: Affected::Target(None),
-        constraints,
-    };
-    Ok((tokens, clause))
-}
-
-fn parse_action_target_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
-    let (tokens, effect) = context("parsing target line", parse_action_first_effect)(tokens)?;
-    let (tokens, _) = tag(tokens!["target"])(tokens)?;
-    let (tokens, constraints) = many1(parse_constraint)(tokens)?;
-    let (tokens, addendum) = opt(parse_its_controller_clause)(tokens)?;
-    let mut clause = Clause {
-        effect,
-        affected: Affected::Target(None),
-        constraints,
-    };
-    if let Some(addendum) = addendum {
-        clause.effect = ClauseEffect::Compound(vec![clause.clone(), addendum]);
+fn parse_mana_symbol_inner<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Vec<ManaCostSymbol>> {
+    let (tokens, first) = take(1 as usize)(tokens)?;
+    let first = &*first[0];
+    let mut res = vec![];
+    if first == "w" {
+        res = vec![ManaCostSymbol::White];
     }
-    Ok((tokens, clause))
-}
-
-fn parse_tapped_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseConstraint> {
-    let (tokens, _) = tag(tokens!["tapped"])(tokens)?;
-    Ok((tokens, ClauseConstraint::IsTapped))
-}
-fn parse_type<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Type> {
-    let first = &*tokens[0];
-    let rest = &tokens[1..];
-    if let Ok(t) = Type::from_str(first) {
-        return Ok((rest, t));
+    if first == "u" {
+        res = vec![ManaCostSymbol::Blue];
     }
-    Err(nom_error(tokens, "Not a type"))
-}
-fn parse_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseConstraint> {
-    let type_constraint = nom::combinator::map(parse_type, |t| ClauseConstraint::CardType(t));
-    let (tokens, constraint) = alt((parse_tapped_constraint, type_constraint))(tokens)?;
-    let (tokens, or_part) = opt(parse_or_constraint)(tokens)?;
-    if let Some(or_part) = or_part {
-        Ok((tokens, ClauseConstraint::Or(vec![constraint, or_part])))
-    } else {
-        Ok((tokens, constraint))
+    if first == "b" {
+        res = vec![ManaCostSymbol::Black];
     }
+    if first == "r" {
+        res = vec![ManaCostSymbol::Red];
+    }
+    if first == "g" {
+        res = vec![ManaCostSymbol::Green];
+    }
+    if let Ok(num) = i64::from_str(first) {
+        res = vec![
+            ManaCostSymbol::Generic;
+            num.try_into()
+                .map_err(|x| nom_error(tokens, "not a positive integer"))?
+        ];
+    }
+    Ok((tokens, res))
 }
-fn parse_or_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseConstraint> {
-    let (tokens, _) = tag(tokens!["or"])(tokens)?;
-    let (tokens, constraint) = parse_constraint(tokens)?;
-    Ok((tokens, constraint))
+fn parse_mana_symbol<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Vec<ManaCostSymbol>> {
+    let (tokens, _) = tag(tokens!["{"])(tokens)?;
+    let (tokens, res) = parse_mana_symbol_inner(tokens)?;
+    let (tokens, _) = tag(tokens!["}"])(tokens)?;
+    Ok((tokens, res))
+}
+fn parse_mana_cost<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Vec<Cost>> {
+    let (tokens, manas) = many1(parse_mana_symbol)(tokens)?;
+    let manas = manas.into_iter().flatten().map(|x| Cost::Mana(x)).collect();
+    Ok((tokens, manas))
+}
+fn parse_costs<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Vec<Cost>> {
+    alt((parse_mana_cost,))(tokens)
+}
+fn parse_activated_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Ability> {
+    let (tokens, costs) = parse_costs(tokens)?;
+    let (tokens, _) = tag(tokens![":"])(tokens)?;
+    let (tokens,clauses)=many1(parse_clause)(tokens)?;
+    Ok((tokens,Ability::Activated(ActivatedAbility{
+        costs,
+        effect:clauses,
+        keyword:None
+    })))
+}
+fn parse_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Ability> {
+    alt((parse_activated_abil,))(tokens)
+}
+fn parse_clause_or_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ParsedLine> {
+    let attempt_clause = parse_clause(tokens);
+    if let Ok((tokens, clause)) = attempt_clause {
+        return Ok((tokens, ParsedLine::Clause(clause)));
+    }
+    let (tokens, abil) = parse_abil(tokens)?;
+    return Ok((tokens, ParsedLine::Abil(abil)));
 }
 
 fn parse_body_lines<'a>(card: &mut CardEnt, tokens: &'a Tokens) -> Res<&'a Tokens, ()> {
-    let (mut rest, keywords) = context("parse keywords", parse_keyword_abilities)(tokens)?;
+    let (mut tokens, keywords) = context("parse keywords", parse_keyword_abilities)(tokens)?;
     for keyword in keywords {
         card.abilities.push(Ability::from_keyword(keyword));
     }
-    let mut clauses = Vec::new();
-    while rest.len() > 0 {
-        let clause;
-        (rest, _) = context("pruning comments", prune_comment)(rest)?;
-        if rest.len() == 0 {
+    while tokens.len() > 0 {
+        let parsedline;
+        (tokens, _) = context("pruning comments", prune_comment)(tokens)?;
+        if tokens.len() == 0 {
             break;
         }
-        (rest, clause) = parse_body_line(rest)?;
-        clauses.push(clause);
+        (tokens, parsedline) = parse_clause_or_abil(tokens)?;
+        match parsedline {
+            ParsedLine::Clause(clause) => {
+                card.effect.push(clause);
+            }
+            ParsedLine::Abil(abil) => {
+                card.abilities.push(abil);
+            }
+        }
+        (tokens, _) = opt(tag(tokens!(".")))(tokens)?;
+        (tokens, _) = opt(tag(tokens!("\n")))(tokens)?;
     }
-    card.effect = clauses;
-    let (rest, _) = nom::combinator::opt(tag(tokens!["\n"]))(rest)?;
-    Ok((rest, ()))
+    let (tokens, _) = nom::combinator::opt(tag(tokens!["\n"]))(tokens)?;
+    Ok((tokens, ()))
 }
 
 fn parse_manasymbol_contents(input: &str) -> Res<&str, Vec<ManaCostSymbol>> {

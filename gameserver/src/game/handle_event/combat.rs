@@ -4,10 +4,12 @@ use crate::{
     client_message::{Ask, AskPair, AskPairItem},
     event::{DamageReason, Event, EventResult, TagEvent},
     game::{Game, Subphase},
+};
+use common::spellabil::KeywordAbility;
+use common::{
+    entities::{CardId, PlayerId, TargetId},
     hashset_obj::HashSetObj,
 };
-use common::entities::{CardId, PlayerId, TargetId};
-use common::spellabil::KeywordAbility;
 impl Game {
     pub fn attack_targets(&self, player: PlayerId) -> HashSet<TargetId> {
         self.opponents(player)
@@ -175,8 +177,8 @@ impl Game {
         subphase: Subphase,
     ) {
         //Handle first strike and normal strike
-        let attacks=self.damage_phase_permanents(self.active_player, subphase);
-        for &attacker in &attacks{
+        let attacks = self.damage_phase_permanents(self.active_player, subphase);
+        for &attacker in &attacks {
             if let Some(attack) = self.cards.get_mut(attacker) {
                 attack.already_dealt_damage = true;
             }
@@ -185,7 +187,7 @@ impl Game {
                 if attack.blocked.len() > 0 {
                     self.spread_damage(events, attacker, &attack.blocked).await;
                 } else {
-                    if let Some(pt)=attack.pt{
+                    if let Some(pt)=&attack.pt{
                         Game::add_event(
                             events,
                             Event::Damage {
@@ -206,7 +208,7 @@ impl Game {
                 }
             }
         }
-        if attacks.len()>0{
+        if attacks.len() > 0 {
             self.cycle_priority().await;
         }
     }
@@ -258,11 +260,12 @@ impl Game {
         dealer: CardId,
         creatures: &Vec<CardId>,
     ) {
-        let mut damage_to_deal = if let Some(pt) = self.cards.get(dealer).and_then(|card| card.pt) {
-            pt.power
-        } else {
-            return;
-        };
+        let mut damage_to_deal =
+            if let Some(pt) = self.cards.get(dealer).and_then(|card| card.pt.as_ref()) {
+                pt.power
+            } else {
+                return;
+            };
         if damage_to_deal <= 0 {
             return;
         }

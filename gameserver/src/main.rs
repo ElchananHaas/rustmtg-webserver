@@ -19,7 +19,6 @@ mod ent_maps;
 mod errors;
 mod event;
 mod game;
-mod hashset_obj;
 mod player;
 mod write_schema;
 static CARDDB: OnceCell<carddb::CardDB> = OnceCell::new();

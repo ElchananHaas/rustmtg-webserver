@@ -1,8 +1,8 @@
 use crate::card_entities::PT;
+use crate::cardtypes::Type;
 use crate::entities::PlayerId;
 use crate::mana::ManaCostSymbol;
 use crate::{entities::TargetId, token_attribute::TokenAttribute};
-use cardtypes::Type;
 use schemars::JsonSchema;
 use serde_derive::Serialize;
 use strum_macros::EnumString;
