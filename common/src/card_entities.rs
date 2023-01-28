@@ -49,6 +49,8 @@ pub struct CardEnt {
     pub pt: Option<PT>,
     pub controller: Option<PlayerId>,
     pub types: Types,
+    pub source_of_ability: Option<CardId>,//Holds the entity 
+    //that produced this triggered ability if appropriate
     pub supertypes: Supertypes,
     pub subtypes: Subtypes,
     pub abilities: Vec<Ability>,

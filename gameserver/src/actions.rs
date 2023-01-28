@@ -40,7 +40,6 @@ pub struct CastingOption {
 #[derive(Clone, Serialize, Debug)]
 pub struct StackActionOption {
     pub stack_ent: CardId,
-    pub ability_source: Option<CardId>, //Set only if its an ability
     pub costs: Vec<Cost>,
     pub filter: ActionFilter,
     pub keyword: Option<KeywordAbility>,

@@ -164,7 +164,8 @@
         {
           "type": "string",
           "enum": [
-            "Controller"
+            "Controller",
+            "Cardname"
           ]
         },
         {
@@ -550,6 +551,16 @@
             }
           ]
         },
+        "source_of_ability": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CardId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "subtypes": {
           "$ref": "#/definitions/Map_of_Null"
         },
@@ -795,9 +806,9 @@
       "required": [
         "affected",
         "constraints",
-        "controller",
         "duration",
-        "effect"
+        "effect",
+        "source"
       ],
       "properties": {
         "affected": {
@@ -809,14 +820,14 @@
             "$ref": "#/definitions/ClauseConstraint"
           }
         },
-        "controller": {
-          "$ref": "#/definitions/PlayerId"
-        },
         "duration": {
           "$ref": "#/definitions/ContDuration"
         },
         "effect": {
           "$ref": "#/definitions/ContEffect"
+        },
+        "source": {
+          "$ref": "#/definitions/CardId"
         }
       }
     },

@@ -1,14 +1,14 @@
-use std::ops::RangeFrom;
+use std::{ops::RangeFrom, borrow::Cow};
 
 use nom::{Compare, CompareResult, FindToken};
-
+pub type Token=Cow<'static,str>;
 #[macro_export]
 macro_rules! tokens{
     ($($e:expr),*) => {
         Tokens::from_array(
             &[
                 $(
-                    $e.to_owned(),
+                    $e.into(),
                 )*
             ]
         )
@@ -17,21 +17,21 @@ macro_rules! tokens{
 #[derive(Debug)]
 #[repr(transparent)]
 pub struct Tokens {
-    pub tokens: [String],
+    pub tokens: [Token],
 }
 impl Tokens {
     pub fn len(&self) -> usize {
         self.tokens.len()
     }
-    pub fn from_array<'a>(tokens: &'a [String]) -> &'a Self {
+    pub fn from_array<'a>(tokens: &'a [Token]) -> &'a Self {
         unsafe { std::mem::transmute(tokens) }
     }
     pub fn empty() -> &'static Self {
         Self::from_array(&[])
     }
 }
-impl<'a> FindToken<String> for &'a Tokens {
-    fn find_token(&self, token: String) -> bool {
+impl<'a> FindToken<Token> for &'a Tokens {
+    fn find_token(&self, token: Token) -> bool {
         for x in &self.tokens {
             if *x == token {
                 return true;
@@ -82,16 +82,16 @@ impl<'a, 'b> Compare<&'b Tokens> for &'a Tokens {
     }
 }
 
-fn mul_loc(x: (usize, String)) -> (usize, String) {
+fn mul_loc(x: (usize, Token)) -> (usize, Token) {
     (x.0, x.1)
 }
 impl<'a> nom::InputIter for &'a Tokens {
-    type Item = String;
+    type Item = Token;
     type Iter = std::iter::Map<
-        std::iter::Enumerate<std::iter::Cloned<std::slice::Iter<'a, String>>>,
-        fn((usize, String)) -> (usize, String),
+        std::iter::Enumerate<std::iter::Cloned<std::slice::Iter<'a, Token>>>,
+        fn((usize, Token)) -> (usize, Token),
     >;
-    type IterElem = std::iter::Cloned<std::slice::Iter<'a, String>>;
+    type IterElem = std::iter::Cloned<std::slice::Iter<'a, Token>>;
     fn iter_indices(&self) -> Self::Iter {
         self.tokens.iter().cloned().enumerate().map(mul_loc)
     }
@@ -119,8 +119,8 @@ impl<'a> nom::InputIter for &'a Tokens {
     }
 }
 impl std::ops::Index<usize> for Tokens {
-    type Output = String;
-    fn index(&self, x: usize) -> &String {
+    type Output = Token;
+    fn index(&self, x: usize) -> &Token {
         &self.tokens[x]
     }
 }

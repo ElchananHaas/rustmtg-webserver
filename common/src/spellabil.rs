@@ -1,6 +1,6 @@
 use crate::card_entities::PT;
 use crate::cardtypes::Type;
-use crate::entities::PlayerId;
+use crate::entities::{PlayerId, CardId};
 use crate::mana::ManaCostSymbol;
 use crate::{entities::TargetId, token_attribute::TokenAttribute};
 use schemars::JsonSchema;
@@ -37,6 +37,7 @@ pub struct Clause {
 #[derive(Clone, Serialize, JsonSchema, Debug, Copy)]
 pub enum Affected {
     Controller,
+    Cardname,
     Target(Option<TargetId>),
     ManuallySet(Option<TargetId>),
 }
@@ -51,8 +52,7 @@ pub struct Continuous {
     pub affected: Affected,
     pub constraints: Vec<ClauseConstraint>,
     pub duration: ContDuration,
-    pub controller: PlayerId, //The player controlling the spell, ability or permanent
-                              //that generated this continuous effect.
+    pub source: CardId,
 }
 
 #[derive(Clone, Serialize, JsonSchema, Debug)]

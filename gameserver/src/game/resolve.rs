@@ -26,12 +26,16 @@ impl Game {
     }
     pub fn calculate_affected(
         &self,
+        id:CardId,
         affected: &Affected,
         constraints: &Vec<ClauseConstraint>,
-        controller: PlayerId,
     ) -> Vec<TargetId> {
         let affected: Vec<TargetId> = match affected {
-            Affected::Controller => vec![controller.into()],
+            Affected::Controller => if let Some(card)=self.cards.get(id){
+                vec![card.get_controller().into()]
+            } else {
+                vec![]
+            },
             Affected::Target(target) => {
                 if let Some(x) = *target {
                     vec![x]
@@ -45,7 +49,14 @@ impl Game {
                 } else {
                     vec![]
                 }
-            }
+            },
+            Affected::Cardname => if let Some(card)=self.cards.get(id)
+            && let Some(source)=card.source_of_ability{
+                vec![source.into()]
+            } else {
+                vec![]
+            },
+
         };
         return affected
             .into_iter()
@@ -60,7 +71,7 @@ impl Game {
     #[must_use]
     async fn resolve_clause(&mut self, clause: Clause, id: CardId, controller: PlayerId) {
         let affected: Vec<TargetId> =
-            self.calculate_affected(&clause.affected, &clause.constraints, controller);
+            self.calculate_affected(id,&clause.affected, &clause.constraints);
         if affected.len() == 0 {
             return;
         }
@@ -169,7 +180,7 @@ impl Game {
                     effect: conteffect,
                     constraints: clause.constraints.clone(),
                     duration: ContDuration::EndOfTurn,
-                    controller,
+                    source: id,
                 };
                 self.cont_effects.push(cont_effect);
             }

@@ -9,9 +9,21 @@ use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::combinator::opt;
 use nom::error::context;
+use nom::multi::many0;
 use nom::multi::many1;
 use texttoken::{tokens, Tokens};
 
+pub fn parse_affected<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Affected> {
+    fn parse_target<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Affected>{
+        let (tokens,_)=tag(tokens!("target"))(tokens)?;
+        Ok((tokens,Affected::Target(None)))
+    }
+    fn parse_cardname<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Affected>{
+        let (tokens,_)=tag(tokens!("cardname"))(tokens)?;
+        Ok((tokens,Affected::Cardname))
+    }
+    alt((parse_target,parse_cardname))(tokens)
+}
 pub fn parse_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
     let (tokens, clause) = context(
         "parsing body line",
@@ -58,12 +70,12 @@ fn parse_its_controller_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause
     ))
 }
 fn parse_target_action_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
-    let (tokens, _) = tag(tokens!["target"])(tokens)?;
-    let (tokens, constraints) = many1(parse_constraint)(tokens)?;
+    let (tokens, affected) = parse_affected(tokens)?;
+    let (tokens, constraints) = many0(parse_constraint)(tokens)?;
     let (tokens, effect) = context("parsing target line", parse_action_second_effect)(tokens)?;
     let clause = Clause {
         effect,
-        affected: Affected::Target(None),
+        affected: affected,
         constraints,
     };
     Ok((tokens, clause))
@@ -71,12 +83,12 @@ fn parse_target_action_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
 
 fn parse_action_target_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
     let (tokens, effect) = context("parsing target line", parse_action_first_effect)(tokens)?;
-    let (tokens, _) = tag(tokens!["target"])(tokens)?;
-    let (tokens, constraints) = many1(parse_constraint)(tokens)?;
+    let (tokens, affected) = parse_affected(tokens)?;
+    let (tokens, constraints) = many0(parse_constraint)(tokens)?;
     let (tokens, addendum) = opt(parse_its_controller_clause)(tokens)?;
-    let mut clause = Clause {
+    let mut clause = Clause { 
         effect,
-        affected: Affected::Target(None),
+        affected: affected,
         constraints,
     };
     if let Some(addendum) = addendum {

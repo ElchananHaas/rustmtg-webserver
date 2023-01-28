@@ -101,9 +101,9 @@ impl Game {
                 ContEffect::ModifyPT(pt) => {
                     for affected in self
                         .calculate_affected(
+                            effect.source,
                             &effect.affected,
                             &effect.constraints,
-                            effect.controller,
                         )
                         .clone()
                     {

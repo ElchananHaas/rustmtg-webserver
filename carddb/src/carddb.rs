@@ -29,13 +29,14 @@ use nom::sequence::delimited;
 use nom::IResult;
 use serde_derive::Deserialize;
 use serde_json;
+use serde_with::{serde_as, BorrowCow};
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
 use std::fs;
-use std::iter::Flatten;
 use std::path::PathBuf;
 use std::str::FromStr;
-use texttoken::{tokens, Tokens};
+use texttoken::{tokens, Token, Tokens};
 pub type Res<T, U> = IResult<T, U, VerboseError<T>>;
 
 enum ParsedLine {
@@ -43,7 +44,7 @@ enum ParsedLine {
     Abil(Ability),
 }
 pub struct CardDB {
-    scryfall: HashMap<String, ScryfallEntry>,
+    scryfall: HashMap<Token, ScryfallEntry>,
 }
 
 impl fmt::Debug for CardDB {
@@ -58,22 +59,31 @@ pub struct ScryfallImageUrls {
     pub normal: Option<String>,
     pub large: Option<String>,
 }
+#[serde_as]
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
 pub struct ScryfallEntry {
-    pub object: Option<String>,
-    pub name: String,
+    #[serde_as(as = "Option<BorrowCow>")]
+    pub object: Option<Cow<'static, str>>,
+    #[serde_as(as = "BorrowCow")]
+    pub name: Cow<'static, str>,
     pub image_uris: Option<ScryfallImageUrls>,
-    pub mana_cost: Option<String>,
-    pub type_line: Option<String>,
-    pub tokenized_type_line: Option<Vec<String>>, //Will be tokeized upon construction
-    pub lang: Option<String>,
-    pub color_identity: Option<Vec<String>>,
+    #[serde_as(as = "Option<BorrowCow>")]
+    pub mana_cost: Option<Cow<'static, str>>,
+    #[serde_as(as = "Option<BorrowCow>")]
+    pub type_line: Option<Cow<'static, str>>,
+    pub tokenized_type_line: Option<Vec<Token>>, //Will be tokeized upon construction
+    #[serde_as(as = "Option<BorrowCow>")]
+    pub lang: Option<Cow<'static, str>>,
+    pub color_identity: Option<Vec<Token>>,
     pub cmc: Option<f64>,
-    pub power: Option<String>,
-    pub toughness: Option<String>,
-    pub oracle_text: Option<String>,
-    pub tokenized_oracle_text: Option<Vec<String>>, //Will be tokeized upon construction
+    #[serde_as(as = "Option<BorrowCow>")]
+    pub power: Option<Cow<'static, str>>,
+    #[serde_as(as = "Option<BorrowCow>")]
+    pub toughness: Option<Cow<'static, str>>,
+    #[serde_as(as = "Option<BorrowCow>")]
+    pub oracle_text: Option<Cow<'static, str>>,
+    pub tokenized_oracle_text: Option<Vec<Token>>, //Will be tokeized upon construction
 }
 pub fn nom_error<'a>(
     tokens: &'a Tokens,
@@ -105,16 +115,30 @@ fn find_path() -> Result<PathBuf, std::io::Error> {
 }
 impl CardDB {
     pub fn new() -> Self {
+        println!("Initializing card database");
         let path = find_path().expect("Failed to find scryfall oracle database");
         let data = fs::read_to_string(path).expect("Couldn't open file");
+        let data: &'static str = Box::leak(data.into_boxed_str());
         let desered: Vec<ScryfallEntry> = serde_json::from_str(&data).expect("failed to parse!");
         let mut byname = HashMap::new();
         for mut card in desered {
-            card.tokenized_type_line = card.type_line.as_ref().map(|line| tokenize(line, None));
-            card.tokenized_oracle_text = card
-                .oracle_text
-                .as_ref()
-                .map(|line| tokenize(line, Some(&card.name)));
+            card.tokenized_type_line =
+                card.type_line
+                    .as_ref()
+                    .map(|line: &Cow<'static, str>| match line {
+                        Cow::Borrowed(line) => tokenize(line, None),
+                        Cow::Owned(line) => tokenize(line, None)
+                            .into_iter()
+                            .map(|item| item.into_owned().into())
+                            .collect(),
+                    });
+            card.tokenized_oracle_text = card.oracle_text.as_ref().map(|line| match line {
+                Cow::Borrowed(line) => tokenize(line, Some(&card.name)),
+                Cow::Owned(line) => tokenize(line, Some(&card.name))
+                    .into_iter()
+                    .map(|item| item.into_owned().into())
+                    .collect(),
+            });
             byname.insert(card.name.clone(), card);
         }
         CardDB { scryfall: byname }
@@ -176,8 +200,7 @@ fn parse_keyword_abilities<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Vec<Keywor
 fn parse_keyword_ability<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, KeywordAbility> {
     if tokens.len() > 0 {
         if let Ok(abil) = KeywordAbility::from_str(&tokens[0]) {
-            let (rest, _) =
-                nom::combinator::opt(tag(Tokens::from_array(&["\n".to_string()])))(&tokens[1..])?;
+            let (rest, _) = nom::combinator::opt(tag(tokens!["\n".to_string()]))(&tokens[1..])?;
             Ok((rest, abil))
         } else {
             Err(nom_error(tokens, "failed to parse keyword ability"))
@@ -240,12 +263,15 @@ fn parse_costs<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Vec<Cost>> {
 fn parse_activated_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Ability> {
     let (tokens, costs) = parse_costs(tokens)?;
     let (tokens, _) = tag(tokens![":"])(tokens)?;
-    let (tokens,clauses)=many1(parse_clause)(tokens)?;
-    Ok((tokens,Ability::Activated(ActivatedAbility{
-        costs,
-        effect:clauses,
-        keyword:None
-    })))
+    let (tokens, clauses) = many1(parse_clause)(tokens)?;
+    Ok((
+        tokens,
+        Ability::Activated(ActivatedAbility {
+            costs,
+            effect: clauses,
+            keyword: None,
+        }),
+    ))
 }
 fn parse_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Ability> {
     alt((parse_activated_abil,))(tokens)

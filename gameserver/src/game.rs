@@ -304,7 +304,6 @@ impl Game {
                         }
                         let stack_opt = StackActionOption {
                             stack_ent,
-                            ability_source: None,
                             costs: casting_option.costs.clone(),
                             filter: ActionFilter::None,
                             keyword: None,
@@ -346,7 +345,6 @@ impl Game {
                             keyword,
                             player,
                             stack_ent: id,
-                            ability_source: Some(*source),
                         };
                         if let Ok(_) = self.handle_cast(castopt).await {
                         } else {
@@ -408,7 +406,7 @@ impl Game {
         if let Some(card) = self.cards.get(castopt.stack_ent) {
             for clause in &card.effect {
                 let mut selected_target = None;
-                if let Affected::Target(target) = clause.affected {
+                if let Affected::Target(_target) = clause.affected {
                     if let Some(pl) = self.players.get(castopt.player) {
                         let mut valid = Vec::new();
                         for &(card, zone) in &cards_and_zones {
@@ -548,21 +546,15 @@ impl Game {
         for cost in normal_costs {
             let paid = match cost {
                 Cost::Selftap => {
-                    let tapped=if let Some(source_perm)=castopt.ability_source
+                    let tapped=
+                    if let Some(card)=self.cards.get(castopt.stack_ent)
+                    && let Some(source_perm)=card.source_of_ability
                         && self.can_tap(source_perm){
                             paid_costs.push(PaidCost::Tapped(source_perm));
                             self.tap(source_perm).await
                     }else{
                         false
                     };
-                    println!("tapped {:?}, {}", castopt.ability_source, tapped);
-                    println!(
-                        "{:?}",
-                        castopt
-                            .ability_source
-                            .and_then(|source| self.cards.get(source))
-                            .map(|card| card.tapped)
-                    );
                     tapped
                 }
                 _ => {
@@ -627,6 +619,7 @@ impl Game {
         abil.controller = Some(player);
         abil.costs = activated.costs.clone();
         abil.effect = activated.effect.clone();
+        abil.source_of_ability=Some(source);
         let (new_id, _new_ent) = self.cards.insert(abil);
         Some((new_id, keyword))
     }

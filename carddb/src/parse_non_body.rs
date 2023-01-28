@@ -5,7 +5,7 @@ use common::{
     cost::Cost,
 };
 use nom::{bytes::complete::tag, combinator::opt, error::VerboseError};
-use texttoken::Tokens;
+use texttoken::{tokens, Tokens};
 
 use crate::carddb::{nom_error, parse_mana, Res, ScryfallEntry};
 
@@ -71,8 +71,8 @@ pub fn parse_type_line<'a>(card: &mut CardEnt, entry: &'a ScryfallEntry) -> Res<
 fn parse_type_line_h<'a>(text: &'a Tokens) -> Res<&'a Tokens, (Types, Subtypes, Supertypes)> {
     let (text, supertypes) = Supertype::parse_set(text)?;
     let (text, types) = Type::parse_set(text)?;
-    let (text, _) = opt(tag(Tokens::from_array(&["—".to_owned()])))(text)?;
+    let (text, _) = opt(tag(tokens!["—"]))(text)?;
     let (text, subtypes) = Subtype::parse_set(text)?;
-    let (text, _) = opt(tag(Tokens::from_array(&["\n".to_owned()])))(text)?;
+    let (text, _) = opt(tag(tokens!["\n"]))(text)?;
     Ok((text, (types, subtypes, supertypes)))
 }
