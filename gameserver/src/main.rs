@@ -2,8 +2,8 @@
 #![feature(const_option)]
 #![feature(let_chains)]
 #![deny(unused_must_use)]
-use crate::game::build_game::GameBuilder;
-use crate::player::PlayerCon;
+use game::game::build_game::GameBuilder;
+use game::player::PlayerCon;
 use crate::write_schema::write_types;
 use anyhow::Result;
 use carddb::carddb;
@@ -13,13 +13,6 @@ use std::mem;
 use std::sync::{Arc, Mutex};
 use warp::ws::WebSocket;
 use warp::Filter;
-mod actions;
-mod client_message;
-mod ent_maps;
-mod errors;
-mod event;
-mod game;
-mod player;
 mod write_schema;
 static CARDDB: OnceCell<carddb::CardDB> = OnceCell::new();
 
@@ -89,8 +82,8 @@ mod tests {
 
     use anyhow::bail;
 
-    use crate::game::{Game, Zone};
-    use common::entities::CardId;
+    use game::game::Game;
+    use common::{entities::CardId, zones::Zone};
 
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;

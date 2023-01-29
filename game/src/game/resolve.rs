@@ -1,21 +1,36 @@
 use super::*;
 use common::ability::{StaticAbility, StaticAbilityEffect};
-use common::spellabil::ContDuration;
+use common::spellabil::{ContDuration, NumberComputer};
 use common::token_attribute::TokenAttribute;
+
 impl Game {
+    pub fn compute_number(&self, id: CardId, computer: &NumberComputer) -> i64 {
+        match computer {
+            NumberComputer::NumPermanents(constraints) => {
+                let mut count = 0;
+                for perm in &self.battlefield {
+                    if constraints
+                        .into_iter()
+                        .all(|x| self.passes_constraint(x, id, (*perm).into()))
+                    {
+                        count += 1;
+                    }
+                }
+                count
+            }
+        }
+    }
     pub async fn resolve(&mut self, id: CardId) {
         let effects;
-        let controller;
         let types;
         if let Some(ent) = self.cards.get(id) {
             effects = ent.effect.clone();
-            controller = ent.get_controller();
             types = ent.types.clone();
         } else {
             return;
         }
         for effect in effects {
-            self.resolve_clause(effect, id, controller).await;
+            self.resolve_clause(effect, id).await;
         }
         let dest = if types.is_instant() || types.is_sorcery() {
             Zone::Graveyard
@@ -26,9 +41,9 @@ impl Game {
     }
     pub fn calculate_affected(
         &self,
-        id:CardId,
+        id: CardId,
         affected: &Affected,
-        constraints: &Vec<ClauseConstraint>,
+        constraints: &Vec<PermConstraint>,
     ) -> Vec<TargetId> {
         let affected: Vec<TargetId> = match affected {
             Affected::Controller => if let Some(card)=self.cards.get(id){
@@ -63,15 +78,15 @@ impl Game {
             .filter(|&target| {
                 constraints
                     .into_iter()
-                    .all(|constraint| self.passes_constraint(constraint, target))
+                    .all(|constraint| self.passes_constraint(constraint, id, target))
             })
             .collect();
     }
     #[async_recursion]
     #[must_use]
-    async fn resolve_clause(&mut self, clause: Clause, id: CardId, controller: PlayerId) {
+    async fn resolve_clause(&mut self, clause: Clause, id: CardId) {
         let affected: Vec<TargetId> =
-            self.calculate_affected(id,&clause.affected, &clause.constraints);
+            self.calculate_affected(id, &clause.affected, &clause.constraints);
         if affected.len() == 0 {
             return;
         }
@@ -116,7 +131,7 @@ impl Game {
             ClauseEffect::Compound(clauses) => {
                 for mut subclause in clauses {
                     subclause.affected = clause.affected; //Propagate target to subclause
-                    self.resolve_clause(subclause, id, controller).await;
+                    self.resolve_clause(subclause, id).await;
                 }
             }
             ClauseEffect::SetTargetController(clause) => {
@@ -125,9 +140,17 @@ impl Game {
                     if let TargetId::Card(affected)=aff
                     && let Some(controller)=self.get_controller(affected){
                         clause.affected=Affected::ManuallySet(Some(controller.into()));
-                        self.resolve_clause(clause, id ,controller).await;
+                        self.resolve_clause(clause, id).await;
                     }
                 }
+            }
+            ClauseEffect::MultClause(inner_effect, computer) => {
+                let multiplier = self.compute_number(id, &computer);
+                for _ in 0..multiplier{
+                    let new_clause=Clause { effect: *inner_effect.clone(), affected: clause.affected.clone(), constraints: clause.constraints.clone() };
+                    self.resolve_clause(new_clause, id).await;
+                }
+                
             }
             ClauseEffect::CreateToken(attributes) => {
                 for aff in affected {

@@ -14,22 +14,22 @@ use nom::multi::many1;
 use texttoken::{tokens, Tokens};
 
 pub fn parse_affected<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Affected> {
-    fn parse_target<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Affected>{
-        let (tokens,_)=tag(tokens!("target"))(tokens)?;
-        Ok((tokens,Affected::Target(None)))
+    fn parse_target<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Affected> {
+        let (tokens, _) = tag(tokens!("target"))(tokens)?;
+        Ok((tokens, Affected::Target(None)))
     }
-    fn parse_cardname<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Affected>{
-        let (tokens,_)=tag(tokens!("cardname"))(tokens)?;
-        Ok((tokens,Affected::Cardname))
+    fn parse_cardname<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Affected> {
+        let (tokens, _) = tag(tokens!("cardname"))(tokens)?;
+        Ok((tokens, Affected::Cardname))
     }
-    alt((parse_target,parse_cardname))(tokens)
+    alt((parse_target, parse_cardname))(tokens)
 }
 pub fn parse_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
     let (tokens, clause) = context(
         "parsing body line",
         alt((
-            parse_action_target_line,
-            parse_target_action_line,
+            parse_action_affected_line,
+            parse_affected_action_line,
             parse_you_clause,
         )),
     )(tokens)?;
@@ -69,7 +69,7 @@ fn parse_its_controller_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause
         },
     ))
 }
-fn parse_target_action_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
+fn parse_affected_action_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
     let (tokens, affected) = parse_affected(tokens)?;
     let (tokens, constraints) = many0(parse_constraint)(tokens)?;
     let (tokens, effect) = context("parsing target line", parse_action_second_effect)(tokens)?;
@@ -81,12 +81,12 @@ fn parse_target_action_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
     Ok((tokens, clause))
 }
 
-fn parse_action_target_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
+fn parse_action_affected_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
     let (tokens, effect) = context("parsing target line", parse_action_first_effect)(tokens)?;
     let (tokens, affected) = parse_affected(tokens)?;
     let (tokens, constraints) = many0(parse_constraint)(tokens)?;
     let (tokens, addendum) = opt(parse_its_controller_clause)(tokens)?;
-    let mut clause = Clause { 
+    let mut clause = Clause {
         effect,
         affected: affected,
         constraints,

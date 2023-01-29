@@ -1,6 +1,6 @@
 use crate::card_entities::PT;
 use crate::cardtypes::Type;
-use crate::entities::{PlayerId, CardId};
+use crate::entities::{CardId, PlayerId};
 use crate::mana::ManaCostSymbol;
 use crate::{entities::TargetId, token_attribute::TokenAttribute};
 use schemars::JsonSchema;
@@ -21,20 +21,23 @@ pub enum KeywordAbility {
     Reach, //Implemented
 }
 
-#[derive(Clone, Serialize, JsonSchema, Debug)]
-pub enum ClauseConstraint {
+#[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]
+pub enum PermConstraint {
     IsTapped,
     CardType(Type),
-    Or(Vec<ClauseConstraint>),
+    Or(Vec<PermConstraint>),
+    IsCardname,
+    YouControl,
+    HasKeyword(KeywordAbility)
 }
 
-#[derive(Clone, Serialize, JsonSchema, Debug)]
+#[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]
 pub struct Clause {
     pub effect: ClauseEffect,
     pub affected: Affected,
-    pub constraints: Vec<ClauseConstraint>,
+    pub constraints: Vec<PermConstraint>,
 }
-#[derive(Clone, Serialize, JsonSchema, Debug, Copy)]
+#[derive(Clone, Serialize, JsonSchema, Debug, Copy, PartialEq)]
 pub enum Affected {
     Controller,
     Cardname,
@@ -46,20 +49,25 @@ pub enum ContDuration {
     Perpetual,
     EndOfTurn,
 }
-#[derive(Clone, Serialize, JsonSchema, Debug)]
+#[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]
 pub struct Continuous {
     pub effect: ContEffect,
     pub affected: Affected,
-    pub constraints: Vec<ClauseConstraint>,
+    pub constraints: Vec<PermConstraint>,
     pub duration: ContDuration,
     pub source: CardId,
 }
 
-#[derive(Clone, Serialize, JsonSchema, Debug)]
+#[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]
 pub enum ContEffect {
     ModifyPT(PT),
 }
-#[derive(Clone, Serialize, JsonSchema, Debug)]
+
+#[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]
+pub enum NumberComputer {
+    NumPermanents(Vec<PermConstraint>),
+}
+#[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]
 pub enum ClauseEffect {
     Destroy,
     ExileBattlefield,
@@ -70,4 +78,5 @@ pub enum ClauseEffect {
     SetTargetController(Box<Clause>),
     CreateToken(Vec<TokenAttribute>),
     UntilEndTurn(ContEffect),
+    MultClause(Box<ClauseEffect>, NumberComputer),
 }

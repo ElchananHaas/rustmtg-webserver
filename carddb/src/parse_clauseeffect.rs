@@ -1,23 +1,37 @@
 use common::{
     card_entities::PT,
-    spellabil::{ClauseEffect, ContEffect},
+    spellabil::{ClauseEffect, ContEffect, NumberComputer},
 };
 
-use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::combinator::opt;
+use nom::{branch::alt, multi::many1};
 
 use texttoken::{tokens, Tokens};
 
-use crate::{carddb::Res, token_builder::parse_token_attributes, util::parse_number};
+use crate::{
+    carddb::Res, parse_constraint::parse_constraint, token_builder::parse_token_attributes,
+    util::parse_number,
+};
 
 pub fn parse_action_second_effect<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseEffect> {
-    alt((
+    let (tokens, effect) = alt((
         parse_gain_life,
         parse_draw_a_card,
         parse_create_token,
         parse_until_end_turn,
-    ))(tokens)
+    ))(tokens)?;
+    let for_clause = parse_for_clause(tokens);
+    if let Ok((tokens, computer)) = for_clause {
+        Ok((tokens, ClauseEffect::MultClause(Box::new(effect), computer)))
+    } else {
+        Ok((tokens, effect))
+    }
+}
+fn parse_for_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, NumberComputer> {
+    let (tokens, _) = tag(tokens!["for", "each"])(tokens)?;
+    let (tokens, constraints) = many1(parse_constraint)(tokens)?;
+    Ok((tokens, NumberComputer::NumPermanents(constraints)))
 }
 fn parse_gain_life<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseEffect> {
     let (tokens, _) = tag(tokens!["gain"])(tokens)?;

@@ -2,7 +2,11 @@ use std::{borrow::Cow, str::FromStr};
 
 use common::cardtypes::Subtype;
 use common::spellabil::KeywordAbility;
-use nom::{bytes::complete::{is_not, take}, multi::many0, IResult};
+use nom::{
+    bytes::complete::{is_not, take},
+    multi::many0,
+    IResult,
+};
 
 //Lowercase the word and trim trailing s.
 //Don't trim trailing s for subtypes and keywords

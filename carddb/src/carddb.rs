@@ -1,17 +1,22 @@
 use crate::parse_clause::parse_clause;
+use crate::parse_constraint::parse_constraint;
 use crate::parse_non_body::parse_cost_line;
 use crate::parse_non_body::parse_pt;
 use crate::parse_non_body::parse_type_line;
 use crate::spawn_error::SpawnError;
 use crate::tokenize::tokenize;
 use common::ability::Ability;
+use common::ability::AbilityTrigger;
 use common::ability::ActivatedAbility;
+use common::ability::TriggeredAbility;
+use common::ability::ZoneMoveTrigger;
 use common::card_entities::CardEnt;
 use common::cost::Cost;
 use common::entities::PlayerId;
 use common::mana::ManaCostSymbol;
 use common::spellabil::Clause;
 use common::spellabil::KeywordAbility;
+use common::zones::Zone;
 use log::debug;
 use log::info;
 use nom::branch::alt;
@@ -241,7 +246,7 @@ fn parse_mana_symbol_inner<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Vec<ManaCo
         res = vec![
             ManaCostSymbol::Generic;
             num.try_into()
-                .map_err(|x| nom_error(tokens, "not a positive integer"))?
+                .map_err(|_| nom_error(tokens, "not a positive integer"))?
         ];
     }
     Ok((tokens, res))
@@ -273,8 +278,36 @@ fn parse_activated_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Ability> {
         }),
     ))
 }
+
+fn parse_etb_trigger<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, AbilityTrigger> {
+    let (tokens, constraint) = many1(parse_constraint)(tokens)?;
+    let (tokens, _) = tag(tokens!["enter", "the", "battlefield"])(tokens)?;
+    Ok((
+        tokens,
+        AbilityTrigger::ZoneMove(ZoneMoveTrigger {
+            origin: None,
+            dest: Some(Zone::Battlefield),
+            constraint,
+        }),
+    ))
+}
+
+fn parse_ability_trigger<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, AbilityTrigger> {
+    alt((parse_etb_trigger,))(tokens)
+}
+fn parse_triggered_ability<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Ability> {
+    let (tokens, _) = tag(tokens!["when"])(tokens)?;
+    let (tokens, trigger) = parse_ability_trigger(tokens)?;
+    let (tokens, _) = tag(tokens![","])(tokens)?;
+    let (tokens, effect) = many1(parse_clause)(tokens)?;
+    Ok((
+        tokens,
+        Ability::Triggered(TriggeredAbility { trigger, effect }),
+    ))
+}
+
 fn parse_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Ability> {
-    alt((parse_activated_abil,))(tokens)
+    alt((parse_activated_abil, parse_triggered_ability))(tokens)
 }
 fn parse_clause_or_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ParsedLine> {
     let attempt_clause = parse_clause(tokens);

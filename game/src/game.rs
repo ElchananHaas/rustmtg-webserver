@@ -1,5 +1,5 @@
 use crate::actions::{Action, ActionFilter, CastingOption, StackActionOption};
-use crate::carddb::CardDB;
+use carddb::carddb::CardDB;
 use crate::client_message::{Ask, AskSelectN};
 use crate::ent_maps::EntMap;
 use crate::errors::MTGError;
@@ -7,7 +7,7 @@ use crate::event::{DiscardCause, Event, EventResult, TagEvent};
 use crate::player::{Player, PlayerCon};
 use anyhow::{bail, Result};
 use async_recursion::async_recursion;
-use common::ability::Ability;
+use common::ability::{Ability, TriggeredAbility, ContTriggeredAbility};
 use common::card_entities::{CardEnt, EntType};
 use common::cardtypes::{Subtype, Supertype, Type};
 use common::cost::{Cost, PaidCost};
@@ -15,8 +15,9 @@ use common::entities::{CardId, ManaId, PlayerId, TargetId, MIN_CARDID};
 use common::hashset_obj::HashSetObj;
 use common::mana::{Color, Mana, ManaCostSymbol};
 use common::spellabil::{
-    Affected, Clause, ClauseConstraint, ClauseEffect, Continuous, KeywordAbility,
+    Affected, Clause, ClauseEffect, Continuous, KeywordAbility, PermConstraint,
 };
+use common::zones::Zone;
 use enum_map::EnumMap;
 use futures::future;
 use rand::seq::SliceRandom;
@@ -61,6 +62,7 @@ pub struct Game {
     pub active_player: PlayerId,
     pub cont_effects: Vec<Continuous>, //Holds continuous effects
     //that are perpertual or time-driven
+    pub triggered_abilities: Vec<ContTriggeredAbility>,
     #[serde(skip)]
     db: &'static CardDB,
     #[serde(skip)]
@@ -372,31 +374,64 @@ impl Game {
         }
         order
     }
-    pub fn passes_constraint(&self, constraint: &ClauseConstraint, id: TargetId) -> bool {
+    pub fn passes_constraint(
+        &self,
+        constraint: &PermConstraint,
+        source: CardId,
+        target: TargetId,
+    ) -> bool {
         match constraint{
-            ClauseConstraint::IsTapped => {
-                if let TargetId::Card(card)=id
+            PermConstraint::IsTapped => {
+                if let TargetId::Card(card)=target
                 && let Some(ent)=self.cards.get(card){
                     ent.tapped
                 }else{
                     false
                 }
             },
-            ClauseConstraint::CardType(t) => {
-                if let TargetId::Card(card)=id
+            PermConstraint::CardType(t) => {
+                if let TargetId::Card(card)=target
                 && let Some(ent)=self.cards.get(card){
                     ent.types.get(t)
                 }else{
                     false
                 }                        
             },
-            ClauseConstraint::Or(constraints) => {
+            PermConstraint::Or(constraints) => {
                 for c in constraints{
-                    if self.passes_constraint(c, id){
+                    if self.passes_constraint(c, source,target){
                         return true
                     }
                 }
                 false
+            }
+            PermConstraint::IsCardname =>{
+                if target==TargetId::Card(source){
+                    return true;
+                }
+                if let Some(card)=self.cards.get(source)
+                && card.source_of_ability.map(|x|x.into())==Some(target){
+                    return true;
+                }else{
+                    return false;
+                }
+            },
+            PermConstraint::YouControl=>{
+                if let Some(source)=self.cards.get(source)
+                && let TargetId::Card(c)=target
+                && let Some(target)=self.cards.get(c){
+                    source.get_controller()==target.get_controller()
+                }else{
+                    false
+                }
+            }
+            PermConstraint::HasKeyword(keyword)=>{
+                if let TargetId::Card(card)=target
+                && let Some(card)=self.cards.get(card){
+                    card.has_keyword(*keyword)
+                }else{
+                    false
+                }
             }
         }
     }
@@ -413,7 +448,7 @@ impl Game {
                             if clause
                                 .constraints
                                 .iter()
-                                .all(|x| self.passes_constraint(x, card.into()))
+                                .all(|x| self.passes_constraint(x, castopt.stack_ent, card.into()))
                             {
                                 valid.push(TargetId::Card(card))
                             }
@@ -619,7 +654,7 @@ impl Game {
         abil.controller = Some(player);
         abil.costs = activated.costs.clone();
         abil.effect = activated.effect.clone();
-        abil.source_of_ability=Some(source);
+        abil.source_of_ability = Some(source);
         let (new_id, _new_ent) = self.cards.insert(abil);
         Some((new_id, keyword))
     }
@@ -677,14 +712,4 @@ pub enum Subphase {
     EndCombat,
     EndStep,
     Cleanup,
-}
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, JsonSchema)]
-pub enum Zone {
-    Hand,
-    Library,
-    Exile,
-    Battlefield,
-    Graveyard,
-    Command,
-    Stack,
 }

@@ -5,4 +5,5 @@ members=[
     "common",
     "texttoken",
     "carddb",
+    "game",
 ]

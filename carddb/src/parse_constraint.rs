@@ -1,31 +1,56 @@
+use std::str::FromStr;
+
 use common::{
     cardtypes::{ParseType, Type},
-    spellabil::ClauseConstraint,
+    spellabil::{PermConstraint, KeywordAbility},
 };
-use nom::branch::alt;
+use nom::{branch::alt, bytes::complete::take};
 use nom::bytes::complete::tag;
 use nom::combinator::opt;
 use texttoken::{tokens, Tokens};
 
-use crate::carddb::Res;
+use crate::carddb::{Res, nom_error};
 
-pub fn parse_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseConstraint> {
-    let type_constraint = nom::combinator::map(Type::parse, |t| ClauseConstraint::CardType(t));
-    let (tokens, constraint) = alt((parse_tapped_constraint, type_constraint))(tokens)?;
+pub fn parse_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConstraint> {
+    let type_constraint = nom::combinator::map(Type::parse, |t| PermConstraint::CardType(t));
+    let (tokens, constraint) = alt((
+        parse_tapped_constraint,
+        type_constraint,
+        parse_cardname_constraint,
+        parse_you_control_constraint,
+        parse_keyword_constraint
+    ))(tokens)?;
     let (tokens, or_part) = opt(parse_or_constraint)(tokens)?;
     if let Some(or_part) = or_part {
-        Ok((tokens, ClauseConstraint::Or(vec![constraint, or_part])))
+        Ok((tokens, PermConstraint::Or(vec![constraint, or_part])))
     } else {
         Ok((tokens, constraint))
     }
 }
-fn parse_or_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseConstraint> {
+fn parse_or_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConstraint> {
     let (tokens, _) = tag(tokens!["or"])(tokens)?;
     let (tokens, constraint) = parse_constraint(tokens)?;
     Ok((tokens, constraint))
 }
 
-fn parse_tapped_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseConstraint> {
+fn parse_tapped_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConstraint> {
     let (tokens, _) = tag(tokens!["tapped"])(tokens)?;
-    Ok((tokens, ClauseConstraint::IsTapped))
+    Ok((tokens, PermConstraint::IsTapped))
+}
+
+fn parse_cardname_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConstraint> {
+    let (tokens, _) = tag(tokens!["cardname"])(tokens)?;
+    Ok((tokens, PermConstraint::IsTapped))
+}
+
+fn parse_you_control_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConstraint> {
+    let (tokens, _) = tag(tokens!["you", "control"])(tokens)?;
+    Ok((tokens, PermConstraint::YouControl))
+}
+
+fn parse_keyword_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConstraint> {
+    let (tokens, _) = tag(tokens!["with"])(tokens)?;
+    let (tokens,first)=take(1usize)(tokens)?;
+    let abil=KeywordAbility::from_str(&*first[0]).map_err(|_|nom_error(tokens,"failed to parse keyword ability"))?;
+    Ok((tokens, PermConstraint::HasKeyword(abil)))
 }

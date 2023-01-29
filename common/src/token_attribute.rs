@@ -8,7 +8,7 @@ use crate::{
     mana::Color,
 };
 
-#[derive(Clone, Serialize, JsonSchema, Debug)]
+#[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]
 pub enum TokenAttribute {
     PT(PT),
     HasColor(Color),

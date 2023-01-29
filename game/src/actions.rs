@@ -5,9 +5,8 @@ use common::{
     cost::Cost,
     entities::{CardId, PlayerId},
     spellabil::KeywordAbility,
+    zones::Zone,
 };
-
-use crate::game::Zone;
 
 //Checks to see if casting option's rules were followed
 //The zone it can be cast from will implicitly be enabled by

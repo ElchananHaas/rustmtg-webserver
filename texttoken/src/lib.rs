@@ -1,7 +1,7 @@
-use std::{ops::RangeFrom, borrow::Cow};
+use std::{borrow::Cow, ops::RangeFrom};
 
 use nom::{Compare, CompareResult, FindToken};
-pub type Token=Cow<'static,str>;
+pub type Token = Cow<'static, str>;
 #[macro_export]
 macro_rules! tokens{
     ($($e:expr),*) => {

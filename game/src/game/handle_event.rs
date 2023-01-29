@@ -3,12 +3,11 @@ mod phase_event;
 
 use crate::game::*;
 use async_recursion::async_recursion;
-use common::card_entities::EntType;
+use common::{card_entities::EntType, ability::AbilityTrigger};
 
 impl Game {
     /*
-    This function should
-    be  refactored to have stages, starting with prevention effects and
+    This function should have stages, starting with prevention effects and
     going on to replacments, then finally
     the event can be handled
     */
@@ -25,6 +24,10 @@ impl Game {
             let event: TagEvent = match events.pop() {
                 Some(x) => x,
                 None => {
+                    for result in &results{
+                        self.fire_triggers(result).await;
+                    }
+
                     return results;
                 }
             };
@@ -179,7 +182,47 @@ impl Game {
                 Event::MoveZones { ent, origin, dest } => {
                     self.movezones(&mut results, &mut events, ent, origin, dest)
                         .await;
+                },
+                Event::TriggeredAbil { event: _, trigger } => {
+                    let effect=trigger.effect;
+                    let source=trigger.source;
+                    let mut new_card=CardEnt::default();
+                    new_card.effect=effect;
+                    new_card.source_of_ability=Some(source);
+                    if let Some(pl)=self.get_controller(source){
+                        new_card.owner=pl;
+                        new_card.controller=Some(pl);
+                    }
+                    new_card.printed=Some(Box::new(new_card.clone()));
+                    let (id,_card)=self.cards.insert(new_card);
+                    self.stack.push(id);
                 }
+            }    
+        }
+    }
+    fn trigger_matches(&self,trigger:&AbilityTrigger,source_id:CardId,event:&EventResult)->bool{
+        match trigger{
+            AbilityTrigger::ZoneMove(trig)=>{
+                if let EventResult::MoveZones { oldent:_, newent, source, dest }=event
+                && let &Some(newent)=newent{ 
+                    trig.origin.map_or(true, |x|Some(x)==*source) &&
+                    trig.dest.map_or(true, |x| x==*dest) && 
+                    trig.constraint.iter().all(|c|
+                        self.passes_constraint(c, source_id,newent.into() ))
+                }else{
+                    false
+                }
+            }
+        }
+    }
+    async fn fire_triggers(&mut self,event:&EventResult) {
+        for triggered_abil in self.triggered_abilities.clone(){
+            let trigger=&triggered_abil.trigger;
+            if self.trigger_matches(trigger, triggered_abil.source, event){
+                self.handle_event(Event::TriggeredAbil{
+                    event:Box::new(event.clone()),
+                    trigger:triggered_abil
+                }).await;
             }
         }
     }
@@ -267,6 +310,13 @@ impl Game {
                         Zone::Battlefield => {
                             self.battlefield.insert(newent);
                             newcard.etb_this_cycle=true;
+                            for abil in &newcard.abilities{
+                                if let Ability::Triggered(abil)=abil{
+                                    self.triggered_abilities.push(
+                                        ContTriggeredAbility { source: newent, trigger: abil.trigger.clone(), effect: abil.effect.clone() }
+                                    );
+                                }
+                            }
                         }
                         Zone::Hand => {
                             owner.hand.insert(newent);
@@ -303,6 +353,10 @@ impl Game {
                     player.life -= amount;
                 }
             }
+        }
+        if let Some(card)=self.cards.get(source)
+        && card.has_keyword(KeywordAbility::Lifelink){
+            self.handle_event(Event::GainLife { player: card.get_controller(), amount }).await;
         }
     }
     fn add_event(events: &mut Vec<TagEvent>, event: Event) {

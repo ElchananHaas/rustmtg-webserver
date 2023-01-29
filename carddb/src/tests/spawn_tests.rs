@@ -3,7 +3,7 @@ use std::num::NonZeroU64;
 
 use common::{card_entities::CardEnt, entities::PlayerId};
 use once_cell::sync::OnceCell;
-
+use test_log;
 static CARDDB: OnceCell<CardDB> = OnceCell::new();
 
 #[test_log::test]
@@ -45,6 +45,10 @@ fn angelic_ascension_test() {
 #[test_log::test]
 fn anointed_chorister_test() {
     test_card(db(), "Anointed Chorister");
+}
+#[test_log::test]
+fn aven_gagglemaster_test() {
+    test_card(db(), "Aven Gagglemaster");
 }
 #[allow(dead_code)]
 fn test_card(db: &CardDB, card_name: &'static str) -> CardEnt {

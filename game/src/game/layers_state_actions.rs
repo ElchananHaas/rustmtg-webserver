@@ -100,11 +100,7 @@ impl Game {
             match effect.effect {
                 ContEffect::ModifyPT(pt) => {
                     for affected in self
-                        .calculate_affected(
-                            effect.source,
-                            &effect.affected,
-                            &effect.constraints,
-                        )
+                        .calculate_affected(effect.source, &effect.affected, &effect.constraints)
                         .clone()
                     {
                         if let TargetId::Card(id)=affected

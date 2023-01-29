@@ -49,7 +49,7 @@ pub struct CardEnt {
     pub pt: Option<PT>,
     pub controller: Option<PlayerId>,
     pub types: Types,
-    pub source_of_ability: Option<CardId>,//Holds the entity 
+    pub source_of_ability: Option<CardId>, //Holds the entity
     //that produced this triggered ability if appropriate
     pub supertypes: Supertypes,
     pub subtypes: Subtypes,
@@ -76,7 +76,7 @@ impl CardEnt {
         }
     }
 }
-#[derive(Clone, Debug, Serialize, JsonSchema)]
+#[derive(Clone, Debug, Serialize, JsonSchema, PartialEq)]
 pub struct PT {
     pub power: i64,
     pub toughness: i64,

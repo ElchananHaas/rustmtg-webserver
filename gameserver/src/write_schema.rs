@@ -1,4 +1,4 @@
-use crate::client_message::ClientMessage;
+use game::client_message::ClientMessage;
 use schemars::schema_for;
 
 pub fn write_types() {
