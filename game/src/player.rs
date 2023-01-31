@@ -15,7 +15,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use warp::filters::ws::Message;
 use warp::ws::WebSocket;
-#[derive(Clone, JsonSchema)]
+#[derive(Clone, JsonSchema, Debug)]
 pub struct Player {
     pub name: String,
     pub life: i64,
@@ -167,7 +167,13 @@ pub enum Socket {
 pub struct PlayerCon {
     socket: Arc<Mutex<Socket>>,
 }
-
+impl Debug for PlayerCon {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PlayerCon")
+            .field("socket", &"socket")
+            .finish()
+    }
+}
 impl PlayerCon {
     pub fn new(socket: WebSocket) -> Self {
         PlayerCon {

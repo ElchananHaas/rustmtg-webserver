@@ -28,9 +28,10 @@ pub enum AbilityTrigger {
 pub struct TriggeredAbility {
     pub trigger: AbilityTrigger,
     pub effect: Vec<Clause>,
+    pub keyword: Option<KeywordAbility>
 }
 #[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]
-pub struct ContTriggeredAbility{
+pub struct ContTriggeredAbility {
     pub source: CardId,
     pub trigger: AbilityTrigger,
     pub effect: Vec<Clause>,
@@ -64,7 +65,8 @@ impl Ability {
         match self {
             //TODO! add in other types of keywords as I add them
             Self::Activated(abil) => abil.keyword,
-            _ => None,
+            Self::Static(abil) => abil.keyword,
+            Self::Triggered(abil) => abil.keyword
         }
     }
 }

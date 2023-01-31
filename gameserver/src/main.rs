@@ -2,12 +2,12 @@
 #![feature(const_option)]
 #![feature(let_chains)]
 #![deny(unused_must_use)]
-use game::game::build_game::GameBuilder;
-use game::player::PlayerCon;
 use crate::write_schema::write_types;
 use anyhow::Result;
 use carddb::carddb;
 use common::entities::PlayerId;
+use game::game::build_game::GameBuilder;
+use game::player::PlayerCon;
 use once_cell::sync::OnceCell;
 use std::mem;
 use std::sync::{Arc, Mutex};
@@ -82,8 +82,8 @@ mod tests {
 
     use anyhow::bail;
 
-    use game::game::Game;
     use common::{entities::CardId, zones::Zone};
+    use game::game::Game;
 
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;

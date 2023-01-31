@@ -1,6 +1,6 @@
 use crate::card_entities::PT;
 use crate::cardtypes::Type;
-use crate::entities::{CardId, PlayerId};
+use crate::entities::{CardId};
 use crate::mana::ManaCostSymbol;
 use crate::{entities::TargetId, token_attribute::TokenAttribute};
 use schemars::JsonSchema;
@@ -28,7 +28,7 @@ pub enum PermConstraint {
     Or(Vec<PermConstraint>),
     IsCardname,
     YouControl,
-    HasKeyword(KeywordAbility)
+    HasKeyword(KeywordAbility),
 }
 
 #[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]

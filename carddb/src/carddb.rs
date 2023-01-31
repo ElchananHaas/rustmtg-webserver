@@ -302,7 +302,7 @@ fn parse_triggered_ability<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Ability> {
     let (tokens, effect) = many1(parse_clause)(tokens)?;
     Ok((
         tokens,
-        Ability::Triggered(TriggeredAbility { trigger, effect }),
+        Ability::Triggered(TriggeredAbility { trigger, effect, keyword:None }),
     ))
 }
 

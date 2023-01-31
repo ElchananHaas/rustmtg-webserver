@@ -3,7 +3,7 @@ mod phase_event;
 
 use crate::game::*;
 use async_recursion::async_recursion;
-use common::{card_entities::EntType, ability::AbilityTrigger};
+use common::{ability::AbilityTrigger, card_entities::EntType};
 
 impl Game {
     /*
@@ -24,7 +24,7 @@ impl Game {
             let event: TagEvent = match events.pop() {
                 Some(x) => x,
                 None => {
-                    for result in &results{
+                    for result in &results {
                         self.fire_triggers(result).await;
                     }
 
@@ -193,14 +193,20 @@ impl Game {
                         new_card.owner=pl;
                         new_card.controller=Some(pl);
                     }
+                    new_card.ent_type=EntType::TriggeredAbility;
                     new_card.printed=Some(Box::new(new_card.clone()));
                     let (id,_card)=self.cards.insert(new_card);
                     self.stack.push(id);
                 }
-            }    
+            }
         }
     }
-    fn trigger_matches(&self,trigger:&AbilityTrigger,source_id:CardId,event:&EventResult)->bool{
+    fn trigger_matches(
+        &self,
+        trigger: &AbilityTrigger,
+        source_id: CardId,
+        event: &EventResult,
+    ) -> bool {
         match trigger{
             AbilityTrigger::ZoneMove(trig)=>{
                 if let EventResult::MoveZones { oldent:_, newent, source, dest }=event
@@ -215,14 +221,15 @@ impl Game {
             }
         }
     }
-    async fn fire_triggers(&mut self,event:&EventResult) {
-        for triggered_abil in self.triggered_abilities.clone(){
-            let trigger=&triggered_abil.trigger;
-            if self.trigger_matches(trigger, triggered_abil.source, event){
-                self.handle_event(Event::TriggeredAbil{
-                    event:Box::new(event.clone()),
-                    trigger:triggered_abil
-                }).await;
+    async fn fire_triggers(&mut self, event: &EventResult) {
+        for triggered_abil in self.triggered_abilities.clone() {
+            let trigger = &triggered_abil.trigger;
+            if self.trigger_matches(trigger, triggered_abil.source, event) {
+                self.handle_event(Event::TriggeredAbil {
+                    event: Box::new(event.clone()),
+                    trigger: triggered_abil,
+                })
+                .await;
             }
         }
     }

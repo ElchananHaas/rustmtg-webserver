@@ -1,19 +1,6 @@
 use common::spellabil::ContEffect;
 
 use crate::game::*;
-pub enum Layer {
-    OneA, //Copiable effects (Copy, As ETB,)
-    OneB, //Face down spells,permanents
-    Two,
-    Three,
-    Four,
-    Five,
-    Six,
-    SevenA, //CDA PT
-    SevenB, //set PT to value
-    SevenC, //Modify PT
-    SevenD, //switch PT
-}
 
 impl Game {
     //Computes layers, state based actions and places abilities on the stack

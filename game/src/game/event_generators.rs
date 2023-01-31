@@ -17,16 +17,31 @@ impl Game {
     pub async fn draw(&mut self, player: PlayerId) -> Vec<CardId> {
         let res = self.handle_event(Event::Draw { player }).await;
         let mut drawn = Vec::new();
-        for event in res {
+        for event in &res {
             if let EventResult::Draw(cardid) = event {
-                if let Some(card) = self.cards.get(cardid) {
+                if let Some(card) = self.cards.get(*cardid) {
                     if card.owner == player {
                         drawn.push(cardid);
                     }
                 }
             }
         }
-        drawn
+        let mut inhand=Vec::new();
+        for event in &res {
+            if let EventResult::MoveZones {
+                oldent,
+                newent,
+                source:_,
+                dest:_,
+            } = event
+            {
+                if drawn.contains(&oldent)
+                && let Some(newent)=newent{
+                    inhand.push(*newent);
+                }
+            }
+        }
+        inhand
     }
 
     //discard cards, returns discarded cards

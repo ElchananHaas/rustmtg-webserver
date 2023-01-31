@@ -8,13 +8,13 @@ impl Game {
         match computer {
             NumberComputer::NumPermanents(constraints) => {
                 let mut count = 0;
-                for perm in &self.battlefield {
-                    if constraints
-                        .into_iter()
-                        .all(|x| self.passes_constraint(x, id, (*perm).into()))
-                    {
-                        count += 1;
+                'outer: for perm in &self.battlefield {
+                    for x in constraints{
+                        if !self.passes_constraint(x, id, (*perm).into()){
+                            continue 'outer;
+                        }
                     }
+                    count += 1;
                 }
                 count
             }
@@ -146,11 +146,14 @@ impl Game {
             }
             ClauseEffect::MultClause(inner_effect, computer) => {
                 let multiplier = self.compute_number(id, &computer);
-                for _ in 0..multiplier{
-                    let new_clause=Clause { effect: *inner_effect.clone(), affected: clause.affected.clone(), constraints: clause.constraints.clone() };
+                for _ in 0..multiplier {
+                    let new_clause = Clause {
+                        effect: *inner_effect.clone(),
+                        affected: clause.affected.clone(),
+                        constraints: clause.constraints.clone(),
+                    };
                     self.resolve_clause(new_clause, id).await;
                 }
-                
             }
             ClauseEffect::CreateToken(attributes) => {
                 for aff in affected {

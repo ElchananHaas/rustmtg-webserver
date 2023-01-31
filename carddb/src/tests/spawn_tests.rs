@@ -50,6 +50,10 @@ fn anointed_chorister_test() {
 fn aven_gagglemaster_test() {
     test_card(db(), "Aven Gagglemaster");
 }
+#[test_log::test]
+fn baneslayer_angel_test() {
+    test_card(db(), "Baneslayer Angel");
+}
 #[allow(dead_code)]
 fn test_card(db: &CardDB, card_name: &'static str) -> CardEnt {
     let spawned = db.try_spawn_card(card_name, PlayerId::from(NonZeroU64::new(1).unwrap()));

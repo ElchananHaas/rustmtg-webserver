@@ -10,7 +10,6 @@ use nom::bytes::complete::tag;
 use nom::combinator::opt;
 use nom::error::context;
 use nom::multi::many0;
-use nom::multi::many1;
 use texttoken::{tokens, Tokens};
 
 pub fn parse_affected<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Affected> {

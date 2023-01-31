@@ -2,14 +2,14 @@ use std::str::FromStr;
 
 use common::{
     cardtypes::{ParseType, Type},
-    spellabil::{PermConstraint, KeywordAbility},
+    spellabil::{KeywordAbility, PermConstraint},
 };
-use nom::{branch::alt, bytes::complete::take};
 use nom::bytes::complete::tag;
 use nom::combinator::opt;
+use nom::{branch::alt, bytes::complete::take};
 use texttoken::{tokens, Tokens};
 
-use crate::carddb::{Res, nom_error};
+use crate::carddb::{nom_error, Res};
 
 pub fn parse_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConstraint> {
     let type_constraint = nom::combinator::map(Type::parse, |t| PermConstraint::CardType(t));
@@ -18,7 +18,7 @@ pub fn parse_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConstrain
         type_constraint,
         parse_cardname_constraint,
         parse_you_control_constraint,
-        parse_keyword_constraint
+        parse_keyword_constraint,
     ))(tokens)?;
     let (tokens, or_part) = opt(parse_or_constraint)(tokens)?;
     if let Some(or_part) = or_part {
@@ -40,7 +40,7 @@ fn parse_tapped_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConstr
 
 fn parse_cardname_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConstraint> {
     let (tokens, _) = tag(tokens!["cardname"])(tokens)?;
-    Ok((tokens, PermConstraint::IsTapped))
+    Ok((tokens, PermConstraint::IsCardname))
 }
 
 fn parse_you_control_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConstraint> {
@@ -50,7 +50,8 @@ fn parse_you_control_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermC
 
 fn parse_keyword_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConstraint> {
     let (tokens, _) = tag(tokens!["with"])(tokens)?;
-    let (tokens,first)=take(1usize)(tokens)?;
-    let abil=KeywordAbility::from_str(&*first[0]).map_err(|_|nom_error(tokens,"failed to parse keyword ability"))?;
+    let (tokens, first) = take(1usize)(tokens)?;
+    let abil = KeywordAbility::from_str(&*first[0])
+        .map_err(|_| nom_error(tokens, "failed to parse keyword ability"))?;
     Ok((tokens, PermConstraint::HasKeyword(abil)))
 }

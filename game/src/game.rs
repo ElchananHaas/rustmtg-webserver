@@ -1,5 +1,4 @@
 use crate::actions::{Action, ActionFilter, CastingOption, StackActionOption};
-use carddb::carddb::CardDB;
 use crate::client_message::{Ask, AskSelectN};
 use crate::ent_maps::EntMap;
 use crate::errors::MTGError;
@@ -7,9 +6,10 @@ use crate::event::{DiscardCause, Event, EventResult, TagEvent};
 use crate::player::{Player, PlayerCon};
 use anyhow::{bail, Result};
 use async_recursion::async_recursion;
-use common::ability::{Ability, TriggeredAbility, ContTriggeredAbility};
+use carddb::carddb::CardDB;
+use common::ability::{Ability, ContTriggeredAbility};
 use common::card_entities::{CardEnt, EntType};
-use common::cardtypes::{Subtype, Supertype, Type};
+use common::cardtypes::{Subtype};
 use common::cost::{Cost, PaidCost};
 use common::entities::{CardId, ManaId, PlayerId, TargetId, MIN_CARDID};
 use common::hashset_obj::HashSetObj;
@@ -64,6 +64,7 @@ pub struct Game {
     //that are perpertual or time-driven
     pub triggered_abilities: Vec<ContTriggeredAbility>,
     #[serde(skip)]
+    #[allow(dead_code)]
     db: &'static CardDB,
     #[serde(skip)]
     backup: Option<Box<Game>>,
@@ -444,7 +445,7 @@ impl Game {
                 if let Affected::Target(_target) = clause.affected {
                     if let Some(pl) = self.players.get(castopt.player) {
                         let mut valid = Vec::new();
-                        for &(card, zone) in &cards_and_zones {
+                        for &(card, _zone) in &cards_and_zones {
                             if clause
                                 .constraints
                                 .iter()
@@ -474,7 +475,7 @@ impl Game {
             .get_mut(castopt.stack_ent)
             .expect("card was checked to exist");
         for (i, clause) in card.effect.iter_mut().enumerate() {
-            if let Affected::Target(target) = clause.affected {
+            if let Affected::Target(_target) = clause.affected {
                 let target = selected_targets[i];
                 if let Some(t) = target {
                     clause.affected = Affected::Target(Some(t));

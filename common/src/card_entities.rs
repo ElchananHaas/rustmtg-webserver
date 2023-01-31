@@ -1,7 +1,6 @@
 use crate::{
-    cardtypes::{Subtype, Subtypes, Supertypes, Type, Types},
+    cardtypes::{Subtypes, Supertypes, Types},
     entities::MIN_CARDID,
-    hashset_obj::HashSetObj,
     spellabil::Clause,
 };
 use derivative::*;
