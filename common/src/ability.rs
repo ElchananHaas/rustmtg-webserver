@@ -28,7 +28,16 @@ pub enum AbilityTrigger {
 pub struct TriggeredAbility {
     pub trigger: AbilityTrigger,
     pub effect: Vec<Clause>,
-    pub keyword: Option<KeywordAbility>
+    pub keyword: Option<KeywordAbility>,
+}
+#[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]
+pub enum PreventionEffect {
+    Protection(Vec<PermConstraint>),
+}
+#[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]
+pub struct ContPrevention {
+    pub source: CardId,
+    pub effect: PreventionEffect,
 }
 #[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]
 pub struct ContTriggeredAbility {
@@ -41,6 +50,7 @@ pub struct ContTriggeredAbility {
 pub enum StaticAbilityEffect {
     HasColor(Color),
     GivenByKeyword,
+    Protection(PermConstraint),
 }
 #[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]
 pub struct StaticAbility {
@@ -66,7 +76,7 @@ impl Ability {
             //TODO! add in other types of keywords as I add them
             Self::Activated(abil) => abil.keyword,
             Self::Static(abil) => abil.keyword,
-            Self::Triggered(abil) => abil.keyword
+            Self::Triggered(abil) => abil.keyword,
         }
     }
 }

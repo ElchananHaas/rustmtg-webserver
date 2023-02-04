@@ -7,9 +7,9 @@ use crate::player::{Player, PlayerCon};
 use anyhow::{bail, Result};
 use async_recursion::async_recursion;
 use carddb::carddb::CardDB;
-use common::ability::{Ability, ContTriggeredAbility};
+use common::ability::{Ability, ContPrevention, ContTriggeredAbility, PreventionEffect};
 use common::card_entities::{CardEnt, EntType};
-use common::cardtypes::{Subtype};
+use common::cardtypes::Subtype;
 use common::cost::{Cost, PaidCost};
 use common::entities::{CardId, ManaId, PlayerId, TargetId, MIN_CARDID};
 use common::hashset_obj::HashSetObj;
@@ -63,6 +63,7 @@ pub struct Game {
     pub cont_effects: Vec<Continuous>, //Holds continuous effects
     //that are perpertual or time-driven
     pub triggered_abilities: Vec<ContTriggeredAbility>,
+    pub prevention_effects: Vec<ContPrevention>,
     #[serde(skip)]
     #[allow(dead_code)]
     db: &'static CardDB,
@@ -382,6 +383,14 @@ impl Game {
         target: TargetId,
     ) -> bool {
         match constraint{
+            PermConstraint::Subtype(subtype)=>{
+                if let TargetId::Card(card)=target
+                && let Some(ent)=self.cards.get(card){
+                    ent.subtypes.contains(subtype)
+                }else{
+                    false
+                }
+            }
             PermConstraint::IsTapped => {
                 if let TargetId::Card(card)=target
                 && let Some(ent)=self.cards.get(card){
@@ -437,54 +446,66 @@ impl Game {
         }
     }
     async fn select_targets(&mut self, castopt: &StackActionOption) -> Result<(), MTGError> {
-        let cards_and_zones = self.cards_and_zones();
-        let mut selected_targets = Vec::new();
+        let mut selected = Vec::new();
         if let Some(card) = self.cards.get(castopt.stack_ent) {
-            for clause in &card.effect {
-                let mut selected_target = None;
-                if let Affected::Target(_target) = clause.affected {
-                    if let Some(pl) = self.players.get(castopt.player) {
-                        let mut valid = Vec::new();
-                        for &(card, _zone) in &cards_and_zones {
-                            if clause
-                                .constraints
-                                .iter()
-                                .all(|x| self.passes_constraint(x, castopt.stack_ent, card.into()))
-                            {
-                                valid.push(TargetId::Card(card))
-                            }
-                        }
-                        let ask = AskSelectN {
-                            ents: valid.clone(),
-                            min: 1,
-                            max: 1,
-                        };
-                        let choice = pl.ask_user_selectn(&Ask::Target(ask.clone()), &ask).await;
-                        selected_target = Some(valid[choice[0]]);
-                    } else {
-                        return Err(MTGError::PlayerDoesntExist);
-                    }
-                }
-                selected_targets.push(selected_target);
-            }
-        } else {
-            return Err(MTGError::CastNonExistentSpell);
-        }
-        let card = self
-            .cards
-            .get_mut(castopt.stack_ent)
-            .expect("card was checked to exist");
-        for (i, clause) in card.effect.iter_mut().enumerate() {
-            if let Affected::Target(_target) = clause.affected {
-                let target = selected_targets[i];
-                if let Some(t) = target {
-                    clause.affected = Affected::Target(Some(t));
-                } else {
-                    return Err(MTGError::TargetNotChosen);
-                }
+            for x in &card.effect {
+                selected.push(self.select_target(castopt, x).await?);
             }
         }
         Ok(())
+    }
+    async fn select_target(
+        &self,
+        castopt: &StackActionOption,
+        clause: &Clause,
+    ) -> Result<Clause, MTGError> {
+        let mut clause = clause.clone();
+        if let Affected::Target(_target) = clause.affected {
+            if let Some(pl) = self.players.get(castopt.player) {
+                let mut valid = Vec::new();
+                'outer: for &(card, _zone) in &self.cards_and_zones() {
+                    if !clause.constraints.iter().all(|x| {
+                        self.passes_constraint(
+                            x,
+                            self.stack_ent_source(castopt.stack_ent),
+                            card.into(),
+                        )
+                    }) {
+                        continue 'outer;
+                    }
+                    for prevention in &self.prevention_effects {
+                        if let PreventionEffect::Protection(c) = &prevention.effect {
+                            if c.iter().any(|x| {
+                                self.passes_constraint(
+                                    x,
+                                    self.stack_ent_source(castopt.stack_ent),
+                                    card.into(),
+                                )
+                            }) {
+                                continue 'outer;
+                            }
+                        }
+                    }
+                    valid.push(TargetId::Card(card));
+                }
+                if valid.len() == 0 {
+                    return Err(MTGError::NoValidTargets);
+                }
+                let ask = AskSelectN {
+                    ents: valid.clone(),
+                    min: 1,
+                    max: 1,
+                };
+                let choice = pl.ask_user_selectn(&Ask::Target(ask.clone()), &ask).await;
+                let target = valid[choice[0]];
+                clause.affected = Affected::Target(Some(target));
+                return Ok(clause);
+            } else {
+                return Err(MTGError::PlayerDoesntExist);
+            }
+        } else {
+            return Ok(clause);
+        }
     }
     //The spell has already been moved to the stack for this operation
     async fn handle_cast(&mut self, castopt: StackActionOption) -> Result<(), MTGError> {
@@ -683,6 +704,14 @@ impl Game {
         //Assume the builder has already added a vector of abilities
         if let Some(ent) = self.cards.get_mut(ent) {
             ent.abilities.push(ability);
+        }
+    }
+    //If this is an ability, return its originator. If not, return itself
+    pub fn stack_ent_source(&self, id: CardId) -> CardId {
+        if let Some(card) = self.cards.get(id) {
+            card.source_of_ability.unwrap_or(id)
+        } else {
+            id
         }
     }
 }

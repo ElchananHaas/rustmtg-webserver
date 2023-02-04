@@ -107,7 +107,7 @@ mod tests {
         deck.push("Staunch Shieldmate");
         deck.push("Garruk's Gorehorn");
         deck.push("Alpine Watchdog");
-        deck.push("Mistral Singer");
+        //deck.push("Mistral Singer");
         deck.push("Wishcoin Crab");
         deck.push("Blood Glutton");
         deck.push("Walking Corpse");

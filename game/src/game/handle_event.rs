@@ -3,7 +3,10 @@ mod phase_event;
 
 use crate::game::*;
 use async_recursion::async_recursion;
-use common::{ability::AbilityTrigger, card_entities::EntType};
+use common::{
+    ability::{AbilityTrigger, PreventionEffect},
+    card_entities::EntType,
+};
 
 impl Game {
     /*
@@ -31,6 +34,10 @@ impl Game {
                     return results;
                 }
             };
+            //Handle prevention effects
+            if self.allow_event(&event.event) {
+                continue;
+            }
             //Handle prevention, replacement, triggered abilties here
             //By the time the loop reaches here, the game is ready to
             //Execute the event. No more prevention/replacement effects
@@ -198,6 +205,32 @@ impl Game {
                     let (id,_card)=self.cards.insert(new_card);
                     self.stack.push(id);
                 }
+            }
+        }
+    }
+    //Returns true if the event is allowed (not prevented)
+    fn allow_event(&self, event: &Event) -> bool {
+        self.prevention_effects
+            .iter()
+            .all(|effect| self.prevention_allow_event(&effect, &event))
+    }
+    fn prevention_allow_event(&self, effect: &ContPrevention, event: &Event) -> bool {
+        match &effect.effect {
+            PreventionEffect::Protection(filter) => {
+                if let Event::Damage {
+                    amount: _,
+                    target,
+                    source,
+                    reason: _,
+                } = event
+                {
+                    for constraint in filter {
+                        if self.passes_constraint(constraint, *source, *target) {
+                            return false;
+                        }
+                    }
+                }
+                return true;
             }
         }
     }

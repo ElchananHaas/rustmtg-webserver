@@ -12,7 +12,7 @@ pub mod errors;
 pub mod event;
 pub mod game;
 pub mod player;
-#[allow(dead_code)]//Used in unit tests
+#[allow(dead_code)] //Used in unit tests
 static CARDDB: OnceCell<CardDB> = OnceCell::new();
 pub fn add(left: usize, right: usize) -> usize {
     left + right

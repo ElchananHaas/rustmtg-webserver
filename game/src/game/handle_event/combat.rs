@@ -5,7 +5,7 @@ use crate::{
     event::{DamageReason, Event, EventResult, TagEvent},
     game::{Game, Subphase},
 };
-use common::spellabil::KeywordAbility;
+use common::{ability::PreventionEffect, spellabil::KeywordAbility};
 use common::{
     entities::{CardId, PlayerId, TargetId},
     hashset_obj::HashSetObj,
@@ -296,12 +296,24 @@ impl Game {
     fn attackers_legal(&self, attacks: &HashMap<CardId, TargetId>) -> bool {
         true
     }
+    //checks if the blocker can legally block the attacker
     fn can_block(&self, attacker: CardId, blocker: CardId) -> bool {
         if self.has_keyword(attacker, KeywordAbility::Flying) {
             if !(self.has_keyword(blocker, KeywordAbility::Flying)
                 || self.has_keyword(blocker, KeywordAbility::Reach))
             {
                 return false;
+            }
+        }
+        for effect in &self.prevention_effects {
+            if let PreventionEffect::Protection(filter) = &effect.effect {
+                //The blocker is blocking the attacker, so it is first in passes constraint
+                if filter
+                    .iter()
+                    .any(|x| self.passes_constraint(x, blocker, attacker.into()))
+                {
+                    return false;
+                }
             }
         }
         true

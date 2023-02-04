@@ -9,8 +9,8 @@ impl Game {
             NumberComputer::NumPermanents(constraints) => {
                 let mut count = 0;
                 'outer: for perm in &self.battlefield {
-                    for x in constraints{
-                        if !self.passes_constraint(x, id, (*perm).into()){
+                    for x in constraints {
+                        if !self.passes_constraint(x, id, (*perm).into()) {
                             continue 'outer;
                         }
                     }

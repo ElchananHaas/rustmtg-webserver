@@ -14,6 +14,16 @@ macro_rules! tokens{
         )
     };
 }
+#[macro_export]
+macro_rules! owned_tokens{
+    ($($e:expr),*) => {
+        vec![
+            $(
+                Cow::<'static, str>::Borrowed($e),
+            )*
+        ]
+    };
+}
 #[derive(Debug)]
 #[repr(transparent)]
 pub struct Tokens {

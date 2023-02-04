@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use common::{
-    cardtypes::{ParseType, Type},
+    cardtypes::{ParseType, Subtype, Type},
     spellabil::{KeywordAbility, PermConstraint},
 };
 use nom::bytes::complete::tag;
@@ -19,6 +19,7 @@ pub fn parse_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConstrain
         parse_cardname_constraint,
         parse_you_control_constraint,
         parse_keyword_constraint,
+        parse_subtype_constraint,
     ))(tokens)?;
     let (tokens, or_part) = opt(parse_or_constraint)(tokens)?;
     if let Some(or_part) = or_part {
@@ -54,4 +55,9 @@ fn parse_keyword_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConst
     let abil = KeywordAbility::from_str(&*first[0])
         .map_err(|_| nom_error(tokens, "failed to parse keyword ability"))?;
     Ok((tokens, PermConstraint::HasKeyword(abil)))
+}
+
+fn parse_subtype_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConstraint> {
+    let (tokens, subtype) = Subtype::parse(tokens)?;
+    Ok((tokens, PermConstraint::Subtype(subtype)))
 }

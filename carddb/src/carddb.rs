@@ -8,6 +8,8 @@ use crate::tokenize::tokenize;
 use common::ability::Ability;
 use common::ability::AbilityTrigger;
 use common::ability::ActivatedAbility;
+use common::ability::StaticAbility;
+use common::ability::StaticAbilityEffect;
 use common::ability::TriggeredAbility;
 use common::ability::ZoneMoveTrigger;
 use common::card_entities::CardEnt;
@@ -16,6 +18,7 @@ use common::entities::PlayerId;
 use common::mana::ManaCostSymbol;
 use common::spellabil::Clause;
 use common::spellabil::KeywordAbility;
+use common::spellabil::PermConstraint;
 use common::zones::Zone;
 use log::debug;
 use log::info;
@@ -41,6 +44,7 @@ use std::fmt;
 use std::fs;
 use std::path::PathBuf;
 use std::str::FromStr;
+use texttoken::owned_tokens;
 use texttoken::{tokens, Token, Tokens};
 pub type Res<T, U> = IResult<T, U, VerboseError<T>>;
 
@@ -200,20 +204,39 @@ fn parse_body<'a>(
     }
 }
 fn parse_keyword_abilities<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Vec<KeywordAbility>> {
-    many0(parse_keyword_ability)(tokens)
+    many0(parse_keyword_abil_and_comma)(tokens)
 }
+fn parse_keyword_abil_and_comma<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, KeywordAbility> {
+    let (tokens, keyword) = parse_keyword_ability(tokens)?;
+    let (tokens, _) = opt(tag(tokens![","]))(tokens)?;
+    let (tokens, _) = opt(tag(tokens!["\n"]))(tokens)?;
+    Ok((tokens, keyword))
+}
+//This parses all keywords that are just a phrase with no additional info
 fn parse_keyword_ability<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, KeywordAbility> {
-    if tokens.len() > 0 {
-        if let Ok(abil) = KeywordAbility::from_str(&tokens[0]) {
-            let (rest, _) = nom::combinator::opt(tag(tokens!["\n".to_string()]))(&tokens[1..])?;
-            Ok((rest, abil))
-        } else {
-            Err(nom_error(tokens, "failed to parse keyword ability"))
+    let basics = vec![
+        (
+            owned_tokens!["first", "strike"],
+            KeywordAbility::FirstStrike,
+        ),
+        (
+            owned_tokens!["double", "strike"],
+            KeywordAbility::DoubleStrike,
+        ),
+        (owned_tokens!["flying"], KeywordAbility::Flying),
+        (owned_tokens!["lifelink"], KeywordAbility::Lifelink),
+        (owned_tokens!["vigilance"], KeywordAbility::Vigilance),
+        (owned_tokens!["trample"], KeywordAbility::Trample),
+        (owned_tokens!["prowess"], KeywordAbility::Prowess),
+    ];
+    for (text, abil) in basics {
+        if let Ok((tokens, _)) = (tag::<_, _, VerboseError<_>>(Tokens::from_array(&text)))(tokens) {
+            return Ok((tokens, abil));
         }
-    } else {
-        Err(nom_error(tokens, "Empty string passed to keyword ability"))
     }
+    Err(nom_error(tokens, "failed to parse basic keyword"))
 }
+
 fn prune_comment<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ()> {
     let (tokens, _) = opt(delimited(
         tag(tokens!["("]),
@@ -302,12 +325,36 @@ fn parse_triggered_ability<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Ability> {
     let (tokens, effect) = many1(parse_clause)(tokens)?;
     Ok((
         tokens,
-        Ability::Triggered(TriggeredAbility { trigger, effect, keyword:None }),
+        Ability::Triggered(TriggeredAbility {
+            trigger,
+            effect,
+            keyword: None,
+        }),
     ))
 }
-
+fn parse_protection_from_x_and_from_y<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, StaticAbility> {
+    let (tokens, _) = tag(tokens!["protection", "from"])(tokens)?;
+    let (tokens, type1) = parse_constraint(tokens)?;
+    let (tokens, _) = tag(tokens!["and", "from"])(tokens)?;
+    let (tokens, type2) = parse_constraint(tokens)?;
+    Ok((
+        tokens,
+        StaticAbility {
+            keyword: Some(KeywordAbility::Protection),
+            effect: StaticAbilityEffect::Protection(PermConstraint::Or(vec![type1, type2])),
+        },
+    ))
+}
+fn parse_static_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Ability> {
+    let (tokens, abil) = alt((parse_protection_from_x_and_from_y,))(tokens)?;
+    Ok((tokens, Ability::Static(abil)))
+}
 fn parse_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Ability> {
-    alt((parse_activated_abil, parse_triggered_ability))(tokens)
+    alt((
+        parse_activated_abil,
+        parse_triggered_ability,
+        parse_static_abil,
+    ))(tokens)
 }
 fn parse_clause_or_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ParsedLine> {
     let attempt_clause = parse_clause(tokens);

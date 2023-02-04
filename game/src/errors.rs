@@ -5,4 +5,5 @@ pub enum MTGError {
     CastNonExistentSpell,
     PlayerDoesntExist,
     TargetNotChosen,
+    NoValidTargets,
 }

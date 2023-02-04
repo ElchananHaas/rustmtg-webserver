@@ -26,13 +26,13 @@ impl Game {
                 }
             }
         }
-        let mut inhand=Vec::new();
+        let mut inhand = Vec::new();
         for event in &res {
             if let EventResult::MoveZones {
                 oldent,
                 newent,
-                source:_,
-                dest:_,
+                source: _,
+                dest: _,
             } = event
             {
                 if drawn.contains(&oldent)

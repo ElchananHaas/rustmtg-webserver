@@ -1,6 +1,6 @@
 use crate::card_entities::PT;
-use crate::cardtypes::Type;
-use crate::entities::{CardId};
+use crate::cardtypes::{Subtype, Type};
+use crate::entities::CardId;
 use crate::mana::ManaCostSymbol;
 use crate::{entities::TargetId, token_attribute::TokenAttribute};
 use schemars::JsonSchema;
@@ -16,9 +16,10 @@ pub enum KeywordAbility {
     DoubleStrike, //Implemented
     Flying,       //Implemented
     Prowess,
-    Lifelink,
+    Lifelink, //Implemented
     Trample,
-    Reach, //Implemented
+    Reach,      //Implemented
+    Protection, //Partially implemented, add it can't be enchanted.
 }
 
 #[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]
@@ -29,6 +30,7 @@ pub enum PermConstraint {
     IsCardname,
     YouControl,
     HasKeyword(KeywordAbility),
+    Subtype(Subtype),
 }
 
 #[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]

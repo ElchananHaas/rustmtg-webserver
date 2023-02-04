@@ -33,9 +33,9 @@ async fn test_gagglemaster() -> Result<()> {
         assert!(drawn.len() == 1);
         gagglemasters.push(drawn[0]);
     }
-    //println!("{:?}",game.cards.get(gagglemasters[0]));
+    println!("{:#?}", game.cards.get(gagglemasters[0]));
     for i in 0..3 {
-        let start_life=game.players.get(pl).unwrap().life;
+        let start_life = game.players.get(pl).unwrap().life;
         let _moved = game
             .handle_event(Event::MoveZones {
                 ent: gagglemasters[i],
@@ -45,8 +45,8 @@ async fn test_gagglemaster() -> Result<()> {
             .await;
         game.resolve(game.stack[0]).await;
         game.stack.pop();
-        let end_life=game.players.get(pl).unwrap().life;
-        assert_eq!(start_life+2*(i as i64 +1),end_life);
+        let end_life = game.players.get(pl).unwrap().life;
+        assert_eq!(start_life + 2 * (i as i64 + 1), end_life);
     }
     assert!(game.players.get(pl).unwrap().hand.len() == 0);
     assert!(game.battlefield.len() == 3);

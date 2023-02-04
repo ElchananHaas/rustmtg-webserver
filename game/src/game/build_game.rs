@@ -74,6 +74,7 @@ impl GameBuilder {
             rng: rand::rngs::StdRng::from_entropy(),
             cont_effects: Vec::new(),
             triggered_abilities: Vec::new(),
+            prevention_effects: Vec::new(),
         })
     }
 }
