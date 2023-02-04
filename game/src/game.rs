@@ -7,7 +7,7 @@ use crate::player::{Player, PlayerCon};
 use anyhow::{bail, Result};
 use async_recursion::async_recursion;
 use carddb::carddb::CardDB;
-use common::ability::{Ability, ContPrevention, ContTriggeredAbility, PreventionEffect};
+use common::ability::{Ability, ContPrevention, ContTriggeredAbility, PreventionEffect, StaticAbilityEffect};
 use common::card_entities::{CardEnt, EntType};
 use common::cardtypes::Subtype;
 use common::cost::{Cost, PaidCost};
@@ -463,30 +463,10 @@ impl Game {
         if let Affected::Target(_target) = clause.affected {
             if let Some(pl) = self.players.get(castopt.player) {
                 let mut valid = Vec::new();
-                'outer: for &(card, _zone) in &self.cards_and_zones() {
-                    if !clause.constraints.iter().all(|x| {
-                        self.passes_constraint(
-                            x,
-                            self.stack_ent_source(castopt.stack_ent),
-                            card.into(),
-                        )
-                    }) {
-                        continue 'outer;
-                    }
-                    for prevention in &self.prevention_effects {
-                        if let PreventionEffect::Protection(c) = &prevention.effect {
-                            if c.iter().any(|x| {
-                                self.passes_constraint(
-                                    x,
-                                    self.stack_ent_source(castopt.stack_ent),
-                                    card.into(),
-                                )
-                            }) {
-                                continue 'outer;
-                            }
-                        }
-                    }
-                    valid.push(TargetId::Card(card));
+                for &(card, zone) in &self.cards_and_zones() {
+                    if self.is_valid_target(&clause,castopt.stack_ent, card.into(), zone){
+                        valid.push(TargetId::Card(card));
+                    }    
                 }
                 if valid.len() == 0 {
                     return Err(MTGError::NoValidTargets);
@@ -506,6 +486,22 @@ impl Game {
         } else {
             return Ok(clause);
         }
+    }
+    pub fn is_valid_target(&self,clause:&Clause,source:CardId,target:TargetId,_zone:Zone)->bool{
+        let source=self.stack_ent_source(source);
+        if !clause.constraints.iter().all(|x| {
+            self.passes_constraint(
+                x,
+                source,
+                target,
+            )
+        }) {
+            return false;
+        }
+        if self.has_protection_from(source, target){
+            return false;
+        }
+        true
     }
     //The spell has already been moved to the stack for this operation
     async fn handle_cast(&mut self, castopt: StackActionOption) -> Result<(), MTGError> {
@@ -713,6 +709,23 @@ impl Game {
         } else {
             id
         }
+    }
+    //Returns true if the event is allowed (not prevented)
+    //Source is the attaker/equipper/source of damage
+    fn has_protection_from(&self,source:CardId,target:TargetId)->bool{
+        if let TargetId::Card(target)=target
+        && let Some(card)=self.cards.get(target){ 
+            for abil in &card.abilities{
+                if let Ability::Static(abil)=abil
+                && let StaticAbilityEffect::Protection(prot)=&abil.effect
+                //This is reversed, because perotection checks the charichteristics of the damager, not the target
+                && self.passes_constraint(prot, target, source.into())
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }
 

@@ -305,16 +305,8 @@ impl Game {
                 return false;
             }
         }
-        for effect in &self.prevention_effects {
-            if let PreventionEffect::Protection(filter) = &effect.effect {
-                //The blocker is blocking the attacker, so it is first in passes constraint
-                if filter
-                    .iter()
-                    .any(|x| self.passes_constraint(x, blocker, attacker.into()))
-                {
-                    return false;
-                }
-            }
+        if self.has_protection_from(attacker, blocker.into()){
+            return false;
         }
         true
     }

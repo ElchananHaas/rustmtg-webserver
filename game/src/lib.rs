@@ -21,4 +21,8 @@ pub fn add(left: usize, right: usize) -> usize {
 #[cfg(test)]
 mod tests {
     mod aven_gagglemaster_tests;
+    mod common_test;
+    mod swift_response_test;
+    mod lethal_damage;
+    mod baneslayer_angel_tests;
 }

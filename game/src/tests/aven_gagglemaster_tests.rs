@@ -1,26 +1,10 @@
 use crate::{
     event::Event,
-    game::{build_game::GameBuilder, Game},
-    player::PlayerCon,
+    tests::common_test::test_state,
 };
 use anyhow::Result;
-use carddb::carddb::CardDB;
 use common::zones::Zone;
 use test_log;
-fn get_db() -> &'static CardDB {
-    crate::CARDDB.get_or_init(|| CardDB::new())
-}
-fn test_state() -> Result<Game> {
-    let db: &CardDB = get_db();
-    let mut gamebuild = GameBuilder::new();
-    let mut deck = Vec::new();
-    for _ in 1..(60 - deck.len()) {
-        deck.push("Aven Gagglemaster");
-    }
-    gamebuild.add_player("p1", &db, &deck, PlayerCon::new_test())?;
-    gamebuild.add_player("p2", &db, &deck, PlayerCon::new_test())?;
-    gamebuild.build(&db)
-}
 
 #[test_log::test(tokio::test)]
 async fn test_gagglemaster() -> Result<()> {

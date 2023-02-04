@@ -4,7 +4,7 @@ mod phase_event;
 use crate::game::*;
 use async_recursion::async_recursion;
 use common::{
-    ability::{AbilityTrigger, PreventionEffect},
+    ability::{AbilityTrigger, PreventionEffect, StaticAbilityEffect},
     card_entities::EntType,
 };
 
@@ -35,7 +35,7 @@ impl Game {
                 }
             };
             //Handle prevention effects
-            if self.allow_event(&event.event) {
+            if !self.allow_event(&event.event) {
                 continue;
             }
             //Handle prevention, replacement, triggered abilties here
@@ -208,32 +208,15 @@ impl Game {
             }
         }
     }
-    //Returns true if the event is allowed (not prevented)
+    
     fn allow_event(&self, event: &Event) -> bool {
-        self.prevention_effects
-            .iter()
-            .all(|effect| self.prevention_allow_event(&effect, &event))
-    }
-    fn prevention_allow_event(&self, effect: &ContPrevention, event: &Event) -> bool {
-        match &effect.effect {
-            PreventionEffect::Protection(filter) => {
-                if let Event::Damage {
-                    amount: _,
-                    target,
-                    source,
-                    reason: _,
-                } = event
-                {
-                    for constraint in filter {
-                        if self.passes_constraint(constraint, *source, *target) {
-                            return false;
-                        }
-                    }
-                }
-                return true;
-            }
+        if let Event::Damage { amount, target, source, reason }=event 
+        && self.has_protection_from(*source, *target){
+            return false;
         }
+        true
     }
+
     fn trigger_matches(
         &self,
         trigger: &AbilityTrigger,
@@ -296,7 +279,8 @@ impl Game {
                         owner.library.remove(i);
                         true
                     }
-                    None => false,
+                    None => {
+                        false},
                 },
                 Zone::Graveyard => match owner.graveyard.iter().position(|x| *x == ent) {
                     Some(i) => {

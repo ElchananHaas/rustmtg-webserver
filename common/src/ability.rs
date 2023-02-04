@@ -32,7 +32,6 @@ pub struct TriggeredAbility {
 }
 #[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]
 pub enum PreventionEffect {
-    Protection(Vec<PermConstraint>),
 }
 #[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]
 pub struct ContPrevention {
