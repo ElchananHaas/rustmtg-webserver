@@ -31,6 +31,7 @@ impl GameBuilder {
             mana_pool: HashSetObj::new(),
             graveyard: Vec::new(),
             library: Vec::new(),
+            counters: Vec::new(),
             max_handsize: 7,
             player_con: player_con,
         };

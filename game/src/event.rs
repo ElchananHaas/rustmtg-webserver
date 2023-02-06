@@ -4,8 +4,9 @@ use crate::game::{Phase, Subphase};
 use common::{
     ability::ContTriggeredAbility,
     entities::{CardId, PlayerId, TargetId},
-    zones::Zone,
+    zones::Zone, counters::Counter,
 };
+use env_logger::Target;
 
 //An event tagged with replacement effects already applied to it
 #[derive(Clone, Debug)]
@@ -104,6 +105,11 @@ pub enum Event {
         event: Box<EventResult>,
         trigger: ContTriggeredAbility,
     },
+    PutCounter{
+        affected:TargetId,
+        counter:Counter,
+        quantity:i64
+    }
 }
 #[derive(Clone, Debug, PartialEq)]
 pub enum EventResult {

@@ -134,6 +134,11 @@ impl Game {
                     self.resolve_clause(subclause, id).await;
                 }
             }
+            ClauseEffect::PutCounter(coutner_type,quantity) =>{
+                for aff in affected {
+                    self.handle_event(Event::PutCounter { affected:aff,counter: coutner_type, quantity }).await;
+                }
+            }
             ClauseEffect::SetTargetController(clause) => {
                 for aff in affected {
                     let mut clause = *clause.clone();

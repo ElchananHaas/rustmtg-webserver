@@ -8,5 +8,6 @@ pub mod mana;
 pub mod spellabil;
 pub mod token_attribute;
 pub mod zones;
+pub mod counters;
 #[cfg(test)]
 mod tests {}

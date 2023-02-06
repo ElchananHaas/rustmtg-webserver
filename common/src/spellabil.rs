@@ -1,5 +1,6 @@
 use crate::card_entities::PT;
 use crate::cardtypes::{Subtype, Type};
+use crate::counters::Counter;
 use crate::entities::CardId;
 use crate::mana::ManaCostSymbol;
 use crate::{entities::TargetId, token_attribute::TokenAttribute};
@@ -81,4 +82,5 @@ pub enum ClauseEffect {
     CreateToken(Vec<TokenAttribute>),
     UntilEndTurn(ContEffect),
     MultClause(Box<ClauseEffect>, NumberComputer),
+    PutCounter(Counter,i64)
 }

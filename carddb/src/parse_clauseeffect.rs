@@ -1,6 +1,6 @@
 use common::{
     card_entities::PT,
-    spellabil::{ClauseEffect, ContEffect, NumberComputer},
+    spellabil::{ClauseEffect, ContEffect, NumberComputer}, counters::Counter,
 };
 
 use nom::bytes::complete::tag;
@@ -40,8 +40,7 @@ fn parse_gain_life<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseEffect> {
     Ok((tokens, ClauseEffect::GainLife(value)))
 }
 fn parse_create_token<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseEffect> {
-    let (tokens, _) = (tag(tokens!["create"]))(tokens)?;
-    let (tokens, _) = tag(tokens!["a"])(tokens)?;
+    let (tokens, _) = tag(tokens!["create","a"])(tokens)?;
     let (tokens, attr1) = parse_token_attributes(tokens)?;
     let (tokens, _) = tag(tokens!["token"])(tokens)?;
     let (tokens, _) = opt(tag(tokens!["with"]))(tokens)?;
@@ -59,14 +58,28 @@ fn parse_exile_effect<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseEffect> {
     Ok((tokens, ClauseEffect::ExileBattlefield))
 }
 pub fn parse_action_first_effect<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseEffect> {
-    alt((parse_destroy_effect, parse_exile_effect))(tokens)
+    alt((parse_destroy_effect, parse_exile_effect,parse_put_counter))(tokens)
 }
 
 fn parse_draw_a_card<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseEffect> {
     let (tokens, _) = tag(tokens!("draw", "a", "card"))(tokens)?;
     Ok((tokens, ClauseEffect::DrawCard))
 }
-
+fn parse_p1p1_coutner<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Counter> {
+    let (tokens, _) = tag(tokens!("+1", "/", "+1"))(tokens)?;
+    Ok((tokens,Counter::Plus1Plus1))
+}
+fn parse_counter<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Counter> {
+    alt((parse_p1p1_coutner,))(tokens)
+}
+fn parse_put_counter<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseEffect> {
+    let (tokens, _) = tag(tokens!["put"])(tokens)?;
+    let (tokens, num) = parse_number(tokens)?;
+    let (tokens,counter)=parse_counter(tokens)?;
+    let (tokens, _) = tag(tokens!["counter","on"])(tokens)?;  
+    let (tokens, _) = opt(tag(tokens!["each","of"]))(tokens)?; 
+    Ok((tokens,ClauseEffect::PutCounter(counter,num)))
+}
 fn parse_until_end_turn<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseEffect> {
     let (tokens, effect) = parse_cont_effect(tokens)?;
     let (tokens, _) = tag(tokens!["until", "end", "of", "turn"])(tokens)?;

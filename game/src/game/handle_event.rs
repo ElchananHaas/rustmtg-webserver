@@ -39,10 +39,28 @@ impl Game {
                 continue;
             }
             //Handle prevention, replacement, triggered abilties here
-            //By the time the loop reaches here, the game is ready to
+            //By the time the loop reaches here, the game is ready to 
             //Execute the event. No more prevention/replacement effects
             //At this point
             match event.event {
+                Event::PutCounter { affected, counter, quantity }=>{
+                    match affected{
+                        TargetId::Card(cardid)=>{
+                            if let Some(card)=self.cards.get_mut(cardid){
+                                for _ in 0..quantity{
+                                    card.counters.push(counter);
+                                }
+                            }
+                        },
+                        TargetId::Player(playerid)=>{
+                            if let Some(pl)=self.players.get_mut(playerid){
+                                for _ in 0..quantity{
+                                    pl.counters.push(counter);
+                                }
+                            }
+                        }
+                    }
+                }
                 Event::GainLife { player, amount } =>{
                     if amount>0 && let Some(pl)=self.players.get_mut(player){
                         pl.life+=amount;
@@ -210,7 +228,7 @@ impl Game {
     }
     
     fn allow_event(&self, event: &Event) -> bool {
-        if let Event::Damage { amount, target, source, reason }=event 
+        if let Event::Damage { amount:_, target, source, reason:_ }=event 
         && self.has_protection_from(*source, *target){
             return false;
         }

@@ -1,6 +1,7 @@
 use crate::client_message::{Ask, AskPair, AskSelectN, ClientMessage};
 use crate::game::Cards;
 use anyhow::Result;
+use common::counters::Counter;
 use common::entities::{CardId, ManaId, PlayerId};
 use common::hashset_obj::HashSetObj;
 use futures::{SinkExt, StreamExt};
@@ -23,6 +24,7 @@ pub struct Player {
     pub hand: HashSetObj<CardId>,
     pub mana_pool: HashSetObj<ManaId>,
     pub graveyard: Vec<CardId>,
+    pub counters: Vec<Counter>,
     pub max_handsize: usize,
     #[serde(skip)]
     pub player_con: PlayerCon,
@@ -36,6 +38,7 @@ pub struct PlayerView<'a> {
     pub hand: Vec<CardId>,
     pub graveyard: &'a Vec<CardId>,
     pub mana_pool: &'a HashSetObj<ManaId>,
+    pub counters: &'a Vec<Counter>,
     pub max_handsize: usize,
 }
 fn view_t<'a>(
@@ -76,6 +79,7 @@ impl Player {
             graveyard: &self.graveyard,
             mana_pool: &self.mana_pool,
             max_handsize: self.max_handsize,
+            counters: &self.counters
         }
     }
 

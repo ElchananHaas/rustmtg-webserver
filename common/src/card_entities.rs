@@ -1,7 +1,7 @@
 use crate::{
     cardtypes::{Subtypes, Supertypes, Types},
     entities::MIN_CARDID,
-    spellabil::Clause,
+    spellabil::Clause, counters::Counter,
 };
 use derivative::*;
 use schemars::JsonSchema;
@@ -57,6 +57,7 @@ pub struct CardEnt {
     pub art_url: Option<String>,
     pub printed: Option<Box<CardEnt>>, //This stores the printed version of the card so
                                        //when layers are recalculated, this can be set.
+    pub counters: Vec<Counter>,
 }
 impl CardEnt {
     pub fn has_keyword(&self, keyword: KeywordAbility) -> bool {
