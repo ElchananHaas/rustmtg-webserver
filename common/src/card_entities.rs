@@ -1,7 +1,8 @@
 use crate::{
     cardtypes::{Subtypes, Supertypes, Types},
+    counters::Counter,
     entities::MIN_CARDID,
-    spellabil::Clause, counters::Counter,
+    spellabil::Clause,
 };
 use derivative::*;
 use schemars::JsonSchema;
@@ -56,7 +57,7 @@ pub struct CardEnt {
     pub costs: Vec<Cost>, //Casting costs
     pub art_url: Option<String>,
     pub printed: Option<Box<CardEnt>>, //This stores the printed version of the card so
-                                       //when layers are recalculated, this can be set.
+    //when layers are recalculated, this can be set.
     pub counters: Vec<Counter>,
 }
 impl CardEnt {

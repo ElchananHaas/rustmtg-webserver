@@ -79,7 +79,7 @@ impl Player {
             graveyard: &self.graveyard,
             mana_pool: &self.mana_pool,
             max_handsize: self.max_handsize,
-            counters: &self.counters
+            counters: &self.counters,
         }
     }
 

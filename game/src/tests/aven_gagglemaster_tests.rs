@@ -1,7 +1,4 @@
-use crate::{
-    event::Event,
-    tests::common_test::test_state,
-};
+use crate::{event::Event, tests::common_test::test_state};
 use anyhow::Result;
 use common::zones::Zone;
 use test_log;

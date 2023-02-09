@@ -1,4 +1,4 @@
-use common::{spellabil::ContEffect};
+use common::spellabil::ContEffect;
 
 use crate::game::*;
 
@@ -101,16 +101,16 @@ impl Game {
                 }
             }
         }
-        let mut preventions=Vec::new();
-        for id in self.battlefield.clone(){
-            if let Some(card)=self.cards.get(id){
-                for abil in &card.abilities{
+        let mut preventions = Vec::new();
+        for id in self.battlefield.clone() {
+            if let Some(card) = self.cards.get(id) {
+                for abil in &card.abilities {
                     if let Ability::Static(abil) = abil {
                         //TODO
                     }
                 }
             }
         }
-        self.prevention_effects=preventions;
+        self.prevention_effects = preventions;
     }
 }

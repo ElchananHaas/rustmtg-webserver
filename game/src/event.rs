@@ -3,8 +3,9 @@ use std::collections::HashMap;
 use crate::game::{Phase, Subphase};
 use common::{
     ability::ContTriggeredAbility,
+    counters::Counter,
     entities::{CardId, PlayerId, TargetId},
-    zones::Zone, counters::Counter,
+    zones::Zone,
 };
 use env_logger::Target;
 
@@ -105,11 +106,11 @@ pub enum Event {
         event: Box<EventResult>,
         trigger: ContTriggeredAbility,
     },
-    PutCounter{
-        affected:TargetId,
-        counter:Counter,
-        quantity:i64
-    }
+    PutCounter {
+        affected: TargetId,
+        counter: Counter,
+        quantity: i64,
+    },
 }
 #[derive(Clone, Debug, PartialEq)]
 pub enum EventResult {

@@ -2,11 +2,11 @@ use common::zones::Zone;
 
 use crate::tests::common_test::cards_with_name;
 use crate::tests::common_test::test_state_w_decks;
-use anyhow::Result;
 use anyhow::bail;
+use anyhow::Result;
 #[test_log::test(tokio::test)]
 async fn test_lethal_damage() -> Result<()> {
-    let deck=vec!["Staunch Shieldmate";60];
+    let deck = vec!["Staunch Shieldmate"; 60];
     let mut game = test_state_w_decks(deck)?;
     let shieldmates = cards_with_name(&mut game, "Staunch Shieldmate");
     let results = game

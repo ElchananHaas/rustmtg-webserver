@@ -39,7 +39,7 @@ impl Game {
                 continue;
             }
             //Handle prevention, replacement, triggered abilties here
-            //By the time the loop reaches here, the game is ready to 
+            //By the time the loop reaches here, the game is ready to
             //Execute the event. No more prevention/replacement effects
             //At this point
             match event.event {
@@ -226,7 +226,7 @@ impl Game {
             }
         }
     }
-    
+
     fn allow_event(&self, event: &Event) -> bool {
         if let Event::Damage { amount:_, target, source, reason:_ }=event 
         && self.has_protection_from(*source, *target){

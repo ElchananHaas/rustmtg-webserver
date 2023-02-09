@@ -305,7 +305,7 @@ impl Game {
                 return false;
             }
         }
-        if self.has_protection_from(attacker, blocker.into()){
+        if self.has_protection_from(attacker, blocker.into()) {
             return false;
         }
         true

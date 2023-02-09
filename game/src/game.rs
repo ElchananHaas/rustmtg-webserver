@@ -7,7 +7,9 @@ use crate::player::{Player, PlayerCon};
 use anyhow::{bail, Result};
 use async_recursion::async_recursion;
 use carddb::carddb::CardDB;
-use common::ability::{Ability, ContPrevention, ContTriggeredAbility, PreventionEffect, StaticAbilityEffect};
+use common::ability::{
+    Ability, ContPrevention, ContTriggeredAbility, StaticAbilityEffect,
+};
 use common::card_entities::{CardEnt, EntType};
 use common::cardtypes::Subtype;
 use common::cost::{Cost, PaidCost};
@@ -416,16 +418,19 @@ impl Game {
                 false
             }
             PermConstraint::IsCardname =>{
-                if target==TargetId::Card(source){
-                    return true;
-                }
-                if let Some(card)=self.cards.get(source)
-                && card.source_of_ability.map(|x|x.into())==Some(target){
-                    return true;
+                if let TargetId::Card(cardid)=target{
+                    return self.stack_ent_source(source)==cardid;
                 }else{
-                    return false;
+                    true
                 }
             },
+            PermConstraint::Other =>{
+                if let TargetId::Card(cardid)=target{
+                    return !(self.stack_ent_source(source)==cardid);
+                }else{
+                    true
+                }
+            }
             PermConstraint::YouControl=>{
                 if let Some(source)=self.cards.get(source)
                 && let TargetId::Card(c)=target
@@ -464,9 +469,9 @@ impl Game {
             if let Some(pl) = self.players.get(castopt.player) {
                 let mut valid = Vec::new();
                 for &(card, zone) in &self.cards_and_zones() {
-                    if self.is_valid_target(&clause,castopt.stack_ent, card.into(), zone){
+                    if self.is_valid_target(&clause, castopt.stack_ent, card.into(), zone) {
                         valid.push(TargetId::Card(card));
-                    }    
+                    }
                 }
                 if valid.len() == 0 {
                     return Err(MTGError::NoValidTargets);
@@ -487,18 +492,22 @@ impl Game {
             return Ok(clause);
         }
     }
-    pub fn is_valid_target(&self,clause:&Clause,source:CardId,target:TargetId,_zone:Zone)->bool{
-        let source=self.stack_ent_source(source);
-        if !clause.constraints.iter().all(|x| {
-            self.passes_constraint(
-                x,
-                source,
-                target,
-            )
-        }) {
+    pub fn is_valid_target(
+        &self,
+        clause: &Clause,
+        source: CardId,
+        target: TargetId,
+        _zone: Zone,
+    ) -> bool {
+        let source = self.stack_ent_source(source);
+        if !clause
+            .constraints
+            .iter()
+            .all(|x| self.passes_constraint(x, source, target))
+        {
             return false;
         }
-        if self.has_protection_from(source, target){
+        if self.has_protection_from(source, target) {
             return false;
         }
         true
@@ -712,7 +721,7 @@ impl Game {
     }
     //Returns true if the event is allowed (not prevented)
     //Source is the attaker/equipper/source of damage
-    fn has_protection_from(&self,source:CardId,target:TargetId)->bool{
+    fn has_protection_from(&self, source: CardId, target: TargetId) -> bool {
         if let TargetId::Card(target)=target
         && let Some(card)=self.cards.get(target){ 
             for abil in &card.abilities{

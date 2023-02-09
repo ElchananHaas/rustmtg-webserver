@@ -32,6 +32,7 @@ pub enum PermConstraint {
     YouControl,
     HasKeyword(KeywordAbility),
     Subtype(Subtype),
+    Other,
 }
 
 #[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]
@@ -40,12 +41,13 @@ pub struct Clause {
     pub affected: Affected,
     pub constraints: Vec<PermConstraint>,
 }
-#[derive(Clone, Serialize, JsonSchema, Debug, Copy, PartialEq)]
+#[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]
 pub enum Affected {
     Controller,
     Cardname,
     Target(Option<TargetId>),
     ManuallySet(Option<TargetId>),
+    UpToXTarget(i64, Vec<TargetId>),
 }
 #[derive(Clone, Serialize, JsonSchema, Debug, PartialEq, Eq)]
 pub enum ContDuration {
@@ -82,5 +84,5 @@ pub enum ClauseEffect {
     CreateToken(Vec<TokenAttribute>),
     UntilEndTurn(ContEffect),
     MultClause(Box<ClauseEffect>, NumberComputer),
-    PutCounter(Counter,i64)
+    PutCounter(Counter, i64),
 }

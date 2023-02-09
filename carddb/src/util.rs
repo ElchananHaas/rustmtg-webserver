@@ -1,8 +1,8 @@
-use std::borrow::Cow;
 use crate::carddb::{nom_error, Res};
-use std::str::FromStr;
 use nom::{bytes::complete::tag, error::VerboseError};
-use texttoken::{Tokens, owned_tokens};
+use std::borrow::Cow;
+use std::str::FromStr;
+use texttoken::{owned_tokens, Tokens};
 
 fn to_int(number: &str) -> Option<i64> {
     if let Ok(num) = i64::from_str(number) {

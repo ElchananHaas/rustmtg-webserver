@@ -31,8 +31,7 @@ pub struct TriggeredAbility {
     pub keyword: Option<KeywordAbility>,
 }
 #[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]
-pub enum PreventionEffect {
-}
+pub enum PreventionEffect {}
 #[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]
 pub struct ContPrevention {
     pub source: CardId,

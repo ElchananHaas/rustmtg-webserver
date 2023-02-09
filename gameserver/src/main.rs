@@ -122,6 +122,4 @@ mod tests {
         let _game = gamebuild.build(&db);
         Ok(())
     }
-    
-
 }

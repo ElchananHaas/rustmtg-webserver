@@ -51,6 +51,9 @@ impl Game {
             } else {
                 vec![]
             },
+            Affected::UpToXTarget(num, targets) => {
+                targets.clone()
+            },
             Affected::Target(target) => {
                 if let Some(x) = *target {
                     vec![x]
@@ -130,13 +133,18 @@ impl Game {
             }
             ClauseEffect::Compound(clauses) => {
                 for mut subclause in clauses {
-                    subclause.affected = clause.affected; //Propagate target to subclause
+                    subclause.affected = clause.affected.clone(); //Propagate target to subclause
                     self.resolve_clause(subclause, id).await;
                 }
             }
-            ClauseEffect::PutCounter(coutner_type,quantity) =>{
+            ClauseEffect::PutCounter(coutner_type, quantity) => {
                 for aff in affected {
-                    self.handle_event(Event::PutCounter { affected:aff,counter: coutner_type, quantity }).await;
+                    self.handle_event(Event::PutCounter {
+                        affected: aff,
+                        counter: coutner_type,
+                        quantity,
+                    })
+                    .await;
                 }
             }
             ClauseEffect::SetTargetController(clause) => {
