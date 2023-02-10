@@ -7,9 +7,7 @@ use crate::player::{Player, PlayerCon};
 use anyhow::{bail, Result};
 use async_recursion::async_recursion;
 use carddb::carddb::CardDB;
-use common::ability::{
-    Ability, ContPrevention, ContTriggeredAbility, StaticAbilityEffect,
-};
+use common::ability::{Ability, ContPrevention, ContTriggeredAbility, StaticAbilityEffect};
 use common::card_entities::{CardEnt, EntType};
 use common::cardtypes::Subtype;
 use common::cost::{Cost, PaidCost};

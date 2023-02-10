@@ -1,4 +1,4 @@
-use common::spellabil::ContEffect;
+use common::{spellabil::ContEffect, counters::Counter};
 
 use crate::game::*;
 
@@ -101,16 +101,21 @@ impl Game {
                 }
             }
         }
-        let mut preventions = Vec::new();
         for id in self.battlefield.clone() {
-            if let Some(card) = self.cards.get(id) {
-                for abil in &card.abilities {
-                    if let Ability::Static(abil) = abil {
-                        //TODO
+            if let Some(card) = self.cards.get_mut(id) {
+                if let Some(mut pt) = card.pt.as_mut() {
+                    for counter in &card.counters {
+                        match counter{
+                            Counter::Plus1Plus1 => {
+                                pt.power+=1;
+                                pt.toughness+=1;
+                            }
+                        }
                     }
                 }
             }
         }
+        let mut preventions = Vec::new();
         self.prevention_effects = preventions;
     }
 }

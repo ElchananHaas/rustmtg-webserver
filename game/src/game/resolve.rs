@@ -51,7 +51,7 @@ impl Game {
             } else {
                 vec![]
             },
-            Affected::UpToXTarget(num, targets) => {
+            Affected::UpToXTarget(_num, targets) => {
                 targets.clone()
             },
             Affected::Target(target) => {

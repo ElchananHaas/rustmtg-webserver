@@ -32,10 +32,7 @@ pub fn parse_affected<'a>(
         tokens: &'a Tokens,
     ) -> Res<&'a Tokens, (Affected, Option<PermConstraint>)> {
         let (tokens, _) = tag(tokens!("cardname"))(tokens)?;
-        Ok((
-            tokens,
-            (Affected::Cardname, None)
-        ))
+        Ok((tokens, (Affected::Cardname, None)))
     }
     fn parse_up_to_target<'a>(
         tokens: &'a Tokens,
@@ -99,9 +96,9 @@ fn parse_its_controller_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause
     ))
 }
 fn parse_affected_action_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
-    let (tokens, (affected,other)) = parse_affected(tokens)?;
+    let (tokens, (affected, other)) = parse_affected(tokens)?;
     let (tokens, mut constraints) = many0(parse_constraint)(tokens)?;
-    if let Some(other)=other{
+    if let Some(other) = other {
         constraints.push(other);
     }
     let (tokens, effect) = context("parsing target line", parse_action_second_effect)(tokens)?;
@@ -115,9 +112,9 @@ fn parse_affected_action_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause>
 
 fn parse_action_affected_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
     let (tokens, effect) = context("parsing target line", parse_action_first_effect)(tokens)?;
-    let (tokens, (affected,other)) = parse_affected(tokens)?;
+    let (tokens, (affected, other)) = parse_affected(tokens)?;
     let (tokens, mut constraints) = many0(parse_constraint)(tokens)?;
-    if let Some(other)=other{
+    if let Some(other) = other {
         constraints.push(other);
     }
     let (tokens, addendum) = opt(parse_its_controller_clause)(tokens)?;
