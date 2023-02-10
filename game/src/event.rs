@@ -7,7 +7,6 @@ use common::{
     entities::{CardId, PlayerId, TargetId},
     zones::Zone,
 };
-use env_logger::Target;
 
 //An event tagged with replacement effects already applied to it
 #[derive(Clone, Debug)]

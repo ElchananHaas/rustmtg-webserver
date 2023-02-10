@@ -80,14 +80,12 @@ async fn launch_game(sockets: Vec<WebSocket>) -> Result<()> {
 #[cfg(test)]
 mod tests {
 
-    use anyhow::bail;
 
-    use common::{entities::CardId, zones::Zone};
     use game::game::Game;
 
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
-
+    #[allow(dead_code)]
     fn test_state() -> Result<Game> {
         let db: &carddb::CardDB = CARDDB.get_or_init(|| carddb::CardDB::new());
         let mut gamebuild = GameBuilder::new();

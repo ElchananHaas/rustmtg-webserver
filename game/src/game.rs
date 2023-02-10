@@ -452,12 +452,12 @@ impl Game {
         let mut selected = Vec::new();
         if let Some(card) = self.cards.get(castopt.stack_ent) {
             for x in &card.effect {
-                selected.push(self.select_target(castopt, x).await?);
+                selected.push(self.clause_select_targets(castopt, x).await?);
             }
         }
         Ok(())
     }
-    async fn select_target(
+    async fn clause_select_targets(
         &self,
         castopt: &StackActionOption,
         clause: &Clause,

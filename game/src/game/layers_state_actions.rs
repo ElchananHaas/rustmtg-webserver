@@ -115,7 +115,7 @@ impl Game {
                 }
             }
         }
-        let mut preventions = Vec::new();
+        let preventions = Vec::new();
         self.prevention_effects = preventions;
     }
 }
