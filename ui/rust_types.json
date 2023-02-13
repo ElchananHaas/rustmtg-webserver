@@ -68,6 +68,22 @@
         }
       ]
     },
+    "AbilityTrigger": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "ZoneMove"
+          ],
+          "properties": {
+            "ZoneMove": {
+              "$ref": "#/definitions/ZoneMoveTrigger"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
     "Action": {
       "oneOf": [
         {
@@ -202,6 +218,32 @@
                   "type": "null"
                 }
               ]
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "UpToXTarget"
+          ],
+          "properties": {
+            "UpToXTarget": {
+              "type": "array",
+              "items": [
+                {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/TargetId"
+                  }
+                }
+              ],
+              "maxItems": 2,
+              "minItems": 2
             }
           },
           "additionalProperties": false
@@ -362,13 +404,11 @@
         },
         "max": {
           "type": "integer",
-          "format": "uint32",
-          "minimum": 0.0
+          "format": "int64"
         },
         "min": {
           "type": "integer",
-          "format": "uint32",
-          "minimum": 0.0
+          "format": "int64"
         }
       }
     },
@@ -388,13 +428,11 @@
         },
         "max": {
           "type": "integer",
-          "format": "uint32",
-          "minimum": 0.0
+          "format": "int64"
         },
         "min": {
           "type": "integer",
-          "format": "uint32",
-          "minimum": 0.0
+          "format": "int64"
         }
       }
     },
@@ -414,13 +452,11 @@
         },
         "max": {
           "type": "integer",
-          "format": "uint32",
-          "minimum": 0.0
+          "format": "int64"
         },
         "min": {
           "type": "integer",
-          "format": "uint32",
-          "minimum": 0.0
+          "format": "int64"
         }
       }
     },
@@ -432,6 +468,7 @@
         "blocked",
         "blocking",
         "costs",
+        "counters",
         "damaged",
         "effect",
         "ent_type",
@@ -497,6 +534,12 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/Cost"
+          }
+        },
+        "counters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Counter"
           }
         },
         "damaged": {
@@ -628,50 +671,13 @@
         "constraints": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/ClauseConstraint"
+            "$ref": "#/definitions/PermConstraint"
           }
         },
         "effect": {
           "$ref": "#/definitions/ClauseEffect"
         }
       }
-    },
-    "ClauseConstraint": {
-      "oneOf": [
-        {
-          "type": "string",
-          "enum": [
-            "IsTapped"
-          ]
-        },
-        {
-          "type": "object",
-          "required": [
-            "CardType"
-          ],
-          "properties": {
-            "CardType": {
-              "$ref": "#/definitions/Type"
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": [
-            "Or"
-          ],
-          "properties": {
-            "Or": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/ClauseConstraint"
-              }
-            }
-          },
-          "additionalProperties": false
-        }
-      ]
     },
     "ClauseEffect": {
       "oneOf": [
@@ -764,6 +770,51 @@
             }
           },
           "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "MultClause"
+          ],
+          "properties": {
+            "MultClause": {
+              "type": "array",
+              "items": [
+                {
+                  "$ref": "#/definitions/ClauseEffect"
+                },
+                {
+                  "$ref": "#/definitions/NumberComputer"
+                }
+              ],
+              "maxItems": 2,
+              "minItems": 2
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "PutCounter"
+          ],
+          "properties": {
+            "PutCounter": {
+              "type": "array",
+              "items": [
+                {
+                  "$ref": "#/definitions/Counter"
+                },
+                {
+                  "type": "integer",
+                  "format": "int64"
+                }
+              ],
+              "maxItems": 2,
+              "minItems": 2
+            }
+          },
+          "additionalProperties": false
         }
       ]
     },
@@ -801,6 +852,43 @@
         }
       ]
     },
+    "ContPrevention": {
+      "type": "object",
+      "required": [
+        "effect",
+        "source"
+      ],
+      "properties": {
+        "effect": {
+          "$ref": "#/definitions/PreventionEffect"
+        },
+        "source": {
+          "$ref": "#/definitions/CardId"
+        }
+      }
+    },
+    "ContTriggeredAbility": {
+      "type": "object",
+      "required": [
+        "effect",
+        "source",
+        "trigger"
+      ],
+      "properties": {
+        "effect": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Clause"
+          }
+        },
+        "source": {
+          "$ref": "#/definitions/CardId"
+        },
+        "trigger": {
+          "$ref": "#/definitions/AbilityTrigger"
+        }
+      }
+    },
     "Continuous": {
       "type": "object",
       "required": [
@@ -817,7 +905,7 @@
         "constraints": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/ClauseConstraint"
+            "$ref": "#/definitions/PermConstraint"
           }
         },
         "duration": {
@@ -851,6 +939,12 @@
           },
           "additionalProperties": false
         }
+      ]
+    },
+    "Counter": {
+      "type": "string",
+      "enum": [
+        "Plus1Plus1"
       ]
     },
     "EntMap_for_ManaId_and_Mana": {
@@ -916,9 +1010,11 @@
         "phases",
         "player",
         "players",
+        "prevention_effects",
         "priority",
         "stack",
         "subphases",
+        "triggered_abilities",
         "turn_order"
       ],
       "properties": {
@@ -993,6 +1089,12 @@
             "$ref": "#/definitions/PlayerView"
           }
         },
+        "prevention_effects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ContPrevention"
+          }
+        },
         "priority": {
           "$ref": "#/definitions/PlayerId"
         },
@@ -1018,6 +1120,12 @@
             "$ref": "#/definitions/Subphase"
           }
         },
+        "triggered_abilities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ContTriggeredAbility"
+          }
+        },
         "turn_order": {
           "type": "array",
           "items": {
@@ -1037,7 +1145,8 @@
         "Prowess",
         "Lifelink",
         "Trample",
-        "Reach"
+        "Reach",
+        "Protection"
       ]
     },
     "Mana": {
@@ -1082,6 +1191,25 @@
         "type": "null"
       }
     },
+    "NumberComputer": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "NumPermanents"
+          ],
+          "properties": {
+            "NumPermanents": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/PermConstraint"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
     "PT": {
       "type": "object",
       "required": [
@@ -1098,6 +1226,70 @@
           "format": "int64"
         }
       }
+    },
+    "PermConstraint": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "IsTapped",
+            "IsCardname",
+            "YouControl",
+            "Other"
+          ]
+        },
+        {
+          "type": "object",
+          "required": [
+            "CardType"
+          ],
+          "properties": {
+            "CardType": {
+              "$ref": "#/definitions/Type"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "Or"
+          ],
+          "properties": {
+            "Or": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/PermConstraint"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "HasKeyword"
+          ],
+          "properties": {
+            "HasKeyword": {
+              "$ref": "#/definitions/KeywordAbility"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "Subtype"
+          ],
+          "properties": {
+            "Subtype": {
+              "$ref": "#/definitions/Subtype"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
     },
     "Phase": {
       "type": "string",
@@ -1117,6 +1309,7 @@
     "PlayerView": {
       "type": "object",
       "required": [
+        "counters",
         "graveyard",
         "hand",
         "library",
@@ -1126,6 +1319,12 @@
         "name"
       ],
       "properties": {
+        "counters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Counter"
+          }
+        },
         "graveyard": {
           "type": "array",
           "items": {
@@ -1160,6 +1359,12 @@
           "type": "string"
         }
       }
+    },
+    "PreventionEffect": {
+      "type": "string",
+      "enum": [
+        "Unused"
+      ]
     },
     "StaticAbility": {
       "type": "object",
@@ -1198,6 +1403,18 @@
           "properties": {
             "HasColor": {
               "$ref": "#/definitions/Color"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "Protection"
+          ],
+          "properties": {
+            "Protection": {
+              "$ref": "#/definitions/PermConstraint"
             }
           },
           "additionalProperties": false
@@ -1561,7 +1778,32 @@
       ]
     },
     "TriggeredAbility": {
-      "type": "object"
+      "type": "object",
+      "required": [
+        "effect",
+        "trigger"
+      ],
+      "properties": {
+        "effect": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Clause"
+          }
+        },
+        "keyword": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/KeywordAbility"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "trigger": {
+          "$ref": "#/definitions/AbilityTrigger"
+        }
+      }
     },
     "Type": {
       "type": "string",
@@ -1586,6 +1828,40 @@
         "Command",
         "Stack"
       ]
+    },
+    "ZoneMoveTrigger": {
+      "type": "object",
+      "required": [
+        "constraint"
+      ],
+      "properties": {
+        "constraint": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PermConstraint"
+          }
+        },
+        "dest": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Zone"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "origin": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Zone"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
     }
   }
 }

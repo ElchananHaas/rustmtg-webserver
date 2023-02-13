@@ -1,4 +1,4 @@
-use anyhow::{Result};
+use anyhow::Result;
 use common::{cardtypes::Subtype, zones::Zone};
 use test_log;
 

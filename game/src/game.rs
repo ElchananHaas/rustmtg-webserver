@@ -463,32 +463,53 @@ impl Game {
         clause: &Clause,
     ) -> Result<Clause, MTGError> {
         let mut clause = clause.clone();
-        if let Affected::Target(_target) = clause.affected {
-            if let Some(pl) = self.players.get(castopt.player) {
-                let mut valid = Vec::new();
-                for &(card, zone) in &self.cards_and_zones() {
-                    if self.is_valid_target(&clause, castopt.stack_ent, card.into(), zone) {
-                        valid.push(TargetId::Card(card));
+        return Ok(match &clause.affected {
+            Affected::Cardname | Affected::Controller | Affected::ManuallySet(_) => clause,
+            Affected::Target(_) => {
+                if let Some(pl) = self.players.get(castopt.player) {
+                    let valid = self.valid_targets(&clause, castopt.stack_ent);
+                    if valid.len() == 0 {
+                        return Err(MTGError::NoValidTargets);
                     }
+                    let ask = AskSelectN {
+                        ents: valid.clone(),
+                        min: 1,
+                        max: 1,
+                    };
+                    let choice = pl.ask_user_selectn(&Ask::Target(ask.clone()), &ask).await;
+                    let target = valid[choice[0]];
+                    clause.affected = Affected::Target(Some(target));
+                    return Ok(clause);
+                } else {
+                    return Err(MTGError::PlayerDoesntExist);
                 }
-                if valid.len() == 0 {
-                    return Err(MTGError::NoValidTargets);
-                }
-                let ask = AskSelectN {
-                    ents: valid.clone(),
-                    min: 1,
-                    max: 1,
-                };
-                let choice = pl.ask_user_selectn(&Ask::Target(ask.clone()), &ask).await;
-                let target = valid[choice[0]];
-                clause.affected = Affected::Target(Some(target));
-                return Ok(clause);
-            } else {
-                return Err(MTGError::PlayerDoesntExist);
             }
-        } else {
-            return Ok(clause);
+            Affected::UpToXTarget(n, _) => {
+                if let Some(pl) = self.players.get(castopt.player) {
+                    let valid = self.valid_targets(&clause, castopt.stack_ent);
+                    let ask = AskSelectN {
+                        ents: valid.clone(),
+                        min: 0,
+                        max: *n,
+                    };
+                    let choice = pl.ask_user_selectn(&Ask::Target(ask.clone()), &ask).await;
+                    let choices = choice.into_iter().map(|i| valid[i]).collect();
+                    clause.affected = Affected::UpToXTarget(*n, choices);
+                    return Ok(clause);
+                } else {
+                    return Err(MTGError::PlayerDoesntExist);
+                }
+            }
+        });
+    }
+    pub fn valid_targets(&self, clause: &Clause, source: CardId) -> Vec<TargetId> {
+        let mut valid = Vec::new();
+        for &(card, zone) in &self.cards_and_zones() {
+            if self.is_valid_target(&clause, source, card.into(), zone) {
+                valid.push(TargetId::Card(card));
+            }
         }
+        valid
     }
     pub fn is_valid_target(
         &self,

@@ -1,4 +1,4 @@
-use common::{spellabil::ContEffect, counters::Counter};
+use common::{counters::Counter, spellabil::ContEffect};
 
 use crate::game::*;
 
@@ -105,10 +105,10 @@ impl Game {
             if let Some(card) = self.cards.get_mut(id) {
                 if let Some(mut pt) = card.pt.as_mut() {
                     for counter in &card.counters {
-                        match counter{
+                        match counter {
                             Counter::Plus1Plus1 => {
-                                pt.power+=1;
-                                pt.toughness+=1;
+                                pt.power += 1;
+                                pt.toughness += 1;
                             }
                         }
                     }

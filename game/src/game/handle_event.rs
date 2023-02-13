@@ -3,10 +3,7 @@ mod phase_event;
 
 use crate::game::*;
 use async_recursion::async_recursion;
-use common::{
-    ability::{AbilityTrigger},
-    card_entities::EntType,
-};
+use common::{ability::AbilityTrigger, card_entities::EntType};
 
 impl Game {
     /*

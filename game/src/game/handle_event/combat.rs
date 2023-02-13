@@ -5,7 +5,7 @@ use crate::{
     event::{DamageReason, Event, EventResult, TagEvent},
     game::{Game, Subphase},
 };
-use common::{spellabil::KeywordAbility};
+use common::spellabil::KeywordAbility;
 use common::{
     entities::{CardId, PlayerId, TargetId},
     hashset_obj::HashSetObj,

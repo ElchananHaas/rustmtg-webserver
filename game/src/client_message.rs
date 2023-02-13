@@ -24,8 +24,8 @@ pub enum ClientMessage<'a, 'b, 'c> {
 #[derive(Clone, Debug, Serialize, JsonSchema)]
 pub struct AskSelectN<T> {
     pub ents: Vec<T>,
-    pub min: u32,
-    pub max: u32,
+    pub min: i64,
+    pub max: i64,
 }
 #[derive(Clone, Debug, Serialize, JsonSchema)]
 pub struct AskPairItem<T: Hash + Eq> {

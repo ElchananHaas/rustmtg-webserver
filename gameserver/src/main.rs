@@ -59,7 +59,7 @@ async fn launch_game(sockets: Vec<WebSocket>) -> Result<()> {
         deck.push("Anointed Chorister");
     }
     for _ in 0..20 {
-        deck.push("Staunch Shieldmate");
+        deck.push("Basri's Acolyte");
     }
     for _ in 0..30 {
         deck.push("Plains");
@@ -79,7 +79,6 @@ async fn launch_game(sockets: Vec<WebSocket>) -> Result<()> {
 }
 #[cfg(test)]
 mod tests {
-
 
     use game::game::Game;
 
