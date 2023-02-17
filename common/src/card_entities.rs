@@ -47,7 +47,7 @@ pub struct CardEnt {
     pub ent_type: EntType,
     pub known_to: HashSet<PlayerId>, //What players know the front side of this card?
     pub pt: Option<PT>,
-    pub controller: Option<PlayerId>,
+    controller: Option<PlayerId>,
     pub types: Types,
     pub source_of_ability: Option<CardId>, //Holds the entity
     //that produced this triggered ability if appropriate
@@ -75,6 +75,9 @@ impl CardEnt {
         } else {
             self.owner
         }
+    }
+    pub fn set_controller(&mut self, controller: Option<PlayerId>){
+        self.controller=controller;
     }
 }
 #[derive(Clone, Debug, Serialize, JsonSchema, PartialEq)]

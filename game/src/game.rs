@@ -231,7 +231,7 @@ impl Game {
     pub fn get_controller(&self, ent: CardId) -> Option<PlayerId> {
         self.cards
             .get(ent)
-            .and_then(|card| card.controller.or(Some(card.owner)))
+            .map(|card| card.get_controller())
     }
     pub async fn cycle_priority(&mut self) {
         self.player_cycle_priority(self.turn_order_from_player(self.active_player))
@@ -266,7 +266,7 @@ impl Game {
         let player = players[0];
         loop {
             let actions = self.compute_actions(player);
-            let mut choice = Vec::new();
+            let mut choice = HashSetObj::new();
             if let Some(pl) = self.players.get(player) {
                 let select = AskSelectN {
                     ents: actions.clone(),
@@ -280,7 +280,7 @@ impl Game {
             if choice.len() == 0 {
                 return ActionPriorityType::Pass;
             } else {
-                let action = &actions[choice[0]];
+                let action = &actions[choice.into_iter().next().unwrap()];
                 let _: ! = match action {
                     Action::Cast(casting_option) => {
                         self.backup();
@@ -477,7 +477,7 @@ impl Game {
                         max: 1,
                     };
                     let choice = pl.ask_user_selectn(&Ask::Target(ask.clone()), &ask).await;
-                    let target = valid[choice[0]];
+                    let target = valid[choice.into_iter().next().unwrap()];
                     clause.affected = Affected::Target(Some(target));
                     return Ok(clause);
                 } else {
@@ -697,7 +697,7 @@ impl Game {
         let keyword = activated.keyword;
         abil.ent_type = EntType::ActivatedAbility;
         abil.owner = player;
-        abil.controller = Some(player);
+        abil.set_controller(Some(player));
         abil.costs = activated.costs.clone();
         abil.effect = activated.effect.clone();
         abil.source_of_ability = Some(source);

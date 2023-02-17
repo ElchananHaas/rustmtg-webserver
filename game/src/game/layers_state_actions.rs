@@ -48,9 +48,9 @@ impl Game {
                 card.costs = base.costs;
                 card.pt = base.pt;
                 if zone == Zone::Battlefield || zone == Zone::Stack {
-                    card.controller = Some(card.owner);
+                    card.set_controller(Some(card.owner));
                 } else {
-                    card.controller = None;
+                    card.set_controller(None);
                 }
             }
         }

@@ -213,7 +213,7 @@ impl Game {
                     new_card.source_of_ability=Some(source);
                     if let Some(pl)=self.get_controller(source){
                         new_card.owner=pl;
-                        new_card.controller=Some(pl);
+                        new_card.set_controller(Some(pl));
                     }
                     new_card.ent_type=EntType::TriggeredAbility;
                     new_card.printed=Some(Box::new(new_card.clone()));

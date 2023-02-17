@@ -11,7 +11,7 @@ export type ActionsUnion = {
     type: "none"
 } | {
     type: "action",
-    actions: CardActions
+    actions: CardActions,
 } | {
     type: "attackers",
     attackers: { [k: CardId]: AskPairItemFor_TargetId };
@@ -28,5 +28,6 @@ export type ActionsUnion = {
     selected_blocker: CardId | null,
 } | {
     type: "target",
-    action: AskSelectNFor_TargetId
+    action: AskSelectNFor_TargetId,
+    response: { [k: CardId]:null},
 };

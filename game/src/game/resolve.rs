@@ -175,7 +175,7 @@ impl Game {
                     if let TargetId::Player(affected) = aff {
                         let mut ent = CardEnt::default();
                         ent.owner = affected;
-                        ent.controller = Some(affected);
+                        ent.set_controller(Some(affected));
                         ent.etb_this_cycle = true;
                         ent.ent_type = EntType::TokenCard;
                         for attribute in attributes.clone() {

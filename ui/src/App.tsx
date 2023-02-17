@@ -105,7 +105,7 @@ class Game extends React.Component<IProps, IState>{
             return;
         }
         if (this.state.actions.type === "action") {
-            this.socket.send("[]");
+            this.socket.send("{}");
             this.clear_actions();
             return;
         }
@@ -122,7 +122,9 @@ class Game extends React.Component<IProps, IState>{
             return;
         }
         if (this.state.actions.type === "target") {
-            //You can't skip targets!
+            const to_send = JSON.stringify(this.state.actions.response);
+            this.socket.send(to_send);
+            this.clear_actions();
             return;
         }
         exhaustiveCheck(this.state.actions);
@@ -145,12 +147,12 @@ class Game extends React.Component<IProps, IState>{
             const parsed_actions: AskSelectNFor_Action = parsed.Action;
             const processed=process_actions(parsed_actions);
             if (Object.entries(processed).length ===0){
-                this.socket.send("[]");
+                this.socket.send("{}");
                 return;  
             }
             actions = {
                 type: "action",
-                actions: processed
+                actions: processed,
             }
         }
         if ("Attackers" in parsed) {
@@ -194,7 +196,8 @@ class Game extends React.Component<IProps, IState>{
         if ("Target" in parsed){
             actions={
                 type: "target",
-                action: parsed.Target
+                action: parsed.Target,
+                response: {}
             }
         }
         this.setState({ actions: actions });
@@ -216,7 +219,10 @@ class Game extends React.Component<IProps, IState>{
                 return;
             }
             if (card_actions.length === 1) {
-                const to_send = JSON.stringify([card_actions[0].index]);
+                const index=card_actions[0].index;
+                const response:any={};
+                response[index]=null;
+                const to_send = JSON.stringify(response);
                 this.socket.send(to_send);
                 this.clear_actions();
             }
@@ -225,17 +231,17 @@ class Game extends React.Component<IProps, IState>{
             }
         }
         if (this.state.actions.type === "target") {
-            let act=this.state.actions.action;
+            let actions=this.state.actions;
+            let act=actions.action;
             let idx=act.ents.indexOf(ent_id);
             if(idx===-1){
                 return;
             }
-            if (act.min!==1 || act.max!==1){
-                throw new Error("I can't deal with multiple targets yet!");
+            if (idx in actions.response){
+                delete actions.response[idx];
+            }else{
+                actions.response[idx]=null;
             }
-            const to_send = JSON.stringify([idx]);
-            this.socket.send(to_send);
-            this.clear_actions();
         }
         if (this.state.actions.type === "attackers") {
             const actions = { ...this.state.actions }

@@ -143,7 +143,7 @@ impl Game {
         zone: Zone,
     ) -> Vec<Action> {
         let mut actions = Vec::new();
-        let controller = card.controller.unwrap_or(card.owner);
+        let controller = card.get_controller();
         for i in 0..card.abilities.len() {
             if zone == Zone::Battlefield && controller == player_id {
                 let abil = &card.abilities[i];

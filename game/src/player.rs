@@ -94,21 +94,19 @@ impl Player {
     }
 
     //Select n entities from a vector, returns selected indicies
-    pub async fn ask_user_selectn<T>(&self, query: &Ask, ask: &AskSelectN<T>) -> Vec<usize> {
+    pub async fn ask_user_selectn<T>(&self, query: &Ask, ask: &AskSelectN<T>) -> HashSetObj<usize> {
         loop {
             self.send_data(ClientMessage::AskUser(query))
                 .await
                 .expect("Failed to send data");
-            let response = self.player_con.receive::<Vec<usize>>().await;
+            let response = self.player_con.receive::<HashSetObj<usize>>().await;
             let response = if let Ok(resp) = response {
                 resp
             } else {
                 continue;
             };
-            let response_unique: HashSet<usize> = response.iter().cloned().collect();
             if response.len() < ask.min.try_into().unwrap()
                 || response.len() > ask.max.try_into().unwrap()
-                || response.len() != response_unique.len()
                 || response.iter().any(|&i| i >= ask.ents.len())
             {
                 continue;

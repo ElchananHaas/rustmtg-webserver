@@ -39,13 +39,18 @@ export function Card(props: {
         if (props.actions.actions[props.id] && props.actions.actions[props.id].length > 0) {
             selected=true;
         }
-    }
-    if (props.actions.type=="target" && props.actions.action.ents.includes(props.id)){
-        selected=true;
-    }
+    }    
     if(selected){
         style.borderColor = "#AAAA00";
     }
+    if (props.actions.type=="target" && props.actions.action.ents.includes(props.id)){
+        if (props.id in props.actions.response){
+            style.borderColor= "#AA0000";
+        }else{
+            style.borderColor = "#AAAA00";
+        }
+    }
+
     const attack_relation: RelationType = {
         targetId: "",
         targetAnchor: 'bottom',
