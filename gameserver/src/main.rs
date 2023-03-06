@@ -14,7 +14,7 @@ use std::sync::{Arc, Mutex};
 use warp::ws::WebSocket;
 use warp::Filter;
 mod write_schema;
-static CARDDB: OnceCell<carddb::CardDB> = OnceCell::new();
+pub static CARDDB: OnceCell<carddb::CardDB> = OnceCell::new();
 
 type Pairing = Arc<Mutex<Option<WebSocket>>>;
 #[tokio::main]
@@ -59,7 +59,7 @@ async fn launch_game(sockets: Vec<WebSocket>) -> Result<()> {
         deck.push("Anointed Chorister");
     }
     for _ in 0..20 {
-        deck.push("Basri's Acolyte");
+        deck.push("Aven Gagglemaster");
     }
     for _ in 0..30 {
         deck.push("Plains");

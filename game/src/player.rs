@@ -7,14 +7,16 @@ use common::hashset_obj::HashSetObj;
 use futures::{SinkExt, StreamExt};
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
-use serde::Serialize;
-use std::collections::{HashMap, HashSet};
+use serde::{Serialize, Deserialize};
+use std::collections::{HashMap};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::ops::DerefMut;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use warp::filters::ws::Message;
+
+
 use warp::ws::WebSocket;
 #[derive(Clone, JsonSchema, Debug)]
 pub struct Player {
@@ -30,15 +32,15 @@ pub struct Player {
     pub player_con: PlayerCon,
 }
 
-#[derive(Serialize, JsonSchema)]
-pub struct PlayerView<'a> {
-    pub name: &'a str,
+#[derive(Serialize, Deserialize,JsonSchema)]
+pub struct PlayerView {
+    pub name: String,
     pub life: i64,
     pub library: Vec<CardId>,
     pub hand: Vec<CardId>,
-    pub graveyard: &'a Vec<CardId>,
-    pub mana_pool: &'a HashSetObj<ManaId>,
-    pub counters: &'a Vec<Counter>,
+    pub graveyard: Vec<CardId>,
+    pub mana_pool: HashSetObj<ManaId>,
+    pub counters: Vec<Counter>,
     pub max_handsize: usize,
 }
 fn view_t<'a>(
@@ -72,18 +74,18 @@ impl Player {
         let libview = view_t(cards, self.library.iter(), player, hidden_map).collect::<Vec<_>>();
         let handview = view_t(cards, self.hand.iter(), player, hidden_map).collect::<Vec<_>>();
         PlayerView {
-            name: &self.name,
+            name: self.name.clone(),
             life: self.life,
             library: libview,
             hand: handview,
-            graveyard: &self.graveyard,
-            mana_pool: &self.mana_pool,
+            graveyard: self.graveyard.clone(),
+            mana_pool: self.mana_pool.clone(),
             max_handsize: self.max_handsize,
-            counters: &self.counters,
+            counters: self.counters.clone(),
         }
     }
 
-    pub async fn send_data(&self, data: ClientMessage<'_, '_, '_>) -> Result<()> {
+    pub async fn send_data(&self, data: ClientMessage) -> Result<()> {
         let mut buffer = Vec::new();
         {
             let cursor = std::io::Cursor::new(&mut buffer);
@@ -96,7 +98,7 @@ impl Player {
     //Select n entities from a vector, returns selected indicies
     pub async fn ask_user_selectn<T>(&self, query: &Ask, ask: &AskSelectN<T>) -> HashSetObj<usize> {
         loop {
-            self.send_data(ClientMessage::AskUser(query))
+            self.send_data(ClientMessage::AskUser(query.clone()))
                 .await
                 .expect("Failed to send data");
             let response = self.player_con.receive::<HashSetObj<usize>>().await;
@@ -125,7 +127,7 @@ impl Player {
         ask: &AskPair<T>,
     ) -> HashMap<CardId, HashSetObj<T>> {
         'outer: loop {
-            self.send_data(ClientMessage::AskUser(query))
+            self.send_data(ClientMessage::AskUser(query.clone()))
                 .await
                 .expect("Failed to send data");
             let response = self
@@ -162,7 +164,7 @@ impl Player {
 
 #[allow(dead_code)]
 pub enum Socket {
-    TestSocket, //used in test, and therefore isn't dead code
+    TestSocket(TestClient), //used in testing, and therefore isn't dead code
     Web(WebSocket),
 }
 #[derive(Clone)]
@@ -183,21 +185,22 @@ impl PlayerCon {
         }
     }
     #[allow(dead_code)] //Used in test code and therefore isn't dead
-    pub fn new_test() -> Self {
+    pub fn new_test(test:TestClient) -> Self {
         PlayerCon {
-            socket: Arc::new(Mutex::new(Socket::TestSocket)),
+            socket: Arc::new(Mutex::new(Socket::TestSocket(test))),
         }
     }
     pub async fn receive<T: DeserializeOwned>(&self) -> Result<T> {
         let mut socket = self.socket.lock().await;
-        let socket: &mut WebSocket = match socket.deref_mut() {
-            Socket::TestSocket => {
-                panic!("Recieving Messages aren't supported in test mode yet");
-            }
-            Socket::Web(sock) => sock,
-        };
         loop {
-            let recieved = socket.next().await.expect("Socket is still open");
+            let recieved = match socket.deref_mut() {
+                Socket::TestSocket(test) => {
+                    test.recieve()
+                }
+                Socket::Web(socket) => {
+                    socket.next().await.expect("Socket is still open")
+                },
+            };
             let message = if let Ok(msg) = recieved {
                 msg
             } else {
@@ -212,21 +215,37 @@ impl PlayerCon {
                 .map_err(|_| anyhow::Error::msg("Message failed to parse correctly"));
         }
     }
-    pub async fn send_data(&self, state: Vec<u8>) -> Result<()> {
+    pub async fn send_data(&self, data: Vec<u8>) -> Result<()> {
+        let msg = std::str::from_utf8(&data).expect("json is valid text");
         let mut socket = self.socket.lock().await;
-        let socket: &mut WebSocket = match socket.deref_mut() {
-            Socket::TestSocket => {
-                panic!("Sending Messages aren't supported in test mode yet");
+        match socket.deref_mut() {
+            Socket::TestSocket(test) => {
+                test.send_message(Message::text(msg))
             }
-            Socket::Web(sock) => sock,
-        };
-        let msg = std::str::from_utf8(&state).expect("json is valid text");
-        socket
-            .send(Message::text(msg))
-            .await
-            .map_err(|_| anyhow::Error::msg("Connection broke on send"))
+            Socket::Web(socket) => {
+                socket
+                .send(Message::text(msg))
+                .await
+                .map_err(|_| anyhow::Error::msg("Connection broke on send"))
+            },
+        }
     }
     async fn socket_error() {
         panic!("Connection broke on read");
+    }
+}
+
+pub struct TestClient{
+
+}
+impl TestClient{
+    pub fn send_message(&mut self,msg:Message)->Result<()>{
+        let text=msg.to_str().expect("message is text");
+        let contents:Result<ClientMessage,_>=serde_json::from_str(text)
+        .map_err(|_| anyhow::Error::msg("Message failed to parse correctly"));
+        Ok(())
+    }
+    pub fn recieve(&mut self)->Result<Message, warp::Error>{
+        panic!();
     }
 }

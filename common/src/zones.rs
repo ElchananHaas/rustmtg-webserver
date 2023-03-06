@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, JsonSchema)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum Zone {
     Hand,
     Library,

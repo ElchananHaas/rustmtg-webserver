@@ -26,4 +26,5 @@ mod tests {
     mod lethal_damage;
     mod swift_response_test;
     mod counter_tests;
+    mod etb_tests;
 }

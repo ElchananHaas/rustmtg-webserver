@@ -1,21 +1,34 @@
 use std::{collections::HashMap, hash::Hash, num::NonZeroU64};
 
 use schemars::JsonSchema;
-use serde::Serialize;
+use serde::{Serialize, Deserialize, Deserializer};
 
 use common::{card_entities::CardEnt, entities::CardId, spellabil::KeywordAbility};
-#[derive(Clone, JsonSchema, Serialize, Debug)]
 
+
+fn countofone<'de, D>(deserializer:D) -> Result<NonZeroU64, D::Error> where D: Deserializer<'de>{
+    Ok(NonZeroU64::new(1).unwrap())
+}
+#[derive(Clone, JsonSchema, Serialize, Deserialize, Debug)]
 pub struct EntMap<K, V>
 where
     K: Copy + Hash + Eq + From<NonZeroU64> + JsonSchema,
     V: JsonSchema,
 {
     ents: HashMap<K, V>,
-    #[serde(skip)]
+    #[serde(skip_serializing,deserialize_with="countofone")]
     count: NonZeroU64,
 }
 
+impl<K, V> Default for EntMap<K, V>
+where
+    K: Copy + Hash + Eq + From<NonZeroU64> + JsonSchema,
+    V: JsonSchema,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
 impl<K, V> EntMap<K, V>
 where
     K: Copy + Hash + Eq + From<NonZeroU64> + JsonSchema,

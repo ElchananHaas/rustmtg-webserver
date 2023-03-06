@@ -18,7 +18,7 @@ impl Game {
         let mut dummy_cards = Vec::new();
         for (card_id, card_ref) in self.cards.view() {
             if card_ref.known_to.contains(&player) {
-                card_views.insert(card_id, card_ref);
+                card_views.insert(card_id, card_ref.clone());
             } else {
                 hidden_ids.push(card_id);
                 let mut dummy_card = CardEnt::default();
@@ -34,7 +34,7 @@ impl Game {
             for i in 0..hidden_ids.len() {
                 next_id = NonZeroU64::new((u64::from(next_id)) + 1).unwrap();
                 let card_id = next_id.into();
-                card_views.insert(card_id, &dummy_cards[i]);
+                card_views.insert(card_id, dummy_cards[i].clone());
                 hidden_map.insert(hidden_ids[i], card_id);
             }
         }
@@ -48,7 +48,7 @@ impl Game {
                 player,
                 cards: card_views,
                 players: player_views,
-                game: self,
+                game: self.clone(),
             });
             pl.send_data(message).await?;
         }

@@ -1,13 +1,14 @@
 use crate::entities::{CardId, ManaId};
 use crate::mana::ManaCostSymbol;
 use schemars::JsonSchema;
+use serde::Deserialize;
 use serde_derive::Serialize;
 
 /*
 !!!!!!!!!TODO
 Allow the game to interactively ask for costs to be paid
 */
-#[derive(Clone, Copy, Debug, Serialize, JsonSchema, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 pub enum Cost {
     Mana(ManaCostSymbol),
     Selftap,

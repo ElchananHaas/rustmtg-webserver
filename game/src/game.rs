@@ -1,3 +1,4 @@
+use crate::CARDDB;
 use crate::actions::{Action, ActionFilter, CastingOption, StackActionOption};
 use crate::client_message::{Ask, AskSelectN};
 use crate::ent_maps::EntMap;
@@ -23,7 +24,7 @@ use futures::future;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
 use schemars::JsonSchema;
-use serde::Serialize;
+use serde::{Serialize, Deserialize, Deserializer};
 use std::cmp::max;
 use std::collections::{HashMap, VecDeque};
 
@@ -38,7 +39,7 @@ mod serialize_game;
 pub type Players = EntMap<PlayerId, Player>;
 pub type Cards = EntMap<CardId, CardEnt>;
 
-#[derive(Serialize, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, JsonSchema)]
 pub struct Game {
     #[serde(skip)]
     pub players: Players,
@@ -64,17 +65,27 @@ pub struct Game {
     //that are perpertual or time-driven
     pub triggered_abilities: Vec<ContTriggeredAbility>,
     pub prevention_effects: Vec<ContPrevention>,
-    #[serde(skip)]
+    #[schemars(skip)]
+    #[serde(skip_serializing,deserialize_with="get_carddb")]
     #[allow(dead_code)]
     db: &'static CardDB,
     #[serde(skip)]
     backup: Option<Box<Game>>,
-    #[serde(skip)]
+    #[schemars(skip)]
+    #[serde(skip_serializing,deserialize_with="rng_from_entropy")]
     rng: rand::rngs::StdRng, //Store the RNG to allow for deterministic replay
                              //if I choose to implement it
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, JsonSchema)]
+fn get_carddb<'de, D>(deserializer:D) -> Result<&'static CardDB, D::Error> where D: Deserializer<'de>{
+    Ok(CARDDB.get_or_init(|| CardDB::new()))
+}
+
+fn rng_from_entropy<'de, D>(deserializer:D) -> Result<rand::rngs::StdRng, D::Error> where D: Deserializer<'de>{
+    Ok(rand::rngs::StdRng::from_entropy())
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum GameOutcome {
     Ongoing,
     Tie,
@@ -234,8 +245,17 @@ impl Game {
             .map(|card| card.get_controller())
     }
     pub async fn cycle_priority(&mut self) {
-        self.player_cycle_priority(self.turn_order_from_player(self.active_player))
+        loop{
+            self.player_cycle_priority(self.turn_order_from_player(self.active_player))
             .await;
+            if self.stack.len()==0{
+                return;
+            }else{
+                self.resolve(self.stack[self.stack.len()-1]).await;
+                self.stack.pop();
+            }
+        }
+
     }
     #[async_recursion]
     #[must_use]
@@ -448,26 +468,32 @@ impl Game {
             }
         }
     }
-    async fn select_targets(&mut self, castopt: &StackActionOption) -> Result<(), MTGError> {
+    async fn select_targets(&mut self,         
+        player:PlayerId,
+        stack_ent:CardId) -> Result<(), MTGError> {
         let mut selected = Vec::new();
-        if let Some(card) = self.cards.get(castopt.stack_ent) {
+        if let Some(card) = self.cards.get(stack_ent) {
             for x in &card.effect {
-                selected.push(self.clause_select_targets(castopt, x).await?);
+                selected.push(self.clause_select_targets(player,stack_ent, x).await?);
             }
+        }
+        if let Some(card)=self.cards.get_mut(stack_ent){
+            card.effect=selected;
         }
         Ok(())
     }
     async fn clause_select_targets(
         &self,
-        castopt: &StackActionOption,
+        player:PlayerId,
+        stack_ent:CardId,
         clause: &Clause,
     ) -> Result<Clause, MTGError> {
         let mut clause = clause.clone();
         return Ok(match &clause.affected {
             Affected::Cardname | Affected::Controller | Affected::ManuallySet(_) => clause,
             Affected::Target(_) => {
-                if let Some(pl) = self.players.get(castopt.player) {
-                    let valid = self.valid_targets(&clause, castopt.stack_ent);
+                if let Some(pl) = self.players.get(player) {
+                    let valid = self.valid_targets(&clause, stack_ent);
                     if valid.len() == 0 {
                         return Err(MTGError::NoValidTargets);
                     }
@@ -485,8 +511,9 @@ impl Game {
                 }
             }
             Affected::UpToXTarget(n, _) => {
-                if let Some(pl) = self.players.get(castopt.player) {
-                    let valid = self.valid_targets(&clause, castopt.stack_ent);
+                println!("selectng up to x targets");
+                if let Some(pl) = self.players.get(player) {
+                    let valid = self.valid_targets(&clause, stack_ent);
                     let ask = AskSelectN {
                         ents: valid.clone(),
                         min: 0,
@@ -537,7 +564,7 @@ impl Game {
         if !castopt.filter.check() {
             return Err(MTGError::CantCast);
         }
-        self.select_targets(&castopt).await?;
+        self.select_targets(castopt.player,castopt.stack_ent).await?;
         let cost_paid = self.request_cost_payment(&castopt).await?;
         println!("cost paid {:?}", cost_paid);
         if self.is_mana_ability(castopt.stack_ent) {
@@ -762,7 +789,7 @@ pub enum ActionPriorityType {
     ManaAbilOrSpecialAction,
     Action,
 }
-#[derive(Clone, Copy, Debug, Serialize, PartialEq, JsonSchema)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub enum Phase {
     Begin,
     FirstMain,
@@ -770,7 +797,7 @@ pub enum Phase {
     SecondMain,
     Ending,
 }
-#[derive(Clone, Copy, Debug, Serialize, PartialEq, JsonSchema)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub enum Subphase {
     Untap,
     Upkeep,

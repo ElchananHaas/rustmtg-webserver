@@ -6,6 +6,7 @@ use crate::{
 };
 use derivative::*;
 use schemars::JsonSchema;
+use serde::Deserialize;
 use serde_derive::Serialize;
 use std::{collections::HashSet, num::NonZeroU64};
 
@@ -15,7 +16,7 @@ use crate::{
     entities::{CardId, PlayerId, TargetId},
     spellabil::KeywordAbility,
 };
-#[derive(Clone, Serialize, PartialEq, Eq, JsonSchema, Debug)]
+#[derive(Clone, Serialize,  Deserialize, PartialEq, Eq, JsonSchema, Debug)]
 pub enum EntType {
     RealCard,
     TokenCard,
@@ -28,8 +29,8 @@ impl Default for EntType {
     }
 }
 #[derive(Derivative)]
-#[derivative(Default)]
-#[derive(Serialize, Clone, JsonSchema, Debug)]
+#[derivative(Default,Debug)]
+#[derive(Serialize,  Deserialize, Clone, JsonSchema)]
 //Holds a card, token or embalem, or triggered/activated ability
 pub struct CardEnt {
     pub etb_this_cycle: bool,
@@ -40,10 +41,10 @@ pub struct CardEnt {
     pub blocked: Vec<CardId>,       //What creatues is this blocked by?
     pub blocking: Vec<CardId>,
     pub effect: Vec<Clause>, //Effect of card, for instant sorcery or ability
-    pub name: &'static str,
+    pub name: String,
     #[derivative(Default(value = "PlayerId::from(NonZeroU64::new(MIN_CARDID-1).unwrap())"))]
     pub owner: PlayerId,
-    pub printed_name: &'static str,
+    pub printed_name: String,
     pub ent_type: EntType,
     pub known_to: HashSet<PlayerId>, //What players know the front side of this card?
     pub pt: Option<PT>,
@@ -56,6 +57,7 @@ pub struct CardEnt {
     pub abilities: Vec<Ability>,
     pub costs: Vec<Cost>, //Casting costs
     pub art_url: Option<String>,
+    #[derivative(Debug="ignore")]
     pub printed: Option<Box<CardEnt>>, //This stores the printed version of the card so
     //when layers are recalculated, this can be set.
     pub counters: Vec<Counter>,
@@ -80,7 +82,7 @@ impl CardEnt {
         self.controller=controller;
     }
 }
-#[derive(Clone, Debug, Serialize, JsonSchema, PartialEq)]
+#[derive(Clone, Debug, Serialize,  Deserialize, JsonSchema, PartialEq)]
 pub struct PT {
     pub power: i64,
     pub toughness: i64,

@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 
-#[derive(Clone, Serialize, JsonSchema, Debug, PartialEq, Copy)]
+#[derive(Clone, Serialize,  Deserialize, JsonSchema, Debug, PartialEq, Copy)]
 pub enum Counter {
     Plus1Plus1,
 }

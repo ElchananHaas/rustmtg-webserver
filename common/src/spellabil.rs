@@ -5,10 +5,11 @@ use crate::entities::CardId;
 use crate::mana::ManaCostSymbol;
 use crate::{entities::TargetId, token_attribute::TokenAttribute};
 use schemars::JsonSchema;
+use serde::Deserialize;
 use serde_derive::Serialize;
 use strum_macros::EnumString;
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, JsonSchema, EnumString)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize,  Deserialize, JsonSchema, EnumString)]
 #[strum(serialize_all = "lowercase")]
 pub enum KeywordAbility {
     FirstStrike,  //Implemented
@@ -23,7 +24,7 @@ pub enum KeywordAbility {
     Protection, //Partially implemented, add it can't be enchanted.
 }
 
-#[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]
+#[derive(Clone, Serialize,  Deserialize, JsonSchema, Debug, PartialEq)]
 pub enum PermConstraint {
     IsTapped,
     CardType(Type),
@@ -35,13 +36,13 @@ pub enum PermConstraint {
     Other,
 }
 
-#[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]
+#[derive(Clone, Serialize,  Deserialize, JsonSchema, Debug, PartialEq)]
 pub struct Clause {
     pub effect: ClauseEffect,
     pub affected: Affected,
     pub constraints: Vec<PermConstraint>,
 }
-#[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]
+#[derive(Clone, Serialize,  Deserialize, JsonSchema, Debug, PartialEq)]
 pub enum Affected {
     Controller,
     Cardname,
@@ -49,12 +50,12 @@ pub enum Affected {
     ManuallySet(Option<TargetId>),
     UpToXTarget(i64, Vec<TargetId>),
 }
-#[derive(Clone, Serialize, JsonSchema, Debug, PartialEq, Eq)]
+#[derive(Clone, Serialize, Deserialize,  JsonSchema, Debug, PartialEq, Eq)]
 pub enum ContDuration {
     Perpetual,
     EndOfTurn,
 }
-#[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]
+#[derive(Clone, Serialize,  Deserialize, JsonSchema, Debug, PartialEq)]
 pub struct Continuous {
     pub effect: ContEffect,
     pub affected: Affected,
@@ -63,16 +64,16 @@ pub struct Continuous {
     pub source: CardId,
 }
 
-#[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]
+#[derive(Clone, Serialize,  Deserialize, JsonSchema, Debug, PartialEq)]
 pub enum ContEffect {
     ModifyPT(PT),
 }
 
-#[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub enum NumberComputer {
     NumPermanents(Vec<PermConstraint>),
 }
-#[derive(Clone, Serialize, JsonSchema, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub enum ClauseEffect {
     Destroy,
     ExileBattlefield,

@@ -217,8 +217,11 @@ impl Game {
                     }
                     new_card.ent_type=EntType::TriggeredAbility;
                     new_card.printed=Some(Box::new(new_card.clone()));
-                    let (id,_card)=self.cards.insert(new_card);
+                    let (id,card)=self.cards.insert(new_card);
                     self.stack.push(id);
+                    let controller=card.get_controller();
+                    let _=self.select_targets(controller, id).await;//Fix this later to see if there is a valid target assignment,
+                    //becuase if so the player must take it.
                 }
             }
         }
