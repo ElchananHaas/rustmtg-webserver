@@ -80,7 +80,7 @@ async fn launch_game(sockets: Vec<WebSocket>) -> Result<()> {
 #[cfg(test)]
 mod tests {
 
-    use game::game::Game;
+    use game::{game::Game, player::TestClient};
 
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
@@ -92,8 +92,8 @@ mod tests {
         for _ in 1..(60 - deck.len()) {
             deck.push("Staunch Shieldmate");
         }
-        gamebuild.add_player("p1", &db, &deck, PlayerCon::new_test())?;
-        gamebuild.add_player("p2", &db, &deck, PlayerCon::new_test())?;
+        gamebuild.add_player("p1", &db, &deck, PlayerCon::new_test(TestClient::default()))?;
+        gamebuild.add_player("p2", &db, &deck, PlayerCon::new_test(TestClient::default()))?;
         gamebuild.build(&db)
     }
     #[test_log::test]
@@ -114,8 +114,8 @@ mod tests {
         for _ in 1..(60 - deck.len()) {
             deck.push("Plains");
         }
-        gamebuild.add_player("p1", &db, &deck, PlayerCon::new_test())?;
-        gamebuild.add_player("p2", &db, &deck, PlayerCon::new_test())?;
+        gamebuild.add_player("p1", &db, &deck, PlayerCon::new_test(TestClient::default()))?;
+        gamebuild.add_player("p2", &db, &deck, PlayerCon::new_test(TestClient::default()))?;
         let _game = gamebuild.build(&db);
         Ok(())
     }

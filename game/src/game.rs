@@ -77,11 +77,11 @@ pub struct Game {
                              //if I choose to implement it
 }
 
-fn get_carddb<'de, D>(deserializer:D) -> Result<&'static CardDB, D::Error> where D: Deserializer<'de>{
+fn get_carddb<'de, D>(_deserializer:D) -> Result<&'static CardDB, D::Error> where D: Deserializer<'de>{
     Ok(CARDDB.get_or_init(|| CardDB::new()))
 }
 
-fn rng_from_entropy<'de, D>(deserializer:D) -> Result<rand::rngs::StdRng, D::Error> where D: Deserializer<'de>{
+fn rng_from_entropy<'de, D>(_deserializer:D) -> Result<rand::rngs::StdRng, D::Error> where D: Deserializer<'de>{
     Ok(rand::rngs::StdRng::from_entropy())
 }
 

@@ -249,3 +249,8 @@ impl TestClient{
         panic!();
     }
 }
+impl Default for TestClient{
+    fn default() -> Self {
+        Self {  }
+    }
+}

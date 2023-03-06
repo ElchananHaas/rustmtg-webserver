@@ -1,6 +1,6 @@
 use crate::{
     game::{build_game::GameBuilder, Game},
-    player::PlayerCon,
+    player::{PlayerCon, TestClient},
 };
 use anyhow::Result;
 use carddb::carddb::CardDB;
@@ -12,8 +12,8 @@ fn get_db() -> &'static CardDB {
 pub fn test_state_w_decks(deck: Vec<&'static str>) -> Result<Game> {
     let db: &CardDB = get_db();
     let mut gamebuild = GameBuilder::new();
-    gamebuild.add_player("p1", &db, &deck, PlayerCon::new_test())?;
-    gamebuild.add_player("p2", &db, &deck, PlayerCon::new_test())?;
+    gamebuild.add_player("p1", &db, &deck, PlayerCon::new_test(TestClient::default()))?;
+    gamebuild.add_player("p2", &db, &deck, PlayerCon::new_test(TestClient::default()))?;
     gamebuild.build(&db)
 }
 pub fn test_state() -> Result<Game> {

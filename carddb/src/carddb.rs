@@ -166,8 +166,8 @@ impl CardDB {
     ) -> Result<CardEnt, SpawnError> {
         info!("spawning {}", card_name);
         let mut card: CardEnt = CardEnt::default();
-        card.name = card_name;
-        card.printed_name = card_name;
+        card.name = card_name.to_string();
+        card.printed_name = card_name.to_string();
         card.owner = owner;
         let scryfall: &ScryfallEntry = self
             .scryfall

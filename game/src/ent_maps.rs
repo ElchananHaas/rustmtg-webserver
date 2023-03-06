@@ -6,7 +6,7 @@ use serde::{Serialize, Deserialize, Deserializer};
 use common::{card_entities::CardEnt, entities::CardId, spellabil::KeywordAbility};
 
 
-fn countofone<'de, D>(deserializer:D) -> Result<NonZeroU64, D::Error> where D: Deserializer<'de>{
+fn countofone<'de, D>(_deserializer:D) -> Result<NonZeroU64, D::Error> where D: Deserializer<'de>{
     Ok(NonZeroU64::new(1).unwrap())
 }
 #[derive(Clone, JsonSchema, Serialize, Deserialize, Debug)]
