@@ -23,8 +23,8 @@ mod tests {
     mod aven_gagglemaster_tests;
     mod baneslayer_angel_tests;
     mod common_test;
-    mod lethal_damage;
-    mod swift_response_test;
     mod counter_tests;
     mod etb_tests;
+    mod lethal_damage;
+    mod swift_response_test;
 }

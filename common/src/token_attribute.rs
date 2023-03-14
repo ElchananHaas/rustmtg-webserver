@@ -1,5 +1,5 @@
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     ability::Ability,
@@ -8,7 +8,7 @@ use crate::{
     mana::Color,
 };
 
-#[derive(Clone, Serialize,  Deserialize, JsonSchema, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub enum TokenAttribute {
     PT(PT),
     HasColor(Color),

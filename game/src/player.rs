@@ -1,21 +1,21 @@
-use crate::client_message::{Ask, AskPair, AskSelectN, ClientMessage};
+use crate::actions::Action;
+use crate::client_message::{Ask, AskPair, AskSelectN, ClientMessage, GameState};
 use crate::game::Cards;
 use anyhow::Result;
 use common::counters::Counter;
-use common::entities::{CardId, ManaId, PlayerId};
+use common::entities::{CardId, ManaId, PlayerId, TargetId};
 use common::hashset_obj::HashSetObj;
 use futures::{SinkExt, StreamExt};
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
-use serde::{Serialize, Deserialize};
-use std::collections::{HashMap};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::ops::DerefMut;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use warp::filters::ws::Message;
-
 
 use warp::ws::WebSocket;
 #[derive(Clone, JsonSchema, Debug)]
@@ -32,7 +32,7 @@ pub struct Player {
     pub player_con: PlayerCon,
 }
 
-#[derive(Serialize, Deserialize,JsonSchema)]
+#[derive(Serialize, Deserialize, JsonSchema)]
 pub struct PlayerView {
     pub name: String,
     pub life: i64,
@@ -185,7 +185,7 @@ impl PlayerCon {
         }
     }
     #[allow(dead_code)] //Used in test code and therefore isn't dead
-    pub fn new_test(test:TestClient) -> Self {
+    pub fn new_test(test: TestClient) -> Self {
         PlayerCon {
             socket: Arc::new(Mutex::new(Socket::TestSocket(test))),
         }
@@ -194,12 +194,8 @@ impl PlayerCon {
         let mut socket = self.socket.lock().await;
         loop {
             let recieved = match socket.deref_mut() {
-                Socket::TestSocket(test) => {
-                    test.recieve()
-                }
-                Socket::Web(socket) => {
-                    socket.next().await.expect("Socket is still open")
-                },
+                Socket::TestSocket(test) => test.recieve(),
+                Socket::Web(socket) => socket.next().await.expect("Socket is still open"),
             };
             let message = if let Ok(msg) = recieved {
                 msg
@@ -219,15 +215,11 @@ impl PlayerCon {
         let msg = std::str::from_utf8(&data).expect("json is valid text");
         let mut socket = self.socket.lock().await;
         match socket.deref_mut() {
-            Socket::TestSocket(test) => {
-                test.send_message(Message::text(msg))
-            }
-            Socket::Web(socket) => {
-                socket
+            Socket::TestSocket(test) => test.send_message(Message::text(msg)),
+            Socket::Web(socket) => socket
                 .send(Message::text(msg))
                 .await
-                .map_err(|_| anyhow::Error::msg("Connection broke on send"))
-            },
+                .map_err(|_| anyhow::Error::msg("Connection broke on send")),
         }
     }
     async fn socket_error() {
@@ -235,22 +227,94 @@ impl PlayerCon {
     }
 }
 
-pub struct TestClient{
-
+pub struct TestClient {
+    game: Option<GameState>,
+    prepared_response: ClientResponse,
+    mock_client: Box<dyn MockClient>,
 }
-impl TestClient{
-    pub fn send_message(&mut self,msg:Message)->Result<()>{
-        let text=msg.to_str().expect("message is text");
-        let contents:Result<ClientMessage,_>=serde_json::from_str(text)
-        .map_err(|_| anyhow::Error::msg("Message failed to parse correctly"));
+impl TestClient {
+    pub fn with_client(client: Box<dyn MockClient>) -> Self {
+        Self {
+            game: None,
+            prepared_response: ClientResponse::None,
+            mock_client: client,
+        }
+    }
+    pub fn send_message(&mut self, msg: Message) -> Result<()> {
+        let text = msg.to_str().expect("message is text");
+        let contents: Result<ClientMessage, _> = serde_json::from_str(text);
+        let contents = contents.expect("parsed correctly");
+        match contents {
+            ClientMessage::GameState(state) => {
+                self.game = Some(state);
+            }
+            ClientMessage::AskUser(ask) => {
+                self.prepared_response = TestClient::respond(
+                    &self.mock_client,
+                    &self.game.as_ref().expect("game is set"),
+                    ask,
+                );
+            }
+        }
         Ok(())
     }
-    pub fn recieve(&mut self)->Result<Message, warp::Error>{
-        panic!();
+    fn respond(mock_client: &Box<dyn MockClient>, game: &GameState, ask: Ask) -> ClientResponse {
+        dbg!(&ask);
+        match &ask {
+            Ask::Action(act) => {
+                if act.min == 0 && act.max == 1 {
+                    if act.ents.len() == 0 {
+                        return ClientResponse::Indicies(HashSetObj::new());
+                    }
+                }
+            }
+            Ask::Target(ask) => {
+                let resp = mock_client.select_targets(game, ask);
+                return ClientResponse::Indicies(resp);
+            }
+            _ => (),
+        };
+        ClientResponse::None
+    }
+    pub fn recieve(&mut self) -> Result<Message, warp::Error> {
+        let mut buffer = Vec::new();
+        let cursor = std::io::Cursor::new(&mut buffer);
+        let mut json_serial = serde_json::Serializer::new(cursor);
+        match &self.prepared_response {
+            ClientResponse::None => {
+                panic!("response not set");
+            }
+            ClientResponse::Indicies(indexs) => {
+                indexs
+                    .serialize(&mut json_serial)
+                    .expect("serialized to json correctly");
+            }
+        };
+        let msg = std::str::from_utf8(&buffer).expect("json is valid text");
+        return Ok(Message::text(msg));
     }
 }
-impl Default for TestClient{
+impl Default for TestClient {
     fn default() -> Self {
-        Self {  }
+        Self {
+            game: None,
+            prepared_response: ClientResponse::None,
+            mock_client: Box::new(PanicClient {}),
+        }
     }
 }
+pub enum ClientResponse {
+    None,
+    Indicies(HashSetObj<usize>),
+}
+
+pub trait MockClient: Send + Sync {
+    fn select_action(&self, _game: &GameState, _ask: &AskSelectN<Action>) -> HashSetObj<usize> {
+        panic!("Select action not overriden");
+    }
+    fn select_targets(&self, _game: &GameState, _ask: &AskSelectN<TargetId>) -> HashSetObj<usize> {
+        panic!("Select targets not overriden");
+    }
+}
+pub struct PanicClient {}
+impl MockClient for PanicClient {}

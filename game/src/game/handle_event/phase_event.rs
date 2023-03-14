@@ -98,7 +98,7 @@ impl Game {
         if let Some(player) = self.players.get_mut(self.active_player) {
             if player.hand.len() > player.max_handsize {
                 let diff = player.hand.len().saturating_sub(player.max_handsize);
-                let diff=diff.try_into().expect("handisize fits into i64");
+                let diff = diff.try_into().expect("handisize fits into i64");
                 let hand: Vec<CardId> = player.hand.iter().cloned().collect();
                 let ask = AskSelectN {
                     ents: hand.clone(),

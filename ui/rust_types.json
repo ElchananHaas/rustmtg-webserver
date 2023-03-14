@@ -323,7 +323,10 @@
       ],
       "properties": {
         "items": {
-          "$ref": "#/definitions/Map_of_Null"
+          "type": "object",
+          "additionalProperties": {
+            "type": "null"
+          }
         },
         "max": {
           "type": "integer",
@@ -346,7 +349,10 @@
       ],
       "properties": {
         "items": {
-          "$ref": "#/definitions/Map_of_Null"
+          "type": "object",
+          "additionalProperties": {
+            "type": "null"
+          }
         },
         "max": {
           "type": "integer",
@@ -605,16 +611,25 @@
           ]
         },
         "subtypes": {
-          "$ref": "#/definitions/Map_of_Null"
+          "type": "object",
+          "additionalProperties": {
+            "type": "null"
+          }
         },
         "supertypes": {
-          "$ref": "#/definitions/Map_of_Null"
+          "type": "object",
+          "additionalProperties": {
+            "type": "null"
+          }
         },
         "tapped": {
           "type": "boolean"
         },
         "types": {
-          "$ref": "#/definitions/Map_of_Null"
+          "type": "object",
+          "additionalProperties": {
+            "type": "null"
+          }
         }
       }
     },
@@ -950,9 +965,16 @@
     "EntMap_for_ManaId_and_Mana": {
       "type": "object",
       "required": [
+        "count",
         "ents"
       ],
       "properties": {
+        "count": {
+          "writeOnly": true,
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 1.0
+        },
         "ents": {
           "type": "object",
           "additionalProperties": {
@@ -1022,7 +1044,10 @@
           "$ref": "#/definitions/PlayerId"
         },
         "battlefield": {
-          "$ref": "#/definitions/Map_of_Null"
+          "type": "object",
+          "additionalProperties": {
+            "type": "null"
+          }
         },
         "cards": {
           "type": "object",
@@ -1031,7 +1056,10 @@
           }
         },
         "command": {
-          "$ref": "#/definitions/Map_of_Null"
+          "type": "object",
+          "additionalProperties": {
+            "type": "null"
+          }
         },
         "cont_effects": {
           "type": "array",
@@ -1040,7 +1068,10 @@
           }
         },
         "exile": {
-          "$ref": "#/definitions/Map_of_Null"
+          "type": "object",
+          "additionalProperties": {
+            "type": "null"
+          }
         },
         "extra_turns": {
           "type": "array",
@@ -1184,12 +1215,6 @@
     },
     "ManaRestriction": {
       "type": "object"
-    },
-    "Map_of_Null": {
-      "type": "object",
-      "additionalProperties": {
-        "type": "null"
-      }
     },
     "NumberComputer": {
       "oneOf": [
@@ -1348,7 +1373,10 @@
           "format": "int64"
         },
         "mana_pool": {
-          "$ref": "#/definitions/Map_of_Null"
+          "type": "object",
+          "additionalProperties": {
+            "type": "null"
+          }
         },
         "max_handsize": {
           "type": "integer",

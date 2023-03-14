@@ -13,58 +13,58 @@ use crate::zones::Zone;
 //use crate::carddb::CardBuilder;
 //origin entity, target entity
 
-#[derive(Clone, Serialize,  Deserialize, JsonSchema, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub struct ZoneMoveTrigger {
     //These both must match for the ability to trigger
     pub origin: Option<Zone>,
     pub dest: Option<Zone>,
     pub constraint: Vec<PermConstraint>,
 }
-#[derive(Clone, Serialize,  Deserialize, JsonSchema, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub enum AbilityTrigger {
     ZoneMove(ZoneMoveTrigger),
 }
 
-#[derive(Clone, Serialize,  Deserialize, JsonSchema, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub struct TriggeredAbility {
     pub trigger: AbilityTrigger,
     pub effect: Vec<Clause>,
     pub keyword: Option<KeywordAbility>,
 }
-#[derive(Clone, Serialize,  Deserialize, JsonSchema, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub enum PreventionEffect {
-    Unused//Needed becuase typescript can't handle empty enums
+    Unused, //Needed becuase typescript can't handle empty enums
 }
-#[derive(Clone, Serialize,  Deserialize, JsonSchema, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub struct ContPrevention {
     pub source: CardId,
     pub effect: PreventionEffect,
 }
-#[derive(Clone, Serialize,  Deserialize, JsonSchema, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub struct ContTriggeredAbility {
     pub source: CardId,
     pub trigger: AbilityTrigger,
     pub effect: Vec<Clause>,
 }
 
-#[derive(Clone, Serialize, Deserialize,  JsonSchema, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub enum StaticAbilityEffect {
     HasColor(Color),
     GivenByKeyword,
     Protection(PermConstraint),
 }
-#[derive(Clone, Serialize,  Deserialize, JsonSchema, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub struct StaticAbility {
     pub keyword: Option<KeywordAbility>,
     pub effect: StaticAbilityEffect,
 }
-#[derive(Clone, Serialize,  Deserialize, JsonSchema, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub struct ActivatedAbility {
     pub costs: Vec<Cost>,
     pub effect: Vec<Clause>,
     pub keyword: Option<KeywordAbility>,
 }
-#[derive(Clone, Serialize,  Deserialize, JsonSchema, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub enum Ability {
     Activated(ActivatedAbility),
     Triggered(TriggeredAbility),

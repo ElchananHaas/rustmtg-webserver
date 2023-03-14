@@ -14,12 +14,12 @@ pub enum Color {
     Green,
     Colorless,
 }
-#[derive(Clone, Serialize,  Deserialize, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Mana {
     pub color: Color,
     pub restriction: Option<ManaRestriction>,
 }
-#[derive(Clone, Serialize,  Deserialize, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ManaRestriction {}
 
 impl Mana {
@@ -35,7 +35,9 @@ impl Mana {
 //This ordering is significant,
 //because we want to sort generic mana to the bottom for
 //fulfilling with mana symbols last
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord, JsonSchema)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord, JsonSchema,
+)]
 pub enum ManaCostSymbol {
     White,
     Blue,

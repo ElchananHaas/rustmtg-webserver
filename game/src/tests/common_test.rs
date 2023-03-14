@@ -1,6 +1,6 @@
 use crate::{
     game::{build_game::GameBuilder, Game},
-    player::{PlayerCon, TestClient},
+    player::{MockClient, PlayerCon, TestClient},
 };
 use anyhow::Result;
 use carddb::carddb::CardDB;
@@ -16,6 +16,7 @@ pub fn test_state_w_decks(deck: Vec<&'static str>) -> Result<Game> {
     gamebuild.add_player("p2", &db, &deck, PlayerCon::new_test(TestClient::default()))?;
     gamebuild.build(&db)
 }
+
 pub fn test_state() -> Result<Game> {
     let mut deck = Vec::new();
     for _ in 1..(60 - deck.len()) {
@@ -26,13 +27,25 @@ pub fn test_state() -> Result<Game> {
 pub async fn hand_battlefield_setup(
     hand: Vec<&'static str>,
     battlefield: Vec<&'static str>,
+    active_client: Option<Box<dyn MockClient>>,
 ) -> Result<(Game, HashSetObj<CardId>)> {
     let joined: Vec<&'static str> = hand
         .iter()
         .cloned()
         .chain(battlefield.iter().cloned())
         .collect();
-    let mut game = test_state_w_decks(joined)?;
+    let db: &CardDB = get_db();
+    let mut gamebuild = GameBuilder::new();
+    let active_client =
+        active_client.map_or_else(|| TestClient::default(), |x| TestClient::with_client(x));
+    gamebuild.add_player("p1", &db, &joined, PlayerCon::new_test(active_client))?;
+    gamebuild.add_player(
+        "p2",
+        &db,
+        &joined,
+        PlayerCon::new_test(TestClient::default()),
+    )?;
+    let mut game = gamebuild.build(&db)?;
     let pl = game.active_player;
     let mut library = game.players.get(pl).unwrap().library.clone();
     for _ in 0..battlefield.len() {
@@ -45,7 +58,9 @@ pub async fn hand_battlefield_setup(
     }
     let pl_hand = game.players.get(pl).unwrap().hand.clone();
     assert!(pl_hand.len() == hand.len());
+    game.send_state().await;
     game.layers_state_actions().await;
+    game.send_state().await;
     Ok((game, pl_hand))
 }
 pub fn cards_with_name(state: &mut Game, name: &str) -> Vec<CardId> {

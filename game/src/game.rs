@@ -1,10 +1,10 @@
-use crate::CARDDB;
 use crate::actions::{Action, ActionFilter, CastingOption, StackActionOption};
 use crate::client_message::{Ask, AskSelectN};
 use crate::ent_maps::EntMap;
 use crate::errors::MTGError;
 use crate::event::{DiscardCause, Event, EventResult, TagEvent};
 use crate::player::{Player, PlayerCon};
+use crate::CARDDB;
 use anyhow::{bail, Result};
 use async_recursion::async_recursion;
 use carddb::carddb::CardDB;
@@ -24,7 +24,7 @@ use futures::future;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize, Deserializer};
+use serde::{Deserialize, Serialize};
 use std::cmp::max;
 use std::collections::{HashMap, VecDeque};
 
@@ -65,24 +65,22 @@ pub struct Game {
     //that are perpertual or time-driven
     pub triggered_abilities: Vec<ContTriggeredAbility>,
     pub prevention_effects: Vec<ContPrevention>,
-    #[schemars(skip)]
-    #[serde(skip_serializing,deserialize_with="get_carddb")]
+    #[serde(skip, default = "get_carddb")]
     #[allow(dead_code)]
     db: &'static CardDB,
     #[serde(skip)]
     backup: Option<Box<Game>>,
-    #[schemars(skip)]
-    #[serde(skip_serializing,deserialize_with="rng_from_entropy")]
+    #[serde(skip, default = "rng_from_entropy")]
     rng: rand::rngs::StdRng, //Store the RNG to allow for deterministic replay
                              //if I choose to implement it
 }
 
-fn get_carddb<'de, D>(_deserializer:D) -> Result<&'static CardDB, D::Error> where D: Deserializer<'de>{
-    Ok(CARDDB.get_or_init(|| CardDB::new()))
+fn get_carddb() -> &'static CardDB {
+    CARDDB.get_or_init(|| CardDB::new())
 }
 
-fn rng_from_entropy<'de, D>(_deserializer:D) -> Result<rand::rngs::StdRng, D::Error> where D: Deserializer<'de>{
-    Ok(rand::rngs::StdRng::from_entropy())
+fn rng_from_entropy() -> rand::rngs::StdRng {
+    rand::rngs::StdRng::from_entropy()
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -240,22 +238,19 @@ impl Game {
     //takes in a card or permanent, returns it's controller or owner if the controller
     //is unavailable
     pub fn get_controller(&self, ent: CardId) -> Option<PlayerId> {
-        self.cards
-            .get(ent)
-            .map(|card| card.get_controller())
+        self.cards.get(ent).map(|card| card.get_controller())
     }
     pub async fn cycle_priority(&mut self) {
-        loop{
+        loop {
             self.player_cycle_priority(self.turn_order_from_player(self.active_player))
-            .await;
-            if self.stack.len()==0{
+                .await;
+            if self.stack.len() == 0 {
                 return;
-            }else{
-                self.resolve(self.stack[self.stack.len()-1]).await;
+            } else {
+                self.resolve(self.stack[self.stack.len() - 1]).await;
                 self.stack.pop();
             }
         }
-
     }
     #[async_recursion]
     #[must_use]
@@ -468,24 +463,26 @@ impl Game {
             }
         }
     }
-    async fn select_targets(&mut self,         
-        player:PlayerId,
-        stack_ent:CardId) -> Result<(), MTGError> {
+    async fn select_targets(
+        &mut self,
+        player: PlayerId,
+        stack_ent: CardId,
+    ) -> Result<(), MTGError> {
         let mut selected = Vec::new();
         if let Some(card) = self.cards.get(stack_ent) {
             for x in &card.effect {
-                selected.push(self.clause_select_targets(player,stack_ent, x).await?);
+                selected.push(self.clause_select_targets(player, stack_ent, x).await?);
             }
         }
-        if let Some(card)=self.cards.get_mut(stack_ent){
-            card.effect=selected;
+        if let Some(card) = self.cards.get_mut(stack_ent) {
+            card.effect = selected;
         }
         Ok(())
     }
     async fn clause_select_targets(
         &self,
-        player:PlayerId,
-        stack_ent:CardId,
+        player: PlayerId,
+        stack_ent: CardId,
         clause: &Clause,
     ) -> Result<Clause, MTGError> {
         let mut clause = clause.clone();
@@ -564,7 +561,8 @@ impl Game {
         if !castopt.filter.check() {
             return Err(MTGError::CantCast);
         }
-        self.select_targets(castopt.player,castopt.stack_ent).await?;
+        self.select_targets(castopt.player, castopt.stack_ent)
+            .await?;
         let cost_paid = self.request_cost_payment(&castopt).await?;
         println!("cost paid {:?}", cost_paid);
         if self.is_mana_ability(castopt.stack_ent) {

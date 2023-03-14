@@ -1,5 +1,5 @@
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use common::{
     cost::Cost,

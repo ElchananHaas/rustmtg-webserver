@@ -1,10 +1,12 @@
 //This is a hashset with modified serialization to serialize as a javascript object, not an array.
 //This will make the front end far simpler and reduce bugs there
 use schemars::JsonSchema;
-use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
+use serde::de::DeserializeOwned;
+use serde::{self, Deserialize, Serialize};
 use std::collections::HashMap;
 use std::hash::Hash;
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, JsonSchema)]
+#[serde(transparent)]
 pub struct HashSetObj<T>
 where
     T: Hash + Eq,
@@ -58,6 +60,29 @@ where
         }
     }
 }
+//This hack is to work around https://github.com/serde-rs/serde/issues/1183
+impl<'de,T> Deserialize<'de> for HashSetObj<T>
+where
+    T: Hash + Eq + Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de> {
+        let json_val=<serde_json::Value>::deserialize(deserializer)?;
+        let mut buf:Vec<u8>=Vec::new();
+        {
+            let cursor = std::io::Cursor::new(&mut buf);
+            let mut json_serial = serde_json::Serializer::new(cursor);
+            json_val.serialize(&mut json_serial).map_err(serde::de::Error::custom)?;
+        }
+        //This unsafe is fine becuase serde-json doesn't borrow from its input
+        let buf_ref:&[u8]=unsafe{std::mem::transmute(&*buf)};
+        let base: HashMap<T,()> = serde_json::from_slice(&buf_ref).map_err(serde::de::Error::custom)?;
+        Ok(Self { base})
+        
+
+    }
+}
 impl<'a, T> HashSetObj<T>
 where
     T: Hash + Eq,
@@ -101,38 +126,5 @@ where
 
     fn into_iter(self) -> Self::IntoIter {
         self.base.keys()
-    }
-}
-impl<T: Serialize + Hash + Eq> Serialize for HashSetObj<T> {
-    fn serialize<S>(
-        &self,
-        serializer: S,
-    ) -> std::result::Result<<S as Serializer>::Ok, <S as serde::Serializer>::Error>
-    where
-        S: serde::Serializer,
-    {
-        self.base.serialize(serializer)
-    }
-}
-
-impl<'de, T: Deserialize<'de> + Hash + Eq> Deserialize<'de> for HashSetObj<T> {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        Ok(HashSetObj {
-            base: <HashMap<T, ()> as Deserialize>::deserialize(deserializer)?,
-        })
-    }
-}
-impl<T> schemars::JsonSchema for HashSetObj<T>
-where
-    T: Hash + Eq,
-{
-    fn schema_name() -> std::string::String {
-        <HashMap<T, ()> as JsonSchema>::schema_name()
-    }
-    fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-        <HashMap<T, ()> as JsonSchema>::json_schema(gen)
     }
 }

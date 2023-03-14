@@ -5,9 +5,9 @@ use common::{
     hashset_obj::HashSetObj,
 };
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::{collections::HashMap, hash::Hash};
-#[derive(Serialize,  Deserialize, JsonSchema)]
+#[derive(Serialize, Deserialize, JsonSchema)]
 pub struct GameState {
     pub player: PlayerId,
     pub cards: HashMap<CardId, CardEnt>,
@@ -33,6 +33,7 @@ pub struct AskPairItem<T: Hash + Eq> {
     pub min: usize, //inclusive
     pub max: usize, //inclusive
 }
+
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct AskPair<T: Hash + Eq> {
     pub pairs: HashMap<CardId, AskPairItem<T>>,

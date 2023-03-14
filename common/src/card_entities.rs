@@ -16,7 +16,7 @@ use crate::{
     entities::{CardId, PlayerId, TargetId},
     spellabil::KeywordAbility,
 };
-#[derive(Clone, Serialize,  Deserialize, PartialEq, Eq, JsonSchema, Debug)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema, Debug)]
 pub enum EntType {
     RealCard,
     TokenCard,
@@ -29,8 +29,8 @@ impl Default for EntType {
     }
 }
 #[derive(Derivative)]
-#[derivative(Default,Debug)]
-#[derive(Serialize,  Deserialize, Clone, JsonSchema)]
+#[derivative(Default, Debug)]
+#[derive(Serialize, Deserialize, Clone, JsonSchema)]
 //Holds a card, token or embalem, or triggered/activated ability
 pub struct CardEnt {
     pub etb_this_cycle: bool,
@@ -57,7 +57,7 @@ pub struct CardEnt {
     pub abilities: Vec<Ability>,
     pub costs: Vec<Cost>, //Casting costs
     pub art_url: Option<String>,
-    #[derivative(Debug="ignore")]
+    #[derivative(Debug = "ignore")]
     pub printed: Option<Box<CardEnt>>, //This stores the printed version of the card so
     //when layers are recalculated, this can be set.
     pub counters: Vec<Counter>,
@@ -78,11 +78,11 @@ impl CardEnt {
             self.owner
         }
     }
-    pub fn set_controller(&mut self, controller: Option<PlayerId>){
-        self.controller=controller;
+    pub fn set_controller(&mut self, controller: Option<PlayerId>) {
+        self.controller = controller;
     }
 }
-#[derive(Clone, Debug, Serialize,  Deserialize, JsonSchema, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema, PartialEq)]
 pub struct PT {
     pub power: i64,
     pub toughness: i64,
