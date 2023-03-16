@@ -134,13 +134,19 @@ export type ActionFilter = "None"
 
 export interface GameState {
 active_player: PlayerId
-battlefield: MapOf_Null
+battlefield: {
+[k: string]: null
+}
 cards: {
 [k: string]: CardEnt
 }
-command: MapOf_Null
+command: {
+[k: string]: null
+}
 cont_effects: Continuous[]
-exile: MapOf_Null
+exile: {
+[k: string]: null
+}
 extra_turns: PlayerId[]
 land_play_limit: number
 lands_played_this_turn: number
@@ -160,9 +166,6 @@ subphases: Subphase[]
 triggered_abilities: ContTriggeredAbility[]
 turn_order: PlayerId[]
 [k: string]: unknown
-}
-export interface MapOf_Null {
-[k: string]: null
 }
 export interface CardEnt {
 abilities: Ability[]
@@ -185,10 +188,16 @@ printed?: (CardEnt | null)
 printed_name: string
 pt?: (PT | null)
 source_of_ability?: (CardId | null)
-subtypes: MapOf_Null
-supertypes: MapOf_Null
+subtypes: {
+[k: string]: null
+}
+supertypes: {
+[k: string]: null
+}
 tapped: boolean
-types: MapOf_Null
+types: {
+[k: string]: null
+}
 [k: string]: unknown
 }
 export interface ActivatedAbility {
@@ -234,6 +243,7 @@ source: CardId
 [k: string]: unknown
 }
 export interface EntMapFor_ManaIdAnd_Mana {
+count: number
 ents: {
 [k: string]: Mana
 }
@@ -253,7 +263,9 @@ graveyard: CardId[]
 hand: CardId[]
 library: CardId[]
 life: number
-mana_pool: MapOf_Null
+mana_pool: {
+[k: string]: null
+}
 max_handsize: number
 name: string
 [k: string]: unknown
@@ -276,7 +288,9 @@ pairs: {
 [k: string]: unknown
 }
 export interface AskPairItemFor_TargetId {
-items: MapOf_Null
+items: {
+[k: string]: null
+}
 max: number
 min: number
 [k: string]: unknown
@@ -288,7 +302,9 @@ pairs: {
 [k: string]: unknown
 }
 export interface AskPairItemFor_CardId {
-items: MapOf_Null
+items: {
+[k: string]: null
+}
 max: number
 min: number
 [k: string]: unknown

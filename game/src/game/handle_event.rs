@@ -3,7 +3,10 @@ mod phase_event;
 
 use crate::game::*;
 use async_recursion::async_recursion;
-use common::{ability::AbilityTrigger, card_entities::EntType};
+use common::{
+    ability::{AbilityTrigger, AbilityTriggerType},
+    card_entities::EntType,
+};
 
 impl Game {
     /*
@@ -241,14 +244,19 @@ impl Game {
         source_id: CardId,
         event: &EventResult,
     ) -> bool {
-        match trigger{
-            AbilityTrigger::ZoneMove(trig)=>{
-                if let EventResult::MoveZones { oldent:_, newent, source, dest }=event
+        match &trigger.trigger{
+            AbilityTriggerType::ZoneMove(trig)=>{
+                if let EventResult::MoveZones { oldent, newent, source, dest }=event
                 && let &Some(newent)=newent{ 
+                    let constrained_card=if *source==Some(Zone::Battlefield){
+                        *oldent
+                    } else {
+                        newent
+                    };
                     trig.origin.map_or(true, |x|Some(x)==*source) &&
                     trig.dest.map_or(true, |x| x==*dest) && 
-                    trig.constraint.iter().all(|c|
-                        self.passes_constraint(c, source_id,newent.into() ))
+                    trigger.constraint.iter().all(|c|
+                        self.passes_constraint(c, source_id,constrained_card.into() ))
                 }else{
                     false
                 }

@@ -70,7 +70,7 @@ fn parse_p1p1_coutner<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Counter> {
     let (tokens, _) = tag(tokens!("+1", "/", "+1"))(tokens)?;
     Ok((tokens, Counter::Plus1Plus1))
 }
-fn parse_counter<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Counter> {
+pub fn parse_counter<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Counter> {
     alt((parse_p1p1_coutner,))(tokens)
 }
 fn parse_put_counter<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseEffect> {

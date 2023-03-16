@@ -4,22 +4,28 @@ use common::{
     cardtypes::{ParseType, Subtype, Type},
     spellabil::{KeywordAbility, PermConstraint},
 };
-use nom::bytes::complete::tag;
 use nom::combinator::opt;
 use nom::{branch::alt, bytes::complete::take};
+use nom::{bytes::complete::tag, multi::many1};
 use texttoken::{tokens, Tokens};
 
-use crate::carddb::{nom_error, Res};
+use crate::{
+    carddb::{nom_error, Res},
+    parse_clauseeffect::parse_counter,
+};
 
 pub fn parse_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConstraint> {
     let type_constraint = nom::combinator::map(Type::parse, |t| PermConstraint::CardType(t));
     let (tokens, constraint) = alt((
         parse_tapped_constraint,
+        parse_other_constraint,
         type_constraint,
         parse_cardname_constraint,
         parse_you_control_constraint,
         parse_keyword_constraint,
         parse_subtype_constraint,
+        parse_has_counter,
+        parse_multicolored_constraint,
     ))(tokens)?;
     let (tokens, or_part) = opt(parse_or_constraint)(tokens)?;
     if let Some(or_part) = or_part {
@@ -28,10 +34,15 @@ pub fn parse_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConstrain
         Ok((tokens, constraint))
     }
 }
+fn parse_multicolored_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConstraint> {
+    let (tokens, _) = tag(tokens!["multicolored"])(tokens)?;
+    Ok((tokens, PermConstraint::Multicolored))
+}
+
 fn parse_or_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConstraint> {
     let (tokens, _) = tag(tokens!["or"])(tokens)?;
-    let (tokens, constraint) = parse_constraint(tokens)?;
-    Ok((tokens, constraint))
+    let (tokens, constraint) = many1(parse_constraint)(tokens)?;
+    Ok((tokens, PermConstraint::And(constraint)))
 }
 
 fn parse_tapped_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConstraint> {
@@ -42,6 +53,11 @@ fn parse_tapped_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConstr
 fn parse_cardname_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConstraint> {
     let (tokens, _) = tag(tokens!["cardname"])(tokens)?;
     Ok((tokens, PermConstraint::IsCardname))
+}
+
+fn parse_other_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConstraint> {
+    let (tokens, _) = alt((tag(tokens!["another"]), tag(tokens!["other"])))(tokens)?;
+    Ok((tokens, PermConstraint::Other))
 }
 
 fn parse_you_control_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConstraint> {
@@ -60,4 +76,14 @@ fn parse_keyword_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConst
 fn parse_subtype_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConstraint> {
     let (tokens, subtype) = Subtype::parse(tokens)?;
     Ok((tokens, PermConstraint::Subtype(subtype)))
+}
+
+fn parse_has_counter<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConstraint> {
+    let (tokens, _) = tag(tokens!["it"])(tokens)?;
+    let (tokens, _) = alt((tag(tokens!["had"]), tag(tokens!["has"])))(tokens)?;
+    let (tokens, _) = tag(tokens!["a"])(tokens)?;
+    let (tokens, counter) = parse_counter(tokens)?;
+    let (tokens, _) = tag(tokens!["counter"])(tokens)?;
+    let (tokens, _) = opt(tag(tokens!["on", "it"]))(tokens)?;
+    Ok((tokens, PermConstraint::HasCounter(counter)))
 }

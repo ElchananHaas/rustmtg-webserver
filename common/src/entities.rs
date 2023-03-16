@@ -4,26 +4,26 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde::{Deserializer, Serializer};
 
-pub trait IdDeserializer{
-    fn custom_from(x:NonZeroU64) -> Self;
+pub trait IdDeserializer {
+    fn custom_from(x: NonZeroU64) -> Self;
 }
-impl IdDeserializer for PlayerId{
-    fn custom_from(x:NonZeroU64) -> Self {
+impl IdDeserializer for PlayerId {
+    fn custom_from(x: NonZeroU64) -> Self {
         Self(x)
     }
 }
-impl IdDeserializer for CardId{
-    fn custom_from(x:NonZeroU64) -> Self {
+impl IdDeserializer for CardId {
+    fn custom_from(x: NonZeroU64) -> Self {
         Self(x)
     }
 }
-impl IdDeserializer for ManaId{
-    fn custom_from(x:NonZeroU64) -> Self {
+impl IdDeserializer for ManaId {
+    fn custom_from(x: NonZeroU64) -> Self {
         Self(x)
     }
 }
-impl IdDeserializer for TargetId{
-    fn custom_from(x:NonZeroU64) -> Self {
+impl IdDeserializer for TargetId {
+    fn custom_from(x: NonZeroU64) -> Self {
         if x.get() < MIN_CARDID {
             Self::Player(PlayerId::from(x))
         } else {

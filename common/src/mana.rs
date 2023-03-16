@@ -4,7 +4,9 @@ use serde::Deserialize;
 use serde_derive::Serialize;
 use strum::EnumString;
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, Enum, JsonSchema, EnumString)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, Serialize, Deserialize, Enum, JsonSchema, EnumString, Eq, Hash,
+)]
 #[strum(serialize_all = "lowercase")]
 pub enum Color {
     White,
@@ -48,7 +50,7 @@ pub enum ManaCostSymbol {
     Generic,
 }
 impl ManaCostSymbol {
-    pub fn spendable_colors(self) -> Vec<Color> {
+    pub fn spendable_colors(&self) -> Vec<Color> {
         match self {
             Self::White => vec![Color::White],
             Self::Blue => vec![Color::Blue],
@@ -64,6 +66,17 @@ impl ManaCostSymbol {
                 Color::Green,
                 Color::Colorless,
             ],
+        }
+    }
+    pub fn color_identity(&self) -> Vec<Color> {
+        match self {
+            Self::White => vec![Color::White],
+            Self::Blue => vec![Color::Blue],
+            Self::Black => vec![Color::Black],
+            Self::Red => vec![Color::Red],
+            Self::Green => vec![Color::Green],
+            Self::Colorless => vec![],
+            Self::Generic => vec![],
         }
     }
 }

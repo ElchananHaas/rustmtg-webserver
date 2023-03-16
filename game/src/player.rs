@@ -250,7 +250,7 @@ impl TestClient {
             }
             ClientMessage::AskUser(ask) => {
                 self.prepared_response = TestClient::respond(
-                    &self.mock_client,
+                    &mut self.mock_client,
                     &self.game.as_ref().expect("game is set"),
                     ask,
                 );
@@ -258,7 +258,11 @@ impl TestClient {
         }
         Ok(())
     }
-    fn respond(mock_client: &Box<dyn MockClient>, game: &GameState, ask: Ask) -> ClientResponse {
+    fn respond(
+        mock_client: &mut Box<dyn MockClient>,
+        game: &GameState,
+        ask: Ask,
+    ) -> ClientResponse {
         dbg!(&ask);
         match &ask {
             Ask::Action(act) => {
@@ -309,10 +313,14 @@ pub enum ClientResponse {
 }
 
 pub trait MockClient: Send + Sync {
-    fn select_action(&self, _game: &GameState, _ask: &AskSelectN<Action>) -> HashSetObj<usize> {
+    fn select_action(&mut self, _game: &GameState, _ask: &AskSelectN<Action>) -> HashSetObj<usize> {
         panic!("Select action not overriden");
     }
-    fn select_targets(&self, _game: &GameState, _ask: &AskSelectN<TargetId>) -> HashSetObj<usize> {
+    fn select_targets(
+        &mut self,
+        _game: &GameState,
+        _ask: &AskSelectN<TargetId>,
+    ) -> HashSetObj<usize> {
         panic!("Select targets not overriden");
     }
 }

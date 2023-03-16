@@ -5,7 +5,7 @@ use common::{
     hashset_obj::HashSetObj,
 };
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{collections::HashMap, hash::Hash};
 #[derive(Serialize, Deserialize, JsonSchema)]
 pub struct GameState {

@@ -28,11 +28,14 @@ pub enum KeywordAbility {
 pub enum PermConstraint {
     IsTapped,
     CardType(Type),
+    And(Vec<PermConstraint>),
     Or(Vec<PermConstraint>),
     IsCardname,
     YouControl,
     HasKeyword(KeywordAbility),
     Subtype(Subtype),
+    HasCounter(Counter),
+    Multicolored,
     Other,
 }
 

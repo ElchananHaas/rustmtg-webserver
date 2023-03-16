@@ -398,6 +398,30 @@ impl Game {
         target: TargetId,
     ) -> bool {
         match constraint{
+            PermConstraint::HasCounter(counter) => {
+                if let TargetId::Card(card)=target
+                && let Some(ent)=self.cards.get(card){
+                    ent.counters.contains(counter)
+                }else{
+                    false
+                } 
+            }
+            PermConstraint::And(constraints) => {             
+                for c in constraints{
+                    if !self.passes_constraint(c, source,target){
+                        return false
+                    }
+                }
+                true
+            }
+            PermConstraint::Multicolored => {
+                if let TargetId::Card(card)=target
+                && let Some(ent)=self.cards.get(card){
+                    ent.colors.len()>=2
+                }else{
+                    false
+                } 
+            }
             PermConstraint::Subtype(subtype)=>{
                 if let TargetId::Card(card)=target
                 && let Some(ent)=self.cards.get(card){

@@ -1,7 +1,6 @@
 //This is a hashset with modified serialization to serialize as a javascript object, not an array.
 //This will make the front end far simpler and reduce bugs there
 use schemars::JsonSchema;
-use serde::de::DeserializeOwned;
 use serde::{self, Deserialize, Serialize};
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -61,26 +60,28 @@ where
     }
 }
 //This hack is to work around https://github.com/serde-rs/serde/issues/1183
-impl<'de,T> Deserialize<'de> for HashSetObj<T>
+impl<'de, T> Deserialize<'de> for HashSetObj<T>
 where
     T: Hash + Eq + Deserialize<'de>,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: serde::Deserializer<'de> {
-        let json_val=<serde_json::Value>::deserialize(deserializer)?;
-        let mut buf:Vec<u8>=Vec::new();
+        D: serde::Deserializer<'de>,
+    {
+        let json_val = <serde_json::Value>::deserialize(deserializer)?;
+        let mut buf: Vec<u8> = Vec::new();
         {
             let cursor = std::io::Cursor::new(&mut buf);
             let mut json_serial = serde_json::Serializer::new(cursor);
-            json_val.serialize(&mut json_serial).map_err(serde::de::Error::custom)?;
+            json_val
+                .serialize(&mut json_serial)
+                .map_err(serde::de::Error::custom)?;
         }
         //This unsafe is fine becuase serde-json doesn't borrow from its input
-        let buf_ref:&[u8]=unsafe{std::mem::transmute(&*buf)};
-        let base: HashMap<T,()> = serde_json::from_slice(&buf_ref).map_err(serde::de::Error::custom)?;
-        Ok(Self { base})
-        
-
+        let buf_ref: &[u8] = unsafe { std::mem::transmute(&*buf) };
+        let base: HashMap<T, ()> =
+            serde_json::from_slice(&buf_ref).map_err(serde::de::Error::custom)?;
+        Ok(Self { base })
     }
 }
 impl<'a, T> HashSetObj<T>

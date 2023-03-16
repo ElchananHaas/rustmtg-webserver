@@ -190,10 +190,7 @@ impl Game {
                                     ent.subtypes.add(t);
                                 }
                                 TokenAttribute::HasColor(color) => {
-                                    ent.abilities.push(Ability::Static(StaticAbility {
-                                        keyword: None,
-                                        effect: StaticAbilityEffect::HasColor(color),
-                                    }));
+                                    ent.colors.add(color);
                                 }
                                 TokenAttribute::Ability(abil) => {
                                     ent.abilities.push(abil);

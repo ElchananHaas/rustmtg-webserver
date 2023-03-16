@@ -58,6 +58,10 @@ fn baneslayer_angel_test() {
 fn basris_acolyte() {
     test_card(db(), "Basri's Acolyte");
 }
+#[test_log::test]
+fn basris_lt() {
+    test_card(db(), "Basri's Lieutenant");
+}
 #[allow(dead_code)]
 fn test_card(db: &CardDB, card_name: &'static str) -> CardEnt {
     let spawned = db.try_spawn_card(card_name, PlayerId::from(NonZeroU64::new(1).unwrap()));

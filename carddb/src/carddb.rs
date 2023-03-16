@@ -7,6 +7,7 @@ use crate::spawn_error::SpawnError;
 use crate::tokenize::tokenize;
 use common::ability::Ability;
 use common::ability::AbilityTrigger;
+use common::ability::AbilityTriggerType;
 use common::ability::ActivatedAbility;
 use common::ability::StaticAbility;
 use common::ability::StaticAbilityEffect;
@@ -307,20 +308,45 @@ fn parse_etb_trigger<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, AbilityTrigger> 
     let (tokens, _) = tag(tokens!["enter", "the", "battlefield"])(tokens)?;
     Ok((
         tokens,
-        AbilityTrigger::ZoneMove(ZoneMoveTrigger {
-            origin: None,
-            dest: Some(Zone::Battlefield),
+        AbilityTrigger {
+            trigger: AbilityTriggerType::ZoneMove(ZoneMoveTrigger {
+                origin: None,
+                dest: Some(Zone::Battlefield),
+            }),
             constraint,
-        }),
+        },
     ))
 }
 
+fn parse_death_trigger<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, AbilityTrigger> {
+    let (tokens, constraint) = many1(parse_constraint)(tokens)?;
+    let (tokens, _) = tag(tokens!["die"])(tokens)?;
+    Ok((
+        tokens,
+        AbilityTrigger {
+            trigger: AbilityTriggerType::ZoneMove(ZoneMoveTrigger {
+                origin: Some(Zone::Battlefield),
+                dest: Some(Zone::Graveyard),
+            }),
+            constraint,
+        },
+    ))
+}
 fn parse_ability_trigger<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, AbilityTrigger> {
-    alt((parse_etb_trigger,))(tokens)
+    alt((parse_etb_trigger, parse_death_trigger))(tokens)
+}
+fn parse_comma_if_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConstraint> {
+    let (tokens, _) = tag(tokens![",", "if"])(tokens)?;
+    let (tokens, constraint) = parse_constraint(tokens)?;
+    Ok((tokens, constraint))
 }
 fn parse_triggered_ability<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Ability> {
-    let (tokens, _) = tag(tokens!["when"])(tokens)?;
-    let (tokens, trigger) = parse_ability_trigger(tokens)?;
+    let (tokens, _) = alt((tag(tokens!["when"]), tag(tokens!["whenever"])))(tokens)?;
+    let (tokens, mut trigger) = parse_ability_trigger(tokens)?;
+    let (tokens, if_clause) = opt(parse_comma_if_clause)(tokens)?;
+    if let Some(constraint) = if_clause {
+        trigger.constraint.push(constraint);
+    }
     let (tokens, _) = tag(tokens![","])(tokens)?;
     let (tokens, effect) = many1(parse_clause)(tokens)?;
     Ok((
@@ -345,8 +371,19 @@ fn parse_protection_from_x_and_from_y<'a>(tokens: &'a Tokens) -> Res<&'a Tokens,
         },
     ))
 }
+fn parse_protection_from<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, StaticAbility> {
+    let (tokens, _) = tag(tokens!["protection", "from"])(tokens)?;
+    let (tokens, constraint) = parse_constraint(tokens)?;
+    Ok((
+        tokens,
+        StaticAbility {
+            keyword: Some(KeywordAbility::Protection),
+            effect: StaticAbilityEffect::Protection(constraint),
+        },
+    ))
+}
 fn parse_static_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Ability> {
-    let (tokens, abil) = alt((parse_protection_from_x_and_from_y,))(tokens)?;
+    let (tokens, abil) = alt((parse_protection_from_x_and_from_y, parse_protection_from))(tokens)?;
     Ok((tokens, Ability::Static(abil)))
 }
 fn parse_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Ability> {

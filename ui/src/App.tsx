@@ -231,7 +231,7 @@ class Game extends React.Component<IProps, IState>{
             }
         }
         if (this.state.actions.type === "target") {
-            let actions=this.state.actions;
+            let actions=structuredClone(this.state.actions);
             let act=actions.action;
             let idx=act.ents.indexOf(ent_id);
             if(idx===-1){
@@ -244,7 +244,8 @@ class Game extends React.Component<IProps, IState>{
             }
         }
         if (this.state.actions.type === "attackers") {
-            const actions = { ...this.state.actions }
+            const actions = structuredClone(this.state.actions);
+            console.log(actions);
             if (ent_id in actions.attackers) {
                 if (actions.selected_attacker !== null) {
                     actions.selected_attacker = null;
@@ -256,10 +257,10 @@ class Game extends React.Component<IProps, IState>{
                 const selected = actions.selected_attacker;
                 const this_attack = actions.attackers[selected];
                 const this_resp = actions.response[selected];
-                if (ent_id in this_attack.items && Object.keys(this_resp).length < this_attack.max) {
+                if (ent_id in this_attack.items) {
                     if (ent_id in this_resp) {
                         delete this_resp[ent_id];
-                    } else {
+                    } else if (Object.keys(this_resp).length < this_attack.max){
                         this_resp[ent_id] = null;
                     }
                     actions.selected_attacker = null;
@@ -280,10 +281,10 @@ class Game extends React.Component<IProps, IState>{
                 const selected = actions.selected_blocker;
                 const this_block = actions.blockers[selected];
                 const this_resp = actions.response[selected];
-                if (ent_id in this_block.items && Object.keys(this_resp).length < this_block.max) {
+                if (ent_id in this_block.items) {
                     if (ent_id in this_resp) {
                         delete this_resp[ent_id];
-                    } else {
+                    } else if (Object.keys(this_resp).length < this_block.max){
                         this_resp[ent_id] = null;
                     }
                     actions.selected_blocker = null;

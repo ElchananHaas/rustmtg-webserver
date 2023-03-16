@@ -18,11 +18,15 @@ pub struct ZoneMoveTrigger {
     //These both must match for the ability to trigger
     pub origin: Option<Zone>,
     pub dest: Option<Zone>,
-    pub constraint: Vec<PermConstraint>,
 }
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
-pub enum AbilityTrigger {
+pub enum AbilityTriggerType {
     ZoneMove(ZoneMoveTrigger),
+}
+#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
+pub struct AbilityTrigger {
+    pub constraint: Vec<PermConstraint>,
+    pub trigger: AbilityTriggerType,
 }
 
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
@@ -49,7 +53,6 @@ pub struct ContTriggeredAbility {
 
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub enum StaticAbilityEffect {
-    HasColor(Color),
     GivenByKeyword,
     Protection(PermConstraint),
 }

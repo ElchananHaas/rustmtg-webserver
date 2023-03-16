@@ -12,6 +12,5 @@ pub mod spellabil;
 pub mod token_attribute;
 pub mod zones;
 
-
 #[cfg(test)]
 mod tests {}

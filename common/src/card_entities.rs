@@ -2,6 +2,8 @@ use crate::{
     cardtypes::{Subtypes, Supertypes, Types},
     counters::Counter,
     entities::MIN_CARDID,
+    hashset_obj::HashSetObj,
+    mana::Color,
     spellabil::Clause,
 };
 use derivative::*;
@@ -40,6 +42,7 @@ pub struct CardEnt {
     pub attacking: Option<TargetId>, //Is this attacking a player of planeswalker
     pub blocked: Vec<CardId>,       //What creatues is this blocked by?
     pub blocking: Vec<CardId>,
+    pub colors: HashSetObj<Color>,
     pub effect: Vec<Clause>, //Effect of card, for instant sorcery or ability
     pub name: String,
     #[derivative(Default(value = "PlayerId::from(NonZeroU64::new(MIN_CARDID-1).unwrap())"))]

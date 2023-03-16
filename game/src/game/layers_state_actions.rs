@@ -47,10 +47,18 @@ impl Game {
                 card.abilities = base.abilities;
                 card.costs = base.costs;
                 card.pt = base.pt;
+                card.colors = base.colors;
                 if zone == Zone::Battlefield || zone == Zone::Stack {
                     card.set_controller(Some(card.owner));
                 } else {
                     card.set_controller(None);
+                }
+                for cost in &card.costs {
+                    if let Cost::Mana(cost) = cost {
+                        for color in cost.color_identity() {
+                            card.colors.add(color);
+                        }
+                    }
                 }
             }
         }
