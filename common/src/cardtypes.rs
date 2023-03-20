@@ -77,7 +77,7 @@ impl HashSetObj<Type> {
     }
 }
 #[derive(
-    Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize, Deserialize, JsonSchema, EnumString,
+    Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize, Deserialize, JsonSchema, EnumString
 )]
 #[strum(serialize_all = "lowercase")]
 pub enum Type {
@@ -90,7 +90,7 @@ pub enum Type {
     Sorcery,
 }
 #[derive(
-    Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize, Deserialize, JsonSchema, EnumString,
+    Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize, Deserialize, JsonSchema, EnumString
 )]
 #[strum(serialize_all = "lowercase")]
 pub enum Supertype {
@@ -100,7 +100,7 @@ pub enum Supertype {
     Snow,
 }
 #[derive(
-    Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize, Deserialize, JsonSchema, EnumString,
+    Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize, Deserialize, JsonSchema, EnumString
 )]
 #[strum(serialize_all = "lowercase")]
 pub enum Subtype {

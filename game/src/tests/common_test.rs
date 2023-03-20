@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{
     game::{build_game::GameBuilder, Game},
     player::{MockClient, PlayerCon, TestClient},
@@ -82,14 +84,13 @@ pub fn cards_with_name(state: &Game, name: &str) -> Vec<CardId> {
         .collect()
 }
 
-pub fn sorted_field(state: &Game) -> Vec<String> {
-    let mut res = Vec::new();
-    for card in &state.battlefield {
-        if let Some(card) = state.cards.get(*card) {
-            res.push(card.name.to_owned());
+pub fn by_name(state: &Game) -> HashMap<String,Vec<CardId>> {
+    let mut res: HashMap<String,Vec<CardId>> = HashMap::new();
+    for cardid in &state.battlefield {
+        if let Some(card) = state.cards.get(*cardid) {
+            res.entry(card.name.to_owned()).or_default().push(*cardid);
         }
     }
-    res.sort();
     res
 }
 

@@ -196,6 +196,9 @@ impl Game {
                                 }
                             }
                         }
+                        let mut list_types:Vec<String>=ent.subtypes.clone().into_iter().map(|t|format!("{:?}",t)).collect();
+                        list_types.sort();
+                        ent.name=list_types.join(" ");
                         ent.printed = Some(Box::new(ent.clone()));
                         let (id, _ent) = self.cards.insert(ent);
                         let results = self

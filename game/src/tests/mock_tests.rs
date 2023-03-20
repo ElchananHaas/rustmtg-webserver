@@ -12,7 +12,7 @@ use crate::{
     client_message::{AskSelectN, GameState},
     event::Event,
     player::MockClient,
-    tests::common_test::{cards_with_name, hand_battlefield_setup, sorted_field},
+    tests::common_test::{cards_with_name, hand_battlefield_setup, by_name},
 };
 
 struct AcolyteClient {}
@@ -104,7 +104,9 @@ async fn basris_lt_test() -> Result<()> {
     assert!(game.battlefield.len() == 1);
     game.cycle_priority().await;
     assert!(game.battlefield.len() == 2);
-    dbg!(sorted_field(&game));
+    let battlefield=by_name(&game);
+    assert!(battlefield.contains_key("Basri's Lieutenant"));
+    assert!(battlefield.contains_key("Knight"));
     Ok(())
 }
 
