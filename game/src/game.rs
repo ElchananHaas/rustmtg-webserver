@@ -8,7 +8,7 @@ use crate::CARDDB;
 use anyhow::{bail, Result};
 use async_recursion::async_recursion;
 use carddb::carddb::CardDB;
-use common::ability::{Ability, ContPrevention, ContTriggeredAbility, StaticAbilityEffect};
+use common::ability::{Ability, ContTriggeredAbility, StaticAbilityEffect};
 use common::card_entities::{CardEnt, EntType};
 use common::cardtypes::Subtype;
 use common::cost::{Cost, PaidCost};
@@ -62,9 +62,8 @@ pub struct Game {
     pub priority: PlayerId,
     pub active_player: PlayerId,
     pub cont_effects: Vec<Continuous>, //Holds continuous effects
-    //that are perpertual or time-driven
+    //that are perpetual or time-driven
     pub triggered_abilities: Vec<ContTriggeredAbility>,
-    pub prevention_effects: Vec<ContPrevention>,
     #[serde(skip, default = "get_carddb")]
     #[allow(dead_code)]
     db: &'static CardDB,

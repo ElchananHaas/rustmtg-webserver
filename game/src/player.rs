@@ -263,7 +263,6 @@ impl TestClient {
         game: &GameState,
         ask: Ask,
     ) -> ClientResponse {
-        dbg!(&ask);
         match &ask {
             Ask::Action(act) => {
                 if act.min == 0 && act.max == 1 {
@@ -313,14 +312,18 @@ pub enum ClientResponse {
 }
 
 pub trait MockClient: Send + Sync {
-    fn select_action(&mut self, _game: &GameState, _ask: &AskSelectN<Action>) -> HashSetObj<usize> {
+    fn select_action(&mut self, _game: &GameState, ask: &AskSelectN<Action>) -> HashSetObj<usize> {
+        println!("query");
+        dbg!(ask);
         panic!("Select action not overriden");
     }
     fn select_targets(
         &mut self,
         _game: &GameState,
-        _ask: &AskSelectN<TargetId>,
+        ask: &AskSelectN<TargetId>,
     ) -> HashSetObj<usize> {
+        println!("query");
+        dbg!(ask);
         panic!("Select targets not overriden");
     }
 }

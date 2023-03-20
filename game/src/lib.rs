@@ -24,7 +24,7 @@ mod tests {
     mod baneslayer_angel_tests;
     mod common_test;
     mod counter_tests;
-    mod etb_tests;
     mod lethal_damage;
+    mod mock_tests;
     mod swift_response_test;
 }

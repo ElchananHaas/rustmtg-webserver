@@ -27,10 +27,10 @@ impl Game {
             let event: TagEvent = match events.pop() {
                 Some(x) => x,
                 None => {
+                    //This fires all triggers once all events have happened.
                     for result in &results {
                         self.fire_triggers(result).await;
                     }
-
                     return results;
                 }
             };
@@ -223,6 +223,7 @@ impl Game {
                     let (id,card)=self.cards.insert(new_card);
                     self.stack.push(id);
                     let controller=card.get_controller();
+                    self.send_state().await;
                     let _=self.select_targets(controller, id).await;//Fix this later to see if there is a valid target assignment,
                     //becuase if so the player must take it.
                 }

@@ -123,7 +123,5 @@ impl Game {
                 }
             }
         }
-        let preventions = Vec::new();
-        self.prevention_effects = preventions;
     }
 }

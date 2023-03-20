@@ -63,7 +63,7 @@ pub async fn hand_battlefield_setup(
     game.send_state().await;
     Ok((game, pl_hand))
 }
-pub fn cards_with_name(state: &mut Game, name: &str) -> Vec<CardId> {
+pub fn cards_with_name(state: &Game, name: &str) -> Vec<CardId> {
     state
         .cards_and_zones()
         .iter()
@@ -80,4 +80,39 @@ pub fn cards_with_name(state: &mut Game, name: &str) -> Vec<CardId> {
             )
         })
         .collect()
+}
+
+pub fn sorted_field(state: &Game) -> Vec<String> {
+    let mut res = Vec::new();
+    for card in &state.battlefield {
+        if let Some(card) = state.cards.get(*card) {
+            res.push(card.name.to_owned());
+        }
+    }
+    res.sort();
+    res
+}
+
+#[test_log::test]
+fn test_game_init() -> Result<()> {
+    let db = get_db();
+    let mut gamebuild = GameBuilder::new();
+    let mut deck = Vec::new();
+    deck.push("Staunch Shieldmate");
+    deck.push("Garruk's Gorehorn");
+    deck.push("Alpine Watchdog");
+    //deck.push("Mistral Singer");
+    deck.push("Wishcoin Crab");
+    deck.push("Blood Glutton");
+    deck.push("Walking Corpse");
+    deck.push("Onakke Ogre");
+    deck.push("Colossal Dreadmaw");
+    deck.push("Concordia Pegasus");
+    for _ in 1..(60 - deck.len()) {
+        deck.push("Plains");
+    }
+    gamebuild.add_player("p1", &db, &deck, PlayerCon::new_test(TestClient::default()))?;
+    gamebuild.add_player("p2", &db, &deck, PlayerCon::new_test(TestClient::default()))?;
+    let _game = gamebuild.build(&db);
+    Ok(())
 }

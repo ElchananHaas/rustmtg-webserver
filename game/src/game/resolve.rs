@@ -1,5 +1,4 @@
 use super::*;
-use common::ability::{StaticAbility, StaticAbilityEffect};
 use common::spellabil::{ContDuration, NumberComputer};
 use common::token_attribute::TokenAttribute;
 

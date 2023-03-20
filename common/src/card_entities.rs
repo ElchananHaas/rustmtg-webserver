@@ -47,7 +47,6 @@ pub struct CardEnt {
     pub name: String,
     #[derivative(Default(value = "PlayerId::from(NonZeroU64::new(MIN_CARDID-1).unwrap())"))]
     pub owner: PlayerId,
-    pub printed_name: String,
     pub ent_type: EntType,
     pub known_to: HashSet<PlayerId>, //What players know the front side of this card?
     pub pt: Option<PT>,

@@ -2,7 +2,7 @@ use anyhow::Result;
 use common::{cardtypes::Subtype, zones::Zone};
 use test_log;
 
-use crate::{player::TestClient, tests::common_test::hand_battlefield_setup};
+use crate::tests::common_test::hand_battlefield_setup;
 
 #[test_log::test(tokio::test)]
 async fn test_baneslayer() -> Result<()> {

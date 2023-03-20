@@ -4,7 +4,7 @@ use serde_derive::Serialize;
 
 use crate::cost::Cost;
 use crate::entities::CardId;
-use crate::mana::{Color, ManaCostSymbol};
+use crate::mana::ManaCostSymbol;
 use crate::spellabil::Clause;
 use crate::spellabil::ClauseEffect;
 use crate::spellabil::KeywordAbility;
