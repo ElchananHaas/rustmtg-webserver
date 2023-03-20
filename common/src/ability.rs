@@ -44,12 +44,6 @@ pub struct ContPrevention {
     pub source: CardId,
     pub effect: PreventionEffect,
 }
-#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
-pub struct ContTriggeredAbility {
-    pub source: CardId,
-    pub trigger: AbilityTrigger,
-    pub effect: Vec<Clause>,
-}
 
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub enum StaticAbilityEffect {

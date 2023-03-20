@@ -208,9 +208,7 @@ impl Game {
                     self.movezones(&mut results, &mut events, ent, origin, dest)
                         .await;
                 },
-                Event::TriggeredAbil { event: _, trigger } => {
-                    let effect=trigger.effect;
-                    let source=trigger.source;
+                Event::TriggeredAbil { event: _, source,effect } => {
                     let mut new_card=CardEnt::default();
                     new_card.effect=effect;
                     new_card.source_of_ability=Some(source);
@@ -265,15 +263,24 @@ impl Game {
         }
     }
     async fn fire_triggers(&mut self, event: &EventResult) {
-        for triggered_abil in self.triggered_abilities.clone() {
-            let trigger = &triggered_abil.trigger;
-            if self.trigger_matches(trigger, triggered_abil.source, event) {
-                self.handle_event(Event::TriggeredAbil {
-                    event: Box::new(event.clone()),
-                    trigger: triggered_abil,
-                })
-                .await;
+        let mut events: Vec<Event>=Vec::new();
+        for cardid in &self.battlefield{
+            if let Some(card)=self.cards.get(*cardid){
+                for abil in &card.abilities{
+                    if let Ability::Triggered(abil)=abil{
+                        if self.trigger_matches(&abil.trigger, *cardid, event) {
+                            events.push(Event::TriggeredAbil {
+                                event: Box::new(event.clone()),
+                                source: *cardid,
+                                effect: abil.effect.clone()
+                            })
+                        }
+                    }
+                }
             }
+        }
+        for event in events{
+            self.handle_event(event).await;
         }
     }
     async fn drain_mana_pools(&mut self) {
@@ -361,13 +368,6 @@ impl Game {
                         Zone::Battlefield => {
                             self.battlefield.insert(newent);
                             newcard.etb_this_cycle=true;
-                            for abil in &newcard.abilities{
-                                if let Ability::Triggered(abil)=abil{
-                                    self.triggered_abilities.push(
-                                        ContTriggeredAbility { source: newent, trigger: abil.trigger.clone(), effect: abil.effect.clone() }
-                                    );
-                                }
-                            }
                         }
                         Zone::Hand => {
                             owner.hand.insert(newent);

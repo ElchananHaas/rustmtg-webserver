@@ -2,10 +2,9 @@ use std::collections::HashMap;
 
 use crate::game::{Phase, Subphase};
 use common::{
-    ability::ContTriggeredAbility,
     counters::Counter,
     entities::{CardId, PlayerId, TargetId},
-    zones::Zone,
+    zones::Zone, spellabil::Clause,
 };
 
 //An event tagged with replacement effects already applied to it
@@ -103,7 +102,8 @@ pub enum Event {
     },
     TriggeredAbil {
         event: Box<EventResult>,
-        trigger: ContTriggeredAbility,
+        source: CardId,
+        effect: Vec<Clause>,
     },
     PutCounter {
         affected: TargetId,
