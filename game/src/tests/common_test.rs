@@ -84,8 +84,8 @@ pub fn cards_with_name(state: &Game, name: &str) -> Vec<CardId> {
         .collect()
 }
 
-pub fn by_name(state: &Game) -> HashMap<String,Vec<CardId>> {
-    let mut res: HashMap<String,Vec<CardId>> = HashMap::new();
+pub fn by_name(state: &Game) -> HashMap<String, Vec<CardId>> {
+    let mut res: HashMap<String, Vec<CardId>> = HashMap::new();
     for cardid in &state.battlefield {
         if let Some(card) = state.cards.get(*cardid) {
             res.entry(card.name.to_owned()).or_default().push(*cardid);

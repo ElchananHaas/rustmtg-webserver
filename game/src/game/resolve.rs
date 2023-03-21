@@ -50,6 +50,10 @@ impl Game {
             } else {
                 vec![]
             },
+            Affected::All => {
+                let all_cards=self.all_cards().into_iter().map(|x| TargetId::Card(x)).collect();
+                all_cards
+            }
             Affected::UpToXTarget(_num, targets) => {
                 targets.clone()
             },
@@ -196,9 +200,14 @@ impl Game {
                                 }
                             }
                         }
-                        let mut list_types:Vec<String>=ent.subtypes.clone().into_iter().map(|t|format!("{:?}",t)).collect();
+                        let mut list_types: Vec<String> = ent
+                            .subtypes
+                            .clone()
+                            .into_iter()
+                            .map(|t| format!("{:?}", t))
+                            .collect();
                         list_types.sort();
-                        ent.name=list_types.join(" ");
+                        ent.name = list_types.join(" ");
                         ent.printed = Some(Box::new(ent.clone()));
                         let (id, _ent) = self.cards.insert(ent);
                         let results = self

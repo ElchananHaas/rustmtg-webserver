@@ -4,7 +4,8 @@ use crate::game::{Phase, Subphase};
 use common::{
     counters::Counter,
     entities::{CardId, PlayerId, TargetId},
-    zones::Zone, spellabil::Clause,
+    spellabil::Clause,
+    zones::Zone,
 };
 
 //An event tagged with replacement effects already applied to it

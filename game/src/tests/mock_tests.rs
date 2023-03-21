@@ -12,7 +12,7 @@ use crate::{
     client_message::{AskSelectN, GameState},
     event::Event,
     player::MockClient,
-    tests::common_test::{cards_with_name, hand_battlefield_setup, by_name},
+    tests::common_test::{by_name, cards_with_name, hand_battlefield_setup},
 };
 
 struct AcolyteClient {}
@@ -61,7 +61,9 @@ async fn basris_acolyte_test() -> Result<()> {
     Ok(())
 }
 
-struct BasriLieutenantClient {}
+struct BasriLieutenantClient {
+    place_basri: bool,
+}
 
 impl MockClient for BasriLieutenantClient {
     fn select_targets(
@@ -73,7 +75,9 @@ impl MockClient for BasriLieutenantClient {
         for (i, card) in ask.ents.iter().enumerate() {
             let TargetId::Card(cardid)=card else {panic!();};
             let card = game.cards.get(cardid).unwrap();
-            if card.name == "Staunch Shieldmate" {
+            if (card.name == "Staunch Shieldmate" && !self.place_basri)
+                || (card.name == "Basri's Lieutenant" && self.place_basri)
+            {
                 let mut res = HashSetObj::new();
                 res.add(i);
                 return res;
@@ -87,7 +91,7 @@ async fn basris_lt_test() -> Result<()> {
     let (mut game, hand) = hand_battlefield_setup(
         vec!["Basri's Lieutenant"],
         vec!["Staunch Shieldmate"; 1],
-        Some(Box::new(BasriLieutenantClient {})),
+        Some(Box::new(BasriLieutenantClient { place_basri: false })),
     )
     .await?;
     let lt = *hand.iter().next().unwrap();
@@ -104,12 +108,39 @@ async fn basris_lt_test() -> Result<()> {
     assert!(game.battlefield.len() == 1);
     game.cycle_priority().await;
     assert!(game.battlefield.len() == 2);
-    let battlefield=by_name(&game);
+    let battlefield = by_name(&game);
     assert!(battlefield.contains_key("Basri's Lieutenant"));
     assert!(battlefield.contains_key("Knight"));
     Ok(())
 }
 
+
+#[test_log::test(tokio::test)]
+async fn basris_lt_self_test() -> Result<()> {
+    let (mut game, hand) = hand_battlefield_setup(
+        vec!["Basri's Lieutenant"],
+        vec![],
+        Some(Box::new(BasriLieutenantClient { place_basri: true })),
+    )
+    .await?;
+    let lt = *hand.iter().next().unwrap();
+    let _moved = game
+        .handle_event(Event::MoveZones {
+            ent: lt,
+            origin: Some(Zone::Hand),
+            dest: Zone::Battlefield,
+        })
+        .await;
+    game.cycle_priority().await;
+    let basri = game.battlefield.iter().next().unwrap();
+    game.destroy(*basri).await;
+    assert!(game.battlefield.len() == 0);
+    game.cycle_priority().await;
+    assert!(game.battlefield.len() == 1);
+    let battlefield = by_name(&game);
+    assert!(battlefield.contains_key("Knight"));
+    Ok(())
+}
 #[test_log::test(tokio::test)]
 async fn empty_test() -> Result<()> {
     let (mut game, _hand) = hand_battlefield_setup(vec![], vec![], None).await?;

@@ -197,6 +197,30 @@ impl Game {
         }
         res
     }
+    pub fn all_cards(&self)-> Vec<CardId> {
+        let mut res = Vec::new();
+        res.extend(
+            self.battlefield
+                .iter()
+                .cloned()
+        );
+        res.extend(self.stack.iter().cloned());
+        res.extend(self.exile.iter().cloned());
+        res.extend(self.command.iter().cloned());
+        for player_id in self.turn_order.clone() {
+            if let Some(player) = self.players.get(player_id) {
+                res.extend(player.hand.iter().cloned());
+                res.extend(
+                    player
+                        .graveyard
+                        .iter()
+                        .cloned()
+                );
+                res.extend(player.library.iter().cloned())
+            }
+        }
+        res
+    }
     pub fn locate_zone(&self, id: CardId) -> Option<Zone> {
         for (ent_id, zone) in self.cards_and_zones() {
             if ent_id == id {
@@ -509,7 +533,7 @@ impl Game {
     ) -> Result<Clause, MTGError> {
         let mut clause = clause.clone();
         return Ok(match &clause.affected {
-            Affected::Cardname | Affected::Controller | Affected::ManuallySet(_) => clause,
+            Affected::Cardname | Affected::Controller | Affected::ManuallySet(_)| Affected::All => clause,
             Affected::Target(_) => {
                 if let Some(pl) = self.players.get(player) {
                     let valid = self.valid_targets(&clause, stack_ent);

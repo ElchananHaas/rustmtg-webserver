@@ -31,11 +31,17 @@ impl IdDeserializer for TargetId {
         }
     }
 }
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash, Serialize, Deserialize, JsonSchema, PartialOrd, Ord)]
+#[derive(
+    Copy, Clone, PartialEq, Eq, Debug, Hash, Serialize, Deserialize, JsonSchema, PartialOrd, Ord,
+)]
 pub struct PlayerId(NonZeroU64);
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash, Serialize, Deserialize, JsonSchema, PartialOrd, Ord)]
+#[derive(
+    Copy, Clone, PartialEq, Eq, Debug, Hash, Serialize, Deserialize, JsonSchema, PartialOrd, Ord,
+)]
 pub struct CardId(NonZeroU64); //a reference to a card, spell token or permanent
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash, Serialize, Deserialize, JsonSchema, PartialOrd, Ord)]
+#[derive(
+    Copy, Clone, PartialEq, Eq, Debug, Hash, Serialize, Deserialize, JsonSchema, PartialOrd, Ord,
+)]
 pub struct ManaId(NonZeroU64);
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub enum TargetId {

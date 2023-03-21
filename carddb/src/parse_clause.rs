@@ -48,7 +48,13 @@ pub fn parse_affected<'a>(
         );
         Ok((tokens, res))
     }
-    alt((parse_target, parse_cardname, parse_up_to_target))(tokens)
+    fn parse_each<'a>(
+        tokens: &'a Tokens,
+    ) -> Res<&'a Tokens, (Affected, Option<PermConstraint>)> {
+        let (tokens, _) = tag(tokens!["each"])(tokens)?;
+        Ok((tokens, (Affected::All, None)))
+    }
+    alt((parse_target, parse_cardname, parse_up_to_target,parse_each))(tokens)
 }
 pub fn parse_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
     let (tokens, clause) = context(

@@ -49,6 +49,7 @@ pub struct Clause {
 pub enum Affected {
     Controller,
     Cardname,
+    All,
     Target(Option<TargetId>),
     ManuallySet(Option<TargetId>),
     UpToXTarget(i64, Vec<TargetId>),

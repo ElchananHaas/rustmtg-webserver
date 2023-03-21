@@ -23,13 +23,17 @@ impl Game {
             event,
             replacements: Vec::new(),
         });
+        let mut trigger_ents=self.battlefield.clone();
         loop {
             let event: TagEvent = match events.pop() {
                 Some(x) => x,
                 None => {
                     //This fires all triggers once all events have happened.
+                    for ent in &self.battlefield{
+                        trigger_ents.add(*ent);
+                    }
                     for result in &results {
-                        self.fire_triggers(result).await;
+                        self.fire_triggers(&trigger_ents,result).await;
                     }
                     return results;
                 }
@@ -262,24 +266,24 @@ impl Game {
             }
         }
     }
-    async fn fire_triggers(&mut self, event: &EventResult) {
-        let mut events: Vec<Event>=Vec::new();
-        for cardid in &self.battlefield{
-            if let Some(card)=self.cards.get(*cardid){
-                for abil in &card.abilities{
-                    if let Ability::Triggered(abil)=abil{
+    async fn fire_triggers(&mut self, trigger_ents: &HashSetObj<CardId>,event: &EventResult) {
+        let mut events: Vec<Event> = Vec::new();
+        for cardid in trigger_ents {
+            if let Some(card) = self.cards.get(*cardid) {
+                for abil in &card.abilities {
+                    if let Ability::Triggered(abil) = abil {
                         if self.trigger_matches(&abil.trigger, *cardid, event) {
                             events.push(Event::TriggeredAbil {
                                 event: Box::new(event.clone()),
                                 source: *cardid,
-                                effect: abil.effect.clone()
+                                effect: abil.effect.clone(),
                             })
                         }
                     }
                 }
             }
         }
-        for event in events{
+        for event in events {
             self.handle_event(event).await;
         }
     }
