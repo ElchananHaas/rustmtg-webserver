@@ -27,4 +27,5 @@ mod tests {
     mod lethal_damage;
     mod mock_tests;
     mod swift_response_test;
+    mod card_tests;
 }

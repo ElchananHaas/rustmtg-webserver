@@ -141,6 +141,7 @@ async fn basris_lt_self_test() -> Result<()> {
     assert!(battlefield.contains_key("Knight"));
     Ok(())
 }
+
 #[test_log::test(tokio::test)]
 async fn empty_test() -> Result<()> {
     let (mut game, _hand) = hand_battlefield_setup(vec![], vec![], None).await?;

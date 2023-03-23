@@ -36,6 +36,7 @@ impl Game {
         } else {
             Zone::Battlefield
         };
+        self.stack.pop();
         self.move_zones(id, Zone::Stack, dest).await;
     }
     pub fn calculate_affected(

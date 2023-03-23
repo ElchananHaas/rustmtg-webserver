@@ -25,7 +25,6 @@ async fn test_gagglemaster() -> Result<()> {
             })
             .await;
         game.resolve(game.stack[0]).await;
-        game.stack.pop();
         let end_life = game.players.get(pl).unwrap().life;
         assert_eq!(start_life + 2 * (i as i64 + 1), end_life);
     }

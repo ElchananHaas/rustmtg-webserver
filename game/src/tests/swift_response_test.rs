@@ -5,7 +5,7 @@ use test_log;
 use crate::{event::EventResult, tests::common_test::test_state_w_decks};
 
 #[test_log::test(tokio::test)]
-async fn test_gagglemaster() -> Result<()> {
+async fn test_swift_response() -> Result<()> {
     let deck = vec!["Swift Response", "Alpine Watchdog"];
     let mut game = test_state_w_decks(deck)?;
     let pl = game.active_player;
