@@ -66,6 +66,10 @@ fn basris_lt() {
 fn basris_solidarity() {
     test_card(db(), "Basri's Solidarity");
 }
+#[test_log::test]
+fn celestial_enforcer() {
+    test_card(db(), "Celestial Enforcer");
+}
 #[allow(dead_code)]
 fn test_card(db: &CardDB, card_name: &'static str) -> CardEnt {
     let spawned = db.try_spawn_card(card_name, PlayerId::from(NonZeroU64::new(1).unwrap()));

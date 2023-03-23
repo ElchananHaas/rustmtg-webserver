@@ -151,7 +151,10 @@ impl Game {
                     Ability::Activated(abil) => abil,
                     _ => continue,
                 };
-
+                //TODO handle correct target for restictions 
+                if !abil.restrictions.iter().all(|r|self.passes_constraint(r, card_id, card_id.into())){
+                    continue;
+                }
                 let maybe_pay = self.maybe_can_pay(&abil.costs, player_id, card_id);
                 if !maybe_pay {
                     continue;

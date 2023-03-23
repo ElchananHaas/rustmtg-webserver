@@ -25,13 +25,14 @@ pub enum KeywordAbility {
 }
 
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
-pub enum PermConstraint {
+pub enum Constraint {
     IsTapped,
     CardType(Type),
-    And(Vec<PermConstraint>),
-    Or(Vec<PermConstraint>),
+    And(Vec<Constraint>),
+    Or(Vec<Constraint>),
     IsCardname,
     YouControl,
+    ControlWith(Vec<Constraint>,i64),
     HasKeyword(KeywordAbility),
     Subtype(Subtype),
     HasCounter(Counter),
@@ -43,7 +44,7 @@ pub enum PermConstraint {
 pub struct Clause {
     pub effect: ClauseEffect,
     pub affected: Affected,
-    pub constraints: Vec<PermConstraint>,
+    pub constraints: Vec<Constraint>,
 }
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub enum Affected {
@@ -63,7 +64,7 @@ pub enum ContDuration {
 pub struct Continuous {
     pub effect: ContEffect,
     pub affected: Affected,
-    pub constraints: Vec<PermConstraint>,
+    pub constraints: Vec<Constraint>,
     pub duration: ContDuration,
     pub source: CardId,
 }
@@ -75,7 +76,7 @@ pub enum ContEffect {
 
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub enum NumberComputer {
-    NumPermanents(Vec<PermConstraint>),
+    NumPermanents(Vec<Constraint>),
 }
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub enum ClauseEffect {
@@ -84,6 +85,7 @@ pub enum ClauseEffect {
     AddMana(Vec<ManaCostSymbol>),
     GainLife(i64),
     DrawCard,
+    Tap,
     Compound(Vec<Clause>),
     SetTargetController(Box<Clause>),
     CreateToken(Vec<TokenAttribute>),

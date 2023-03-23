@@ -43,7 +43,7 @@ impl Game {
         &self,
         id: CardId,
         affected: &Affected,
-        constraints: &Vec<PermConstraint>,
+        constraints: &Vec<Constraint>,
     ) -> Vec<TargetId> {
         let affected: Vec<TargetId> = match affected {
             Affected::Controller => if let Some(card)=self.cards.get(id){
@@ -104,6 +104,13 @@ impl Game {
                         for &mana in &manas {
                             self.add_mana(pl, mana).await;
                         }
+                    }
+                }
+            }
+            ClauseEffect::Tap => {
+                for aff in affected {
+                    if let TargetId::Card(card) = aff {
+                        self.tap(card).await;
                     }
                 }
             }

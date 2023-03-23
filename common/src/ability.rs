@@ -3,12 +3,11 @@ use serde::Deserialize;
 use serde_derive::Serialize;
 
 use crate::cost::Cost;
-use crate::entities::CardId;
 use crate::mana::ManaCostSymbol;
 use crate::spellabil::Clause;
 use crate::spellabil::ClauseEffect;
 use crate::spellabil::KeywordAbility;
-use crate::spellabil::{Affected, PermConstraint};
+use crate::spellabil::{Affected, Constraint};
 use crate::zones::Zone;
 //use crate::carddb::CardBuilder;
 //origin entity, target entity
@@ -25,7 +24,7 @@ pub enum AbilityTriggerType {
 }
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub struct AbilityTrigger {
-    pub constraint: Vec<PermConstraint>,
+    pub constraint: Vec<Constraint>,
     pub trigger: AbilityTriggerType,
 }
 
@@ -35,20 +34,11 @@ pub struct TriggeredAbility {
     pub effect: Vec<Clause>,
     pub keyword: Option<KeywordAbility>,
 }
-#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
-pub enum PreventionEffect {
-    Unused, //Needed becuase typescript can't handle empty enums
-}
-#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
-pub struct ContPrevention {
-    pub source: CardId,
-    pub effect: PreventionEffect,
-}
 
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub enum StaticAbilityEffect {
     GivenByKeyword,
-    Protection(PermConstraint),
+    Protection(Constraint),
 }
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub struct StaticAbility {
@@ -60,6 +50,7 @@ pub struct ActivatedAbility {
     pub costs: Vec<Cost>,
     pub effect: Vec<Clause>,
     pub keyword: Option<KeywordAbility>,
+    pub restrictions: Option<Constraint>
 }
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub enum Ability {
@@ -89,6 +80,7 @@ impl Ability {
                 affected: Affected::Controller,
             }],
             keyword: None,
+            restrictions: None
         })
     }
     pub fn from_keyword(keyword: KeywordAbility) -> Self {

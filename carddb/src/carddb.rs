@@ -5,6 +5,7 @@ use crate::parse_non_body::parse_pt;
 use crate::parse_non_body::parse_type_line;
 use crate::spawn_error::SpawnError;
 use crate::tokenize::tokenize;
+use crate::util::parse_number;
 use common::ability::Ability;
 use common::ability::AbilityTrigger;
 use common::ability::AbilityTriggerType;
@@ -19,7 +20,7 @@ use common::entities::PlayerId;
 use common::mana::ManaCostSymbol;
 use common::spellabil::Clause;
 use common::spellabil::KeywordAbility;
-use common::spellabil::PermConstraint;
+use common::spellabil::Constraint;
 use common::zones::Zone;
 use log::debug;
 use log::info;
@@ -285,19 +286,48 @@ fn parse_mana_cost<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Vec<Cost>> {
     let manas = manas.into_iter().flatten().map(|x| Cost::Mana(x)).collect();
     Ok((tokens, manas))
 }
+fn parse_tap_cost<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Vec<Cost>> {
+    let (tokens, _) = tag(tokens!["{","t","}"])(tokens)?;
+    Ok((tokens,vec![Cost::Selftap]))
+}
+
+fn parse_tap_comma<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Vec<Cost>> {
+    let (tokens, _) = tag(tokens![","])(tokens)?;
+    Ok((tokens,vec![]))
+}
+
+fn parse_cost<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Vec<Cost>> {
+    alt((parse_mana_cost,parse_tap_cost,parse_tap_comma))(tokens)
+}
+
 fn parse_costs<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Vec<Cost>> {
-    alt((parse_mana_cost,))(tokens)
+    let (tokens, manas) = many1(parse_cost)(tokens)?;
+    let costs = manas.into_iter().flatten().collect();
+    Ok((tokens, costs))
+}
+fn parse_activate_only<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Constraint> {
+    fn if_you_control<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Constraint> {
+        let (tokens, _) = tag(tokens!["if", "you", "control"])(tokens)?;
+        let (tokens,num)=parse_number(tokens)?;
+        let (tokens,r)=many1(parse_constraint)(tokens)?;
+        Ok((tokens,Constraint::ControlWith(r, num)))
+    }
+    let (tokens, _) = tag(tokens![".", "activate", "only"])(tokens)?;
+    let (tokens,res)=alt((if_you_control,))(tokens)?;
+    Ok((tokens, res))
 }
 fn parse_activated_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Ability> {
     let (tokens, costs) = parse_costs(tokens)?;
     let (tokens, _) = tag(tokens![":"])(tokens)?;
     let (tokens, clauses) = many1(parse_clause)(tokens)?;
+    let (tokens,activate_only) = opt(parse_activate_only)(tokens)?;
     Ok((
         tokens,
         Ability::Activated(ActivatedAbility {
             costs,
             effect: clauses,
             keyword: None,
+            restrictions: activate_only,
         }),
     ))
 }
@@ -334,7 +364,7 @@ fn parse_death_trigger<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, AbilityTrigger
 fn parse_ability_trigger<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, AbilityTrigger> {
     alt((parse_etb_trigger, parse_death_trigger))(tokens)
 }
-fn parse_comma_if_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, PermConstraint> {
+fn parse_comma_if_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Constraint> {
     let (tokens, _) = tag(tokens![",", "if"])(tokens)?;
     let (tokens, constraint) = parse_constraint(tokens)?;
     Ok((tokens, constraint))
@@ -366,7 +396,7 @@ fn parse_protection_from_x_and_from_y<'a>(tokens: &'a Tokens) -> Res<&'a Tokens,
         tokens,
         StaticAbility {
             keyword: Some(KeywordAbility::Protection),
-            effect: StaticAbilityEffect::Protection(PermConstraint::Or(vec![type1, type2])),
+            effect: StaticAbilityEffect::Protection(Constraint::Or(vec![type1, type2])),
         },
     ))
 }

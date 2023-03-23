@@ -6,7 +6,7 @@ use crate::util::parse_number;
 use common::spellabil::Affected;
 use common::spellabil::Clause;
 use common::spellabil::ClauseEffect;
-use common::spellabil::PermConstraint;
+use common::spellabil::Constraint;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::combinator::opt;
@@ -16,27 +16,27 @@ use texttoken::{tokens, Tokens};
 
 pub fn parse_affected<'a>(
     tokens: &'a Tokens,
-) -> Res<&'a Tokens, (Affected, Option<PermConstraint>)> {
-    fn parse_target<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, (Affected, Option<PermConstraint>)> {
+) -> Res<&'a Tokens, (Affected, Option<Constraint>)> {
+    fn parse_target<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, (Affected, Option<Constraint>)> {
         let (tokens, is_other) = opt(tag(tokens!("other")))(tokens)?;
         let (tokens, _) = tag(tokens!("target"))(tokens)?;
         Ok((
             tokens,
             (
                 Affected::Target(None),
-                is_other.map(|_| PermConstraint::Other),
+                is_other.map(|_| Constraint::Other),
             ),
         ))
     }
     fn parse_cardname<'a>(
         tokens: &'a Tokens,
-    ) -> Res<&'a Tokens, (Affected, Option<PermConstraint>)> {
+    ) -> Res<&'a Tokens, (Affected, Option<Constraint>)> {
         let (tokens, _) = tag(tokens!("cardname"))(tokens)?;
         Ok((tokens, (Affected::Cardname, None)))
     }
     fn parse_up_to_target<'a>(
         tokens: &'a Tokens,
-    ) -> Res<&'a Tokens, (Affected, Option<PermConstraint>)> {
+    ) -> Res<&'a Tokens, (Affected, Option<Constraint>)> {
         let (tokens, _) = opt(tag(tokens!["each", "of"]))(tokens)?;
         let (tokens, _) = tag(tokens!["up", "to"])(tokens)?;
         let (tokens, num) = parse_number(tokens)?;
@@ -44,13 +44,13 @@ pub fn parse_affected<'a>(
         let (tokens, _) = tag(tokens!["target"])(tokens)?;
         let res = (
             Affected::UpToXTarget(num, vec![]),
-            is_other.map(|_| PermConstraint::Other),
+            is_other.map(|_| Constraint::Other),
         );
         Ok((tokens, res))
     }
     fn parse_each<'a>(
         tokens: &'a Tokens,
-    ) -> Res<&'a Tokens, (Affected, Option<PermConstraint>)> {
+    ) -> Res<&'a Tokens, (Affected, Option<Constraint>)> {
         let (tokens, _) = tag(tokens!["each"])(tokens)?;
         Ok((tokens, (Affected::All, None)))
     }
@@ -65,8 +65,6 @@ pub fn parse_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
             parse_you_clause,
         )),
     )(tokens)?;
-    //let (tokens, _) = opt(tag(tokens!(".")))(tokens)?;
-    //let (tokens, _) = opt(tag(tokens!("\n")))(tokens)?;
     Ok((tokens, clause))
 }
 fn parse_you_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {

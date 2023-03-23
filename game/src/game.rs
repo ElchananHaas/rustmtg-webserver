@@ -16,7 +16,7 @@ use common::entities::{CardId, ManaId, PlayerId, TargetId, MIN_CARDID};
 use common::hashset_obj::HashSetObj;
 use common::mana::{Color, Mana, ManaCostSymbol};
 use common::spellabil::{
-    Affected, Clause, ClauseEffect, Continuous, KeywordAbility, PermConstraint,
+    Affected, Clause, ClauseEffect, Continuous, KeywordAbility, Constraint,
 };
 use common::zones::Zone;
 use enum_map::EnumMap;
@@ -415,12 +415,12 @@ impl Game {
     }
     pub fn passes_constraint(
         &self,
-        constraint: &PermConstraint,
+        constraint: &Constraint,
         source: CardId,
         target: TargetId,
     ) -> bool {
         match constraint{
-            PermConstraint::HasCounter(counter) => {
+            Constraint::HasCounter(counter) => {
                 if let TargetId::Card(card)=target
                 && let Some(ent)=self.cards.get(card){
                     ent.counters.contains(counter)
@@ -428,7 +428,20 @@ impl Game {
                     false
                 } 
             }
-            PermConstraint::And(constraints) => {             
+            Constraint::ControlWith(constraints,num )=>{
+                if let Some(ent)=self.cards.get(source){
+                    let mut count=0;
+                    for card in self.players_permanents(ent.get_controller()){
+                        if constraints.iter().all(|r| self.passes_constraint(r, card,card.into())){
+                            count+=1
+                        }
+                    }
+                    count>=*num
+                }else{
+                    false
+                } 
+            }
+            Constraint::And(constraints) => {             
                 for c in constraints{
                     if !self.passes_constraint(c, source,target){
                         return false
@@ -436,7 +449,7 @@ impl Game {
                 }
                 true
             }
-            PermConstraint::Multicolored => {
+            Constraint::Multicolored => {
                 if let TargetId::Card(card)=target
                 && let Some(ent)=self.cards.get(card){
                     ent.colors.len()>=2
@@ -444,7 +457,7 @@ impl Game {
                     false
                 } 
             }
-            PermConstraint::Subtype(subtype)=>{
+            Constraint::Subtype(subtype)=>{
                 if let TargetId::Card(card)=target
                 && let Some(ent)=self.cards.get(card){
                     ent.subtypes.contains(subtype)
@@ -452,7 +465,7 @@ impl Game {
                     false
                 }
             }
-            PermConstraint::IsTapped => {
+            Constraint::IsTapped => {
                 if let TargetId::Card(card)=target
                 && let Some(ent)=self.cards.get(card){
                     ent.tapped
@@ -460,7 +473,7 @@ impl Game {
                     false
                 }
             },
-            PermConstraint::CardType(t) => {
+            Constraint::CardType(t) => {
                 if let TargetId::Card(card)=target
                 && let Some(ent)=self.cards.get(card){
                     ent.types.get(t)
@@ -468,7 +481,7 @@ impl Game {
                     false
                 }                        
             },
-            PermConstraint::Or(constraints) => {
+            Constraint::Or(constraints) => {
                 for c in constraints{
                     if self.passes_constraint(c, source,target){
                         return true
@@ -476,21 +489,21 @@ impl Game {
                 }
                 false
             }
-            PermConstraint::IsCardname =>{
+            Constraint::IsCardname =>{
                 if let TargetId::Card(cardid)=target{
                     return self.stack_ent_source(source)==cardid;
                 }else{
                     true
                 }
             },
-            PermConstraint::Other =>{
+            Constraint::Other =>{
                 if let TargetId::Card(cardid)=target{
                     return !(self.stack_ent_source(source)==cardid);
                 }else{
                     true
                 }
             }
-            PermConstraint::YouControl=>{
+            Constraint::YouControl=>{
                 if let Some(source)=self.cards.get(source)
                 && let TargetId::Card(c)=target
                 && let Some(target)=self.cards.get(c){
@@ -499,7 +512,7 @@ impl Game {
                     false
                 }
             }
-            PermConstraint::HasKeyword(keyword)=>{
+            Constraint::HasKeyword(keyword)=>{
                 if let TargetId::Card(card)=target
                 && let Some(card)=self.cards.get(card){
                     card.has_keyword(*keyword)
