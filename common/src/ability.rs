@@ -50,7 +50,7 @@ pub struct ActivatedAbility {
     pub costs: Vec<Cost>,
     pub effect: Vec<Clause>,
     pub keyword: Option<KeywordAbility>,
-    pub restrictions: Option<Constraint>
+    pub restrictions: Option<Constraint>,
 }
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub enum Ability {
@@ -80,7 +80,7 @@ impl Ability {
                 affected: Affected::Controller,
             }],
             keyword: None,
-            restrictions: None
+            restrictions: None,
         })
     }
     pub fn from_keyword(keyword: KeywordAbility) -> Self {

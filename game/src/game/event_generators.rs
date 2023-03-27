@@ -28,16 +28,12 @@ impl Game {
         }
         let mut inhand = Vec::new();
         for event in &res {
-            if let EventResult::MoveZones {
-                oldent,
-                newent,
-                source: _,
-                dest: _,
-            } = event
-            {
-                if drawn.contains(&oldent)
-                && let Some(newent)=newent{
-                    inhand.push(*newent);
+            if let EventResult::MoveZones(moved) = event {
+                for event in moved {
+                    if drawn.contains(&&event.oldent)
+                    && let Some(newent)=event.newent{
+                        inhand.push(newent);
+                    }
                 }
             }
         }
@@ -48,46 +44,45 @@ impl Game {
     pub async fn discard(
         &mut self,
         player: PlayerId,
-        card: CardId,
-        cause: DiscardCause,
+        cards: Vec<CardId>,
     ) -> Vec<CardId> {
         let res = self
             .handle_event(Event::Discard {
                 player,
-                card,
-                cause,
+                cards,
             })
             .await;
         let mut discarded = Vec::new();
-        for event in res {
-            if let EventResult::MoveZones {
-                oldent: _,
-                newent: Some(newent),
-                source: Some(Zone::Hand),
-                dest: Zone::Graveyard,
-            } = event
-            {
-                discarded.push(newent);
+        for event in &res {
+            if let EventResult::MoveZones(moved) = event {
+                for event in moved {
+                    if event.source==Some(Zone::Hand)
+                    && event.dest==Zone::Graveyard
+                    && let Some(newent)=event.newent{
+                        discarded.push(newent);
+
+                    }
+                }
             }
         }
         discarded
     }
 
-    pub async fn move_zones(&mut self, ent: CardId, origin: Zone, dest: Zone) -> Vec<EventResult> {
+    pub async fn move_zones(&mut self, ents: Vec<CardId>, origin: Zone, dest: Zone) -> Vec<EventResult> {
         self.handle_event(Event::MoveZones {
-            ent,
+            ents,
             origin: Some(origin),
             dest,
         })
         .await
     }
-    pub async fn destroy(&mut self, id: CardId) -> Vec<EventResult> {
-        self.handle_event(Event::Destroy { card: id }).await
+    pub async fn destroy(&mut self, perms: Vec<CardId>) -> Vec<EventResult> {
+        self.handle_event(Event::Destroy { perms }).await
     }
     //Exiles a permanent, records the old and new entities.
-    pub async fn exile(&mut self, id: CardId, origin: Zone) -> Vec<EventResult> {
+    pub async fn exile(&mut self, ents: Vec<CardId>, origin: Zone) -> Vec<EventResult> {
         self.handle_event(Event::MoveZones {
-            ent: id,
+            ents,
             origin: Some(origin),
             dest: Zone::Exile,
         })

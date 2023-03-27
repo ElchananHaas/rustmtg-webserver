@@ -114,7 +114,6 @@ async fn basris_lt_test() -> Result<()> {
     Ok(())
 }
 
-
 #[test_log::test(tokio::test)]
 async fn basris_lt_self_test() -> Result<()> {
     let (mut game, hand) = hand_battlefield_setup(

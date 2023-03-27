@@ -2,7 +2,7 @@ use crate::actions::{Action, ActionFilter, CastingOption, StackActionOption};
 use crate::client_message::{Ask, AskSelectN};
 use crate::ent_maps::EntMap;
 use crate::errors::MTGError;
-use crate::event::{DiscardCause, Event, EventResult, TagEvent};
+use crate::event::{Event, EventResult, TagEvent};
 use crate::player::{Player, PlayerCon};
 use crate::CARDDB;
 use anyhow::{bail, Result};
@@ -15,9 +15,7 @@ use common::cost::{Cost, PaidCost};
 use common::entities::{CardId, ManaId, PlayerId, TargetId, MIN_CARDID};
 use common::hashset_obj::HashSetObj;
 use common::mana::{Color, Mana, ManaCostSymbol};
-use common::spellabil::{
-    Affected, Clause, ClauseEffect, Continuous, KeywordAbility, Constraint,
-};
+use common::spellabil::{Affected, Clause, ClauseEffect, Constraint, Continuous, KeywordAbility};
 use common::zones::Zone;
 use enum_map::EnumMap;
 use futures::future;
@@ -197,25 +195,16 @@ impl Game {
         }
         res
     }
-    pub fn all_cards(&self)-> Vec<CardId> {
+    pub fn all_cards(&self) -> Vec<CardId> {
         let mut res = Vec::new();
-        res.extend(
-            self.battlefield
-                .iter()
-                .cloned()
-        );
+        res.extend(self.battlefield.iter().cloned());
         res.extend(self.stack.iter().cloned());
         res.extend(self.exile.iter().cloned());
         res.extend(self.command.iter().cloned());
         for player_id in self.turn_order.clone() {
             if let Some(player) = self.players.get(player_id) {
                 res.extend(player.hand.iter().cloned());
-                res.extend(
-                    player
-                        .graveyard
-                        .iter()
-                        .cloned()
-                );
+                res.extend(player.graveyard.iter().cloned());
                 res.extend(player.library.iter().cloned())
             }
         }
@@ -323,18 +312,15 @@ impl Game {
                         self.backup();
                         let card = casting_option.source_card;
                         let stackobjs = self
-                            .move_zones(card, casting_option.zone, Zone::Stack)
+                            .move_zones(vec![card], casting_option.zone, Zone::Stack)
                             .await;
                         let stack_ent;
                         if stackobjs.len() == 1 {
-                            if let EventResult::MoveZones {
-                                oldent: _,
-                                newent: Some(newent),
-                                source: _,
-                                dest: _,
-                            } = stackobjs[0]
+                            if let EventResult::MoveZones(events) = &stackobjs[0]
+                            && events.len()==1
+                            && let Some(newent)=events[0].newent
                             {
-                                stack_ent = newent
+                                stack_ent = newent;
                             } else {
                                 self.restore();
                                 continue;
@@ -546,7 +532,10 @@ impl Game {
     ) -> Result<Clause, MTGError> {
         let mut clause = clause.clone();
         return Ok(match &clause.affected {
-            Affected::Cardname | Affected::Controller | Affected::ManuallySet(_)| Affected::All => clause,
+            Affected::Cardname
+            | Affected::Controller
+            | Affected::ManuallySet(_)
+            | Affected::All => clause,
             Affected::Target(_) => {
                 if let Some(pl) = self.players.get(player) {
                     let valid = self.valid_targets(&clause, stack_ent);

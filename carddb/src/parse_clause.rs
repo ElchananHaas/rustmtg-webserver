@@ -14,23 +14,16 @@ use nom::error::context;
 use nom::multi::many0;
 use texttoken::{tokens, Tokens};
 
-pub fn parse_affected<'a>(
-    tokens: &'a Tokens,
-) -> Res<&'a Tokens, (Affected, Option<Constraint>)> {
+pub fn parse_affected<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, (Affected, Option<Constraint>)> {
     fn parse_target<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, (Affected, Option<Constraint>)> {
         let (tokens, is_other) = opt(tag(tokens!("other")))(tokens)?;
         let (tokens, _) = tag(tokens!("target"))(tokens)?;
         Ok((
             tokens,
-            (
-                Affected::Target(None),
-                is_other.map(|_| Constraint::Other),
-            ),
+            (Affected::Target(None), is_other.map(|_| Constraint::Other)),
         ))
     }
-    fn parse_cardname<'a>(
-        tokens: &'a Tokens,
-    ) -> Res<&'a Tokens, (Affected, Option<Constraint>)> {
+    fn parse_cardname<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, (Affected, Option<Constraint>)> {
         let (tokens, _) = tag(tokens!("cardname"))(tokens)?;
         Ok((tokens, (Affected::Cardname, None)))
     }
@@ -48,13 +41,11 @@ pub fn parse_affected<'a>(
         );
         Ok((tokens, res))
     }
-    fn parse_each<'a>(
-        tokens: &'a Tokens,
-    ) -> Res<&'a Tokens, (Affected, Option<Constraint>)> {
+    fn parse_each<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, (Affected, Option<Constraint>)> {
         let (tokens, _) = tag(tokens!["each"])(tokens)?;
         Ok((tokens, (Affected::All, None)))
     }
-    alt((parse_target, parse_cardname, parse_up_to_target,parse_each))(tokens)
+    alt((parse_target, parse_cardname, parse_up_to_target, parse_each))(tokens)
 }
 pub fn parse_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
     let (tokens, clause) = context(

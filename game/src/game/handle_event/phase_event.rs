@@ -1,6 +1,6 @@
 use crate::{
     client_message::{Ask, AskSelectN},
-    event::{DiscardCause, EventResult, TagEvent},
+    event::{EventResult, TagEvent},
     game::{Game, Phase, Subphase},
 };
 use common::{entities::CardId, spellabil::ContDuration};
@@ -108,10 +108,9 @@ impl Game {
                 let to_discard = player
                     .ask_user_selectn(&Ask::DiscardToHandSize(ask.clone()), &ask)
                     .await;
-                for i in to_discard {
-                    self.discard(self.active_player, hand[i], DiscardCause::GameInternal)
+                let to_discard=to_discard.into_iter().map(|i|hand[i]).collect();
+                    self.discard(self.active_player, to_discard)
                         .await;
-                }
             }
         }
 

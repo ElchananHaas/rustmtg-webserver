@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use common::{
     cardtypes::{ParseType, Subtype, Type},
-    spellabil::{KeywordAbility, Constraint},
+    spellabil::{Constraint, KeywordAbility},
 };
 use nom::combinator::opt;
 use nom::{branch::alt, bytes::complete::take};

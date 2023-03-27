@@ -1,10 +1,10 @@
 mod combat;
 mod phase_event;
 
-use crate::game::*;
+use crate::{game::*, event::MoveZonesResult};
 use async_recursion::async_recursion;
 use common::{
-    ability::{AbilityTrigger, AbilityTriggerType},
+    ability::{AbilityTrigger, AbilityTriggerType, TriggeredAbility, self},
     card_entities::EntType,
 };
 
@@ -23,17 +23,17 @@ impl Game {
             event,
             replacements: Vec::new(),
         });
-        let mut trigger_ents=self.battlefield.clone();
+        let mut trigger_ents = self.battlefield.clone();
         loop {
             let event: TagEvent = match events.pop() {
                 Some(x) => x,
                 None => {
                     //This fires all triggers once all events have happened.
-                    for ent in &self.battlefield{
+                    for ent in &self.battlefield {
                         trigger_ents.add(*ent);
                     }
                     for result in &results {
-                        self.fire_triggers(&trigger_ents,result).await;
+                        self.fire_triggers(&trigger_ents, result).await;
                     }
                     return results;
                 }
@@ -70,11 +70,11 @@ impl Game {
                         pl.life+=amount;
                     }
                 }
-                Event::Destroy { card } => {
+                Event::Destroy { perms } => {
                     Game::add_event(
                         &mut events,
                         Event::MoveZones {
-                            ent: card,
+                            ents: perms,
                             origin: Some(Zone::Battlefield),
                             dest: Zone::Graveyard,
                         },
@@ -97,13 +97,12 @@ impl Game {
                 Event::AttackUnblocked { attacker: _ } => {}
                 Event::Discard {
                     player: _,
-                    card,
-                    cause: _,
+                    cards,
                 } => {
                     Game::add_event(
                         &mut events,
                         Event::MoveZones {
-                            ent: card,
+                            ents: cards,
                             origin: Some(Zone::Hand),
                             dest: Zone::Graveyard,
                         },
@@ -115,7 +114,7 @@ impl Game {
                         Game::add_event(
                             &mut events,
                             Event::MoveZones {
-                                ent: land,
+                                ents: vec![land],
                                 origin: Some(zone),
                                 dest: Zone::Battlefield,
                             },
@@ -173,7 +172,7 @@ impl Game {
                                 Game::add_event(
                                     &mut events,
                                     Event::MoveZones {
-                                        ent: *card,
+                                        ents: vec![*card],
                                         origin: Some(Zone::Library),
                                         dest: Zone::Hand,
                                     },
@@ -208,8 +207,8 @@ impl Game {
                     //TODO add in the logic to have the game terminate such as setting winners
                     todo!();
                 }
-                Event::MoveZones { ent, origin, dest } => {
-                    self.movezones(&mut results, &mut events, ent, origin, dest)
+                Event::MoveZones { ents, origin, dest } => {
+                    self.movezones(&mut results, &mut events, ents, origin, dest)
                         .await;
                 },
                 Event::TriggeredAbil { event: _, source,effect } => {
@@ -241,44 +240,48 @@ impl Game {
         true
     }
 
-    fn trigger_matches(
+    fn triggers_for_abil(
         &self,
-        trigger: &AbilityTrigger,
+        abil: &TriggeredAbility,
         source_id: CardId,
         event: &EventResult,
-    ) -> bool {
+    ) -> Vec<Event>{
+        let trigger=&abil.trigger;
+        let mut res=Vec::new();
         match &trigger.trigger{
             AbilityTriggerType::ZoneMove(trig)=>{
-                if let EventResult::MoveZones { oldent, newent, source, dest }=event
-                && let &Some(newent)=newent{ 
-                    let constrained_card=if *source==Some(Zone::Battlefield){
-                        *oldent
-                    } else {
-                        newent
-                    };
-                    trig.origin.map_or(true, |x|Some(x)==*source) &&
-                    trig.dest.map_or(true, |x| x==*dest) && 
-                    trigger.constraint.iter().all(|c|
-                        self.passes_constraint(c, source_id,constrained_card.into() ))
-                }else{
-                    false
+                if let EventResult::MoveZones(results)=event{ 
+                    for result in results{
+                        let constrained_card=if result.source!=Some(Zone::Battlefield)
+                        && let Some(newent)=result.newent{
+                            newent
+                        } else {
+                            result.oldent
+                        };
+                        let to_fire=trig.origin.map_or(true, |x|Some(x)==result.source) &&
+                        trig.dest.map_or(true, |x| x==result.dest) && 
+                        trigger.constraint.iter().all(|c|
+                            self.passes_constraint(c, source_id,constrained_card.into()));
+                        if to_fire{
+                            res.push(Event::TriggeredAbil {
+                                event: Box::new(event.clone()),
+                                source: source_id,
+                                effect: abil.effect.clone(),
+                            })
+                        }
+                    }
                 }
             }
         }
+        res
     }
-    async fn fire_triggers(&mut self, trigger_ents: &HashSetObj<CardId>,event: &EventResult) {
+    async fn fire_triggers(&mut self, trigger_ents: &HashSetObj<CardId>, event: &EventResult) {
         let mut events: Vec<Event> = Vec::new();
         for cardid in trigger_ents {
             if let Some(card) = self.cards.get(*cardid) {
                 for abil in &card.abilities {
                     if let Ability::Triggered(abil) = abil {
-                        if self.trigger_matches(&abil.trigger, *cardid, event) {
-                            events.push(Event::TriggeredAbil {
-                                event: Box::new(event.clone()),
-                                source: *cardid,
-                                effect: abil.effect.clone(),
-                            })
-                        }
+                        events.append(&mut self.triggers_for_abil(abil,*cardid,event));
                     }
                 }
             }
@@ -300,10 +303,12 @@ impl Game {
         &mut self,
         results: &mut Vec<EventResult>,
         _events: &mut Vec<TagEvent>,
-        ent: CardId,
+        ents: Vec<CardId>,
         origin: Option<Zone>,
         dest: Zone,
     ) {
+        let mut move_results=Vec::new();
+        for ent in ents{
         if let Some(card)=self.cards.get_mut(ent)
         && let Some(owner)= self.players.get_mut(card.owner) {
             let removed = if let Some(origin)=origin{
@@ -340,7 +345,7 @@ impl Game {
             let real = card.ent_type == EntType::RealCard;
             if removed{
                 if !real && origin.is_some(){
-                    results.push(EventResult::MoveZones {
+                    move_results.push(MoveZonesResult{
                         oldent: ent,
                         newent: None,
                         source: origin,
@@ -381,7 +386,7 @@ impl Game {
                         Zone::Graveyard => owner.graveyard.push(newent),
                         Zone::Stack => self.stack.push(newent),
                     }
-                    results.push(EventResult::MoveZones {
+                    move_results.push(MoveZonesResult {
                         oldent: ent,
                         newent: Some(newent),
                         source: origin,
@@ -390,6 +395,8 @@ impl Game {
                 }
             }
         };
+    }
+    results.push(EventResult::MoveZones(move_results))
     }
 
     //Add deathtouch and combat triggers

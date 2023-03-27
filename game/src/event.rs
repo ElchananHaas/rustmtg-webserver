@@ -15,11 +15,6 @@ pub struct TagEvent {
     pub replacements: Vec<i32>,
 }
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum DiscardCause {
-    GameInternal,
-    SpellAbility(CardId),
-}
-#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum DamageReason {
     Combat,
     SpellAbility(CardId),
@@ -38,12 +33,11 @@ pub enum Event {
         reason: DamageReason,
     },
     Destroy {
-        card: CardId,
+        perms: Vec<CardId>,
     },
     Discard {
         player: PlayerId,
-        card: CardId,
-        cause: DiscardCause,
+        cards: Vec<CardId>,
     },
     Block {
         blocker: CardId,
@@ -70,7 +64,7 @@ pub enum Event {
         ability: CardId,
     },
     MoveZones {
-        ent: CardId,
+        ents: Vec<CardId>,
         origin: Option<Zone>,
         dest: Zone,
     },
@@ -113,14 +107,17 @@ pub enum Event {
     },
 }
 #[derive(Clone, Debug, PartialEq)]
+pub struct MoveZonesResult {
+    pub oldent: CardId,
+    pub newent: Option<CardId>,
+    pub source: Option<Zone>,
+    pub dest: Zone,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum EventResult {
     Draw(CardId),
-    MoveZones {
-        oldent: CardId,
-        newent: Option<CardId>,
-        source: Option<Zone>,
-        dest: Zone,
-    },
+    MoveZones(Vec<MoveZonesResult>),
     Tap(CardId),
     Untap(CardId),
 }

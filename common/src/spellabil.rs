@@ -32,7 +32,7 @@ pub enum Constraint {
     Or(Vec<Constraint>),
     IsCardname,
     YouControl,
-    ControlWith(Vec<Constraint>,i64),
+    ControlWith(Vec<Constraint>, i64),
     HasKeyword(KeywordAbility),
     Subtype(Subtype),
     HasCounter(Counter),

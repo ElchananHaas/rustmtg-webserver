@@ -19,8 +19,8 @@ use common::cost::Cost;
 use common::entities::PlayerId;
 use common::mana::ManaCostSymbol;
 use common::spellabil::Clause;
-use common::spellabil::KeywordAbility;
 use common::spellabil::Constraint;
+use common::spellabil::KeywordAbility;
 use common::zones::Zone;
 use log::debug;
 use log::info;
@@ -287,17 +287,17 @@ fn parse_mana_cost<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Vec<Cost>> {
     Ok((tokens, manas))
 }
 fn parse_tap_cost<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Vec<Cost>> {
-    let (tokens, _) = tag(tokens!["{","t","}"])(tokens)?;
-    Ok((tokens,vec![Cost::Selftap]))
+    let (tokens, _) = tag(tokens!["{", "t", "}"])(tokens)?;
+    Ok((tokens, vec![Cost::Selftap]))
 }
 
 fn parse_tap_comma<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Vec<Cost>> {
     let (tokens, _) = tag(tokens![","])(tokens)?;
-    Ok((tokens,vec![]))
+    Ok((tokens, vec![]))
 }
 
 fn parse_cost<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Vec<Cost>> {
-    alt((parse_mana_cost,parse_tap_cost,parse_tap_comma))(tokens)
+    alt((parse_mana_cost, parse_tap_cost, parse_tap_comma))(tokens)
 }
 
 fn parse_costs<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Vec<Cost>> {
@@ -308,19 +308,19 @@ fn parse_costs<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Vec<Cost>> {
 fn parse_activate_only<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Constraint> {
     fn if_you_control<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Constraint> {
         let (tokens, _) = tag(tokens!["if", "you", "control"])(tokens)?;
-        let (tokens,num)=parse_number(tokens)?;
-        let (tokens,r)=many1(parse_constraint)(tokens)?;
-        Ok((tokens,Constraint::ControlWith(r, num)))
+        let (tokens, num) = parse_number(tokens)?;
+        let (tokens, r) = many1(parse_constraint)(tokens)?;
+        Ok((tokens, Constraint::ControlWith(r, num)))
     }
     let (tokens, _) = tag(tokens![".", "activate", "only"])(tokens)?;
-    let (tokens,res)=alt((if_you_control,))(tokens)?;
+    let (tokens, res) = alt((if_you_control,))(tokens)?;
     Ok((tokens, res))
 }
 fn parse_activated_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Ability> {
     let (tokens, costs) = parse_costs(tokens)?;
     let (tokens, _) = tag(tokens![":"])(tokens)?;
     let (tokens, clauses) = many1(parse_clause)(tokens)?;
-    let (tokens,activate_only) = opt(parse_activate_only)(tokens)?;
+    let (tokens, activate_only) = opt(parse_activate_only)(tokens)?;
     Ok((
         tokens,
         Ability::Activated(ActivatedAbility {

@@ -70,7 +70,12 @@ pub fn parse_action_first_effect<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clau
         let (tokens, _) = tag(tokens!["tap"])(tokens)?;
         Ok((tokens, ClauseEffect::Tap))
     }
-    alt((parse_destroy_effect, parse_exile_effect, parse_put_counter,parse_tap))(tokens)
+    alt((
+        parse_destroy_effect,
+        parse_exile_effect,
+        parse_put_counter,
+        parse_tap,
+    ))(tokens)
 }
 
 fn parse_draw_a_card<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseEffect> {

@@ -37,7 +37,7 @@ impl Game {
             Zone::Battlefield
         };
         self.stack.pop();
-        self.move_zones(id, Zone::Stack, dest).await;
+        self.move_zones(vec![id], Zone::Stack, dest).await;
     }
     pub fn calculate_affected(
         &self,
@@ -129,18 +129,34 @@ impl Game {
                 }
             }
             ClauseEffect::Destroy => {
-                for aff in affected {
-                    if let TargetId::Card(card) = aff {
-                        self.destroy(card).await;
+                let to_destroy= (&affected)
+                .into_iter()
+                .filter_map(|x| {
+                    if let TargetId::Card(aff) = x {
+                        Some(aff)
+                    } else {
+                        None
                     }
-                }
+                })
+                .cloned()
+                .collect();
+                        self.destroy(to_destroy).await;
             }
             ClauseEffect::ExileBattlefield => {
-                for aff in affected {
-                    if let TargetId::Card(card) = aff {
-                        self.exile(card, Zone::Battlefield).await;
-                    }
-                }
+                let to_exile = (&affected)
+                    .into_iter()
+                    .filter_map(|x| {
+                        if let TargetId::Card(aff) = x {
+                            Some(aff)
+                        } else {
+                            None
+                        }
+                    })
+                    .cloned()
+                    .collect();
+                self.exile(to_exile, Zone::Battlefield).await;
+
+                for aff in affected {}
             }
             ClauseEffect::Compound(clauses) => {
                 for mut subclause in clauses {
@@ -220,7 +236,7 @@ impl Game {
                         let (id, _ent) = self.cards.insert(ent);
                         let results = self
                             .handle_event(Event::MoveZones {
-                                ent: id,
+                                ents: vec![id],
                                 origin: None,
                                 dest: Zone::Battlefield,
                             })
