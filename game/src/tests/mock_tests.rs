@@ -44,7 +44,7 @@ async fn basris_acolyte_test() -> Result<()> {
     let acolyte = *hand.iter().next().unwrap();
     let _moved = game
         .handle_event(Event::MoveZones {
-            ent: acolyte,
+            ents: vec![acolyte],
             origin: Some(Zone::Hand),
             dest: Zone::Battlefield,
         })
@@ -97,14 +97,14 @@ async fn basris_lt_test() -> Result<()> {
     let lt = *hand.iter().next().unwrap();
     let _moved = game
         .handle_event(Event::MoveZones {
-            ent: lt,
+            ents: vec![lt],
             origin: Some(Zone::Hand),
             dest: Zone::Battlefield,
         })
         .await;
     game.cycle_priority().await;
     let staunch = cards_with_name(&game, "Staunch Shieldmate")[0];
-    game.destroy(staunch).await;
+    game.destroy(vec![staunch]).await;
     assert!(game.battlefield.len() == 1);
     game.cycle_priority().await;
     assert!(game.battlefield.len() == 2);
@@ -125,14 +125,14 @@ async fn basris_lt_self_test() -> Result<()> {
     let lt = *hand.iter().next().unwrap();
     let _moved = game
         .handle_event(Event::MoveZones {
-            ent: lt,
+            ents: vec![lt],
             origin: Some(Zone::Hand),
             dest: Zone::Battlefield,
         })
         .await;
     game.cycle_priority().await;
     let basri = game.battlefield.iter().next().unwrap();
-    game.destroy(*basri).await;
+    game.destroy(vec![*basri]).await;
     assert!(game.battlefield.len() == 0);
     game.cycle_priority().await;
     assert!(game.battlefield.len() == 1);

@@ -10,7 +10,7 @@ async fn test_lethal_damage() -> Result<()> {
     let mut game = test_state_w_decks(deck)?;
     let shieldmates = cards_with_name(&mut game, "Staunch Shieldmate");
     let results = game
-        .move_zones(shieldmates[0], Zone::Library, Zone::Battlefield)
+        .move_zones(vec![shieldmates[0]], Zone::Library, Zone::Battlefield)
         .await;
     println!("{:?}", results);
     assert!(game.battlefield.len() == 1);

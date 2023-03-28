@@ -19,7 +19,7 @@ async fn test_gagglemaster() -> Result<()> {
         let start_life = game.players.get(pl).unwrap().life;
         let _moved = game
             .handle_event(Event::MoveZones {
-                ent: gagglemasters[i],
+                ents: vec![gagglemasters[i]],
                 origin: Some(Zone::Hand),
                 dest: Zone::Battlefield,
             })

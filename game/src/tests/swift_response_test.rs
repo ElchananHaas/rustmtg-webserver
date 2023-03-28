@@ -2,7 +2,7 @@ use anyhow::Result;
 use common::zones::Zone;
 use test_log;
 
-use crate::{event::EventResult, tests::common_test::test_state_w_decks};
+use crate::{event::{EventResult, MoveZonesResult}, tests::common_test::test_state_w_decks};
 
 #[test_log::test(tokio::test)]
 async fn test_swift_response() -> Result<()> {
@@ -11,12 +11,13 @@ async fn test_swift_response() -> Result<()> {
     let pl = game.active_player;
     let library = game.players.get(pl).unwrap().library.clone();
     let move_bat = game
-        .move_zones(library[1], Zone::Library, Zone::Battlefield)
+        .move_zones(vec![library[1]], Zone::Library, Zone::Battlefield)
         .await;
     assert!(move_bat.len() == 1);
-    let EventResult::MoveZones { oldent:_, newent, source:_, dest:_ }=move_bat[0] else{
+    let EventResult::MoveZones(ref moves)=move_bat[0] else{
         panic!("failed to move zones");
     };
+    let MoveZonesResult { oldent:_, newent, source:_, dest:_ }=moves[0];
     let watchdog = newent.unwrap();
     let hand = game.draw(pl).await[0];
     {
