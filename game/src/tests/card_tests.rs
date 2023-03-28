@@ -15,7 +15,8 @@ async fn test_basri_solidarity() -> Result<()> {
     )
     .await?;
     let basri_1 = *hand.iter().next().unwrap();
-    game.move_zones(vec![basri_1], Zone::Hand, Zone::Stack).await;
+    game.move_zones(vec![basri_1], Zone::Hand, Zone::Stack)
+        .await;
     game.resolve(game.stack[0]).await;
     for ent in &game.battlefield {
         if let Some(card) = game.cards.get(*ent) {

@@ -5,18 +5,46 @@ use serde::{Deserialize, Serialize};
 
 use common::{card_entities::CardEnt, entities::CardId, spellabil::KeywordAbility};
 
-fn count_of_one() -> NonZeroU64 {
-    NonZeroU64::new(1).unwrap()
-}
-#[derive(Clone, JsonSchema, Serialize, Deserialize, Debug)]
+#[derive(Clone, JsonSchema, Serialize, Debug)]
 pub struct EntMap<K, V>
 where
     K: Copy + Hash + Eq + From<NonZeroU64> + JsonSchema,
     V: JsonSchema,
 {
+    #[serde(flatten)]
     ents: HashMap<K, V>,
-    #[serde(skip_serializing, default = "count_of_one")]
+    #[serde(skip)]
     count: NonZeroU64,
+}
+
+//This hack is to work around https://github.com/serde-rs/serde/issues/1183
+impl<'de, K, V> Deserialize<'de> for EntMap<K, V>
+where
+    K: Copy + Hash + Eq + From<NonZeroU64> + JsonSchema + Deserialize<'de>,
+    V: JsonSchema + Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let json_val = <serde_json::Value>::deserialize(deserializer)?;
+        let mut buf: Vec<u8> = Vec::new();
+        {
+            let cursor = std::io::Cursor::new(&mut buf);
+            let mut json_serial = serde_json::Serializer::new(cursor);
+            json_val
+                .serialize(&mut json_serial)
+                .map_err(serde::de::Error::custom)?;
+        }
+        //This unsafe is fine becuase serde-json doesn't borrow from its input
+        let buf_ref: &[u8] = unsafe { std::mem::transmute(&*buf) };
+        let base: HashMap<K, V> =
+            serde_json::from_slice(&buf_ref).map_err(serde::de::Error::custom)?;
+        Ok(Self {
+            ents: base,
+            count: NonZeroU64::new(1).unwrap(),
+        })
+    }
 }
 
 impl<K, V> Default for EntMap<K, V>

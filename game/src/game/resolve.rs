@@ -36,7 +36,6 @@ impl Game {
         } else {
             Zone::Battlefield
         };
-        self.stack.pop();
         self.move_zones(vec![id], Zone::Stack, dest).await;
     }
     pub fn calculate_affected(
@@ -129,18 +128,18 @@ impl Game {
                 }
             }
             ClauseEffect::Destroy => {
-                let to_destroy= (&affected)
-                .into_iter()
-                .filter_map(|x| {
-                    if let TargetId::Card(aff) = x {
-                        Some(aff)
-                    } else {
-                        None
-                    }
-                })
-                .cloned()
-                .collect();
-                        self.destroy(to_destroy).await;
+                let to_destroy = (&affected)
+                    .into_iter()
+                    .filter_map(|x| {
+                        if let TargetId::Card(aff) = x {
+                            Some(aff)
+                        } else {
+                            None
+                        }
+                    })
+                    .cloned()
+                    .collect();
+                self.destroy(to_destroy).await;
             }
             ClauseEffect::ExileBattlefield => {
                 let to_exile = (&affected)

@@ -263,21 +263,23 @@ impl TestClient {
         game: &GameState,
         ask: Ask,
     ) -> ClientResponse {
-        match &ask {
+        return match &ask {
             Ask::Action(act) => {
-                if act.min == 0 && act.max == 1 {
-                    if act.ents.len() == 0 {
-                        return ClientResponse::Indicies(HashSetObj::new());
-                    }
+                if act.min == 0 && act.max == 1 && act.ents.len() == 0 {
+                    ClientResponse::Indicies(HashSetObj::new())
+                } else {
+                    ClientResponse::Indicies(mock_client.select_action(game, act))
                 }
             }
             Ask::Target(ask) => {
                 let resp = mock_client.select_targets(game, ask);
-                return ClientResponse::Indicies(resp);
+                ClientResponse::Indicies(resp)
             }
-            _ => (),
+            _ => {
+                dbg!(ask);
+                panic!("Can't handle query");
+            }
         };
-        ClientResponse::None
     }
     pub fn recieve(&mut self) -> Result<Message, warp::Error> {
         let mut buffer = Vec::new();

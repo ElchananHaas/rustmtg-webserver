@@ -52,7 +52,9 @@ pub async fn hand_battlefield_setup(
     let mut library = game.players.get(pl).unwrap().library.clone();
     for _ in 0..battlefield.len() {
         let top = library.pop().unwrap();
-        let move_bat = game.move_zones(vec![top], Zone::Library, Zone::Battlefield).await;
+        let move_bat = game
+            .move_zones(vec![top], Zone::Library, Zone::Battlefield)
+            .await;
         assert!(move_bat.len() == 1);
     }
     for _ in 0..library.len() {

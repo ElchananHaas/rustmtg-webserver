@@ -108,9 +108,8 @@ impl Game {
                 let to_discard = player
                     .ask_user_selectn(&Ask::DiscardToHandSize(ask.clone()), &ask)
                     .await;
-                let to_discard=to_discard.into_iter().map(|i|hand[i]).collect();
-                    self.discard(self.active_player, to_discard)
-                        .await;
+                let to_discard = to_discard.into_iter().map(|i| hand[i]).collect();
+                self.discard(self.active_player, to_discard).await;
             }
         }
 

@@ -10,8 +10,8 @@ impl Game {
         self.place_abilities().await;
     }
     async fn state_based_actions(&mut self) {
-        let mut to_die=Vec::new();
-        let mut to_destroy=Vec::new();
+        let mut to_die = Vec::new();
+        let mut to_destroy = Vec::new();
         for &cardid in &self.battlefield.clone() {
             if let Some(card)=self.cards.get(cardid) &&
             let Some(pt)=&card.pt{
@@ -23,7 +23,8 @@ impl Game {
                 }
             }
         }
-        self.move_zones(to_die, Zone::Battlefield, Zone::Graveyard).await;
+        self.move_zones(to_die, Zone::Battlefield, Zone::Graveyard)
+            .await;
         self.destroy(to_destroy).await;
     }
     //Places abilities on the stack

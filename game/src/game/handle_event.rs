@@ -1,10 +1,10 @@
 mod combat;
 mod phase_event;
 
-use crate::{game::*, event::MoveZonesResult};
+use crate::{event::MoveZonesResult, game::*};
 use async_recursion::async_recursion;
 use common::{
-    ability::{ AbilityTriggerType, TriggeredAbility},
+    ability::{AbilityTriggerType, TriggeredAbility},
     card_entities::EntType,
 };
 
@@ -245,24 +245,25 @@ impl Game {
         abil: &TriggeredAbility,
         source_id: CardId,
         event: &EventResult,
-    ) -> Vec<Event>{
-        let trigger=&abil.trigger;
-        let mut res=Vec::new();
-        match &trigger.trigger{
-            AbilityTriggerType::ZoneMove(trig)=>{
-                if let EventResult::MoveZones(results)=event{ 
-                    for result in results{
+    ) -> Vec<Event> {
+        let trigger = &abil.trigger;
+        let mut res = Vec::new();
+        match &trigger.trigger {
+            AbilityTriggerType::ZoneMove(trig) => {
+                if let EventResult::MoveZones(results) = event {
+                    for result in results {
                         let constrained_card=if result.source!=Some(Zone::Battlefield)
                         && let Some(newent)=result.newent{
                             newent
                         } else {
                             result.oldent
                         };
-                        let to_fire=trig.origin.map_or(true, |x|Some(x)==result.source) &&
-                        trig.dest.map_or(true, |x| x==result.dest) && 
-                        trigger.constraint.iter().all(|c|
-                            self.passes_constraint(c, source_id,constrained_card.into()));
-                        if to_fire{
+                        let to_fire = trig.origin.map_or(true, |x| Some(x) == result.source)
+                            && trig.dest.map_or(true, |x| x == result.dest)
+                            && trigger.constraint.iter().all(|c| {
+                                self.passes_constraint(c, source_id, constrained_card.into())
+                            });
+                        if to_fire {
                             res.push(Event::TriggeredAbil {
                                 event: Box::new(event.clone()),
                                 source: source_id,
@@ -281,7 +282,7 @@ impl Game {
             if let Some(card) = self.cards.get(*cardid) {
                 for abil in &card.abilities {
                     if let Ability::Triggered(abil) = abil {
-                        events.append(&mut self.triggers_for_abil(abil,*cardid,event));
+                        events.append(&mut self.triggers_for_abil(abil, *cardid, event));
                     }
                 }
             }
@@ -307,9 +308,9 @@ impl Game {
         origin: Option<Zone>,
         dest: Zone,
     ) {
-        let mut move_results=Vec::new();
-        for ent in ents{
-        if let Some(card)=self.cards.get_mut(ent)
+        let mut move_results = Vec::new();
+        for ent in ents {
+            if let Some(card)=self.cards.get_mut(ent)
         && let Some(owner)= self.players.get_mut(card.owner) {
             let removed = if let Some(origin)=origin{
             match origin {
@@ -395,8 +396,8 @@ impl Game {
                 }
             }
         };
-    }
-    results.push(EventResult::MoveZones(move_results))
+        }
+        results.push(EventResult::MoveZones(move_results))
     }
 
     //Add deathtouch and combat triggers

@@ -259,7 +259,6 @@ impl Game {
                 return;
             } else {
                 self.resolve(self.stack[self.stack.len() - 1]).await;
-                self.stack.pop();
             }
         }
     }

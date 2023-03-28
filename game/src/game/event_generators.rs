@@ -41,17 +41,8 @@ impl Game {
     }
 
     //discard cards, returns discarded cards
-    pub async fn discard(
-        &mut self,
-        player: PlayerId,
-        cards: Vec<CardId>,
-    ) -> Vec<CardId> {
-        let res = self
-            .handle_event(Event::Discard {
-                player,
-                cards,
-            })
-            .await;
+    pub async fn discard(&mut self, player: PlayerId, cards: Vec<CardId>) -> Vec<CardId> {
+        let res = self.handle_event(Event::Discard { player, cards }).await;
         let mut discarded = Vec::new();
         for event in &res {
             if let EventResult::MoveZones(moved) = event {
@@ -68,7 +59,12 @@ impl Game {
         discarded
     }
 
-    pub async fn move_zones(&mut self, ents: Vec<CardId>, origin: Zone, dest: Zone) -> Vec<EventResult> {
+    pub async fn move_zones(
+        &mut self,
+        ents: Vec<CardId>,
+        origin: Zone,
+        dest: Zone,
+    ) -> Vec<EventResult> {
         self.handle_event(Event::MoveZones {
             ents,
             origin: Some(origin),

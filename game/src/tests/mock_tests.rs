@@ -4,16 +4,47 @@ use anyhow::Result;
 use common::{
     entities::{CardId, TargetId},
     hashset_obj::HashSetObj,
+    mana::ManaCostSymbol,
     zones::Zone,
 };
 use test_log;
 
 use crate::{
+    actions::Action,
     client_message::{AskSelectN, GameState},
     event::Event,
+    game::Phase,
     player::MockClient,
     tests::common_test::{by_name, cards_with_name, hand_battlefield_setup},
 };
+struct CastCreatureClient {}
+
+impl MockClient for CastCreatureClient {
+    fn select_action(&mut self, _game: &GameState, _ask: &AskSelectN<Action>) -> HashSetObj<usize> {
+        let mut res = HashSetObj::new();
+        res.insert(0);
+        res
+    }
+}
+#[test_log::test(tokio::test)]
+
+async fn cast_creature_test() -> Result<()> {
+    let (mut game, _) = hand_battlefield_setup(
+        vec!["Staunch Shieldmate"],
+        vec![],
+        Some(Box::new(CastCreatureClient {})),
+    )
+    .await?;
+    game.phase = Some(Phase::FirstMain);
+    game.add_mana(game.active_player, ManaCostSymbol::White)
+        .await;
+    game.cycle_priority().await;
+    dbg!(&game.battlefield);
+    assert!(game.players.get(game.active_player).unwrap().hand.len() == 0);
+    assert!(game.stack.len() == 0);
+    assert!(game.battlefield.len() == 1);
+    Ok(())
+}
 
 struct AcolyteClient {}
 
