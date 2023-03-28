@@ -22,7 +22,7 @@ export type Cost = ("Selftap" | {
 Mana: ManaCostSymbol
 })
 export type ManaCostSymbol = ("White" | "Blue" | "Black" | "Red" | "Green" | "Colorless" | "Generic")
-export type Affected = (("Controller" | "Cardname") | {
+export type Affected = (("Controller" | "Cardname" | "All") | {
 Target: (TargetId | null)
 } | {
 ManuallySet: (TargetId | null)
@@ -34,19 +34,30 @@ ManuallySet: (TargetId | null)
 UpToXTarget: [number, TargetId[]]
 })
 export type TargetId = number
-export type PermConstraint = (("IsTapped" | "IsCardname" | "YouControl" | "Other") | {
+export type Constraint = (("IsTapped" | "IsCardname" | "YouControl" | "Multicolored" | "Other") | {
 CardType: Type
 } | {
-Or: PermConstraint[]
+And: Constraint[]
+} | {
+Or: Constraint[]
+} | {
+/**
+ * @minItems 2
+ * @maxItems 2
+ */
+ControlWith: [Constraint[], number]
 } | {
 HasKeyword: KeywordAbility
 } | {
 Subtype: Subtype
+} | {
+HasCounter: Counter
 })
 export type Type = ("Artifact" | "Enchantment" | "Planeswalker" | "Land" | "Creature" | "Instant" | "Sorcery")
 export type KeywordAbility = ("FirstStrike" | "Haste" | "Vigilance" | "DoubleStrike" | "Flying" | "Prowess" | "Lifelink" | "Trample" | "Reach" | "Protection")
 export type Subtype = ("Advisor" | "Aetherborn" | "Ally" | "Angel" | "Antelope" | "Ape" | "Archer" | "Archon" | "Army" | "Artificer" | "Assassin" | "AssemblyWorker" | "Atog" | "Aurochs" | "Avatar" | "Azra" | "Badger" | "Barbarian" | "Bard" | "Basilisk" | "Bat" | "Bear" | "Beast" | "Beeble" | "Beholder" | "Berserker" | "Bird" | "Blinkmoth" | "Boar" | "Bringer" | "Brushwagg" | "Camarid" | "Camel" | "Caribou" | "Carrier" | "Cat" | "Centaur" | "Cephalid" | "Chimera" | "Citizen" | "Cleric" | "Cockatrice" | "Construct" | "Coward" | "Crab" | "Crocodile" | "Cyclops" | "Dauthi" | "Demigod" | "Demon" | "Deserter" | "Devil" | "Dinosaur" | "Djinn" | "Dog" | "Dragon" | "Drake" | "Dreadnought" | "Drone" | "Druid" | "Dryad" | "Dwarf" | "Efreet" | "Egg" | "Elder" | "Eldrazi" | "Elemental" | "Elephant" | "Elf" | "Elk" | "Eye" | "Faerie" | "Ferret" | "Fish" | "Flagbearer" | "Fox" | "Fractal" | "Frog" | "Fungus" | "Gargoyle" | "Germ" | "Giant" | "Gnoll" | "Gnome" | "Goat" | "Goblin" | "God" | "Golem" | "Gorgon" | "Graveborn" | "Gremlin" | "Griffin" | "Hag" | "Halfling" | "Hamster" | "Harpy" | "Hellion" | "Hippo" | "Hippogriff" | "Homarid" | "Homunculus" | "Horror" | "Horse" | "Human" | "Hydra" | "Hyena" | "Illusion" | "Imp" | "Incarnation" | "Inkling" | "Insect" | "Jackal" | "Jellyfish" | "Juggernaut" | "Kavu" | "Kirin" | "Kithkin" | "Knight" | "Kobold" | "Kor" | "Kraken" | "Lamia" | "Lammasu" | "Leech" | "Leviathan" | "Lhurgoyf" | "Licid" | "Lizard" | "Manticore" | "Masticore" | "Mercenary" | "Merfolk" | "Metathran" | "Minion" | "Minotaur" | "Mole" | "Monger" | "Mongoose" | "Monk" | "Monkey" | "Moonfolk" | "Mouse" | "Mutant" | "Myr" | "Mystic" | "Naga" | "Nautilus" | "Nephilim" | "Nightmare" | "Nightstalker" | "Ninja" | "Noble" | "Noggle" | "Nomad" | "Nymph" | "Octopus" | "Ogre" | "Ooze" | "Orb" | "Orc" | "Orgg" | "Otter" | "Ouphe" | "Ox" | "Oyster" | "Pangolin" | "Peasant" | "Pegasus" | "Pentavite" | "Pest" | "Phelddagrif" | "Phoenix" | "Phyrexian" | "Pilot" | "Pincher" | "Pirate" | "Plant" | "Praetor" | "Prism" | "Processor" | "Rabbit" | "Ranger" | "Rat" | "Rebel" | "Reflection" | "Rhino" | "Rigger" | "Rogue" | "Sable" | "Salamander" | "Samurai" | "Sand" | "Saproling" | "Satyr" | "Scarecrow" | "Scion" | "Scorpion" | "Scout" | "Sculpture" | "Serf" | "Serpent" | "Servo" | "Shade" | "Shaman" | "Shapeshifter" | "Shark" | "Sheep" | "Siren" | "Skeleton" | "Slith" | "Sliver" | "Slug" | "Snake" | "Soldier" | "Soltari" | "Spawn" | "Specter" | "Spellshaper" | "Sphinx" | "Spider" | "Spike" | "Spirit" | "Splinter" | "Sponge" | "Squid" | "Squirrel" | "Starfish" | "Surrakar" | "Survivor" | "Tentacle" | "Tetravite" | "Thalakos" | "Thopter" | "Thrull" | "Tiefling" | "Treefolk" | "Trilobite" | "Triskelavite" | "Troll" | "Turtle" | "Unicorn" | "Vampire" | "Vedalken" | "Viashino" | "Volver" | "Wall" | "Warlock" | "Warrior" | "Weird" | "Werewolf" | "Whale" | "Wizard" | "Wolf" | "Wolverine" | "Wombat" | "Worm" | "Wraith" | "Wurm" | "Yeti" | "Zombie" | "Zubera" | "EndCreatureMarker" | "Plains" | "Island" | "Swamp" | "Mountain" | "Forest")
-export type ClauseEffect = (("Destroy" | "ExileBattlefield" | "DrawCard") | {
+export type Counter = "Plus1Plus1"
+export type ClauseEffect = (("Destroy" | "ExileBattlefield" | "DrawCard" | "Tap") | {
 AddMana: ManaCostSymbol[]
 } | {
 GainLife: number
@@ -87,17 +98,14 @@ export type ContEffect = {
 ModifyPT: PT
 }
 export type NumberComputer = {
-NumPermanents: PermConstraint[]
+NumPermanents: Constraint[]
 }
-export type Counter = "Plus1Plus1"
-export type AbilityTrigger = {
+export type AbilityTriggerType = {
 ZoneMove: ZoneMoveTrigger
 }
 export type Zone = ("Hand" | "Library" | "Exile" | "Battlefield" | "Graveyard" | "Command" | "Stack")
 export type StaticAbilityEffect = ("GivenByKeyword" | {
-HasColor: Color
-} | {
-Protection: PermConstraint
+Protection: Constraint
 })
 export type CardId = number
 export type EntType = ("RealCard" | "TokenCard" | "ActivatedAbility" | "TriggeredAbility")
@@ -106,7 +114,6 @@ export type GameOutcome = (("Ongoing" | "Tie") | {
 Winner: PlayerId
 })
 export type Phase = ("Begin" | "FirstMain" | "Combat" | "SecondMain" | "Ending")
-export type PreventionEffect = "Unused"
 export type Subphase = ("Untap" | "Upkeep" | "Draw" | "BeginCombat" | "Attackers" | "Blockers" | "FirstStrikeDamage" | "Damage" | "EndCombat" | "EndStep" | "Cleanup")
 export type Ask = ({
 Attackers: AskPairFor_TargetId
@@ -158,12 +165,10 @@ player: PlayerId
 players: {
 [k: string]: PlayerView
 }
-prevention_effects: ContPrevention[]
 priority: PlayerId
 stack: CardId[]
 subphase?: (Subphase | null)
 subphases: Subphase[]
-triggered_abilities: ContTriggeredAbility[]
 turn_order: PlayerId[]
 [k: string]: unknown
 }
@@ -174,6 +179,9 @@ art_url?: (string | null)
 attacking?: (TargetId | null)
 blocked: CardId[]
 blocking: CardId[]
+colors: {
+[k: string]: null
+}
 controller?: (PlayerId | null)
 costs: Cost[]
 counters: Counter[]
@@ -185,7 +193,6 @@ known_to: PlayerId[]
 name: string
 owner: PlayerId
 printed?: (CardEnt | null)
-printed_name: string
 pt?: (PT | null)
 source_of_ability?: (CardId | null)
 subtypes: {
@@ -204,11 +211,12 @@ export interface ActivatedAbility {
 costs: Cost[]
 effect: Clause[]
 keyword?: (KeywordAbility | null)
+restrictions?: (Constraint | null)
 [k: string]: unknown
 }
 export interface Clause {
 affected: Affected
-constraints: PermConstraint[]
+constraints: Constraint[]
 effect: ClauseEffect
 [k: string]: unknown
 }
@@ -223,8 +231,12 @@ keyword?: (KeywordAbility | null)
 trigger: AbilityTrigger
 [k: string]: unknown
 }
+export interface AbilityTrigger {
+constraint: Constraint[]
+trigger: AbilityTriggerType
+[k: string]: unknown
+}
 export interface ZoneMoveTrigger {
-constraint: PermConstraint[]
 dest?: (Zone | null)
 origin?: (Zone | null)
 [k: string]: unknown
@@ -236,7 +248,7 @@ keyword?: (KeywordAbility | null)
 }
 export interface Continuous {
 affected: Affected
-constraints: PermConstraint[]
+constraints: Constraint[]
 duration: ContDuration
 effect: ContEffect
 source: CardId
@@ -268,17 +280,6 @@ mana_pool: {
 }
 max_handsize: number
 name: string
-[k: string]: unknown
-}
-export interface ContPrevention {
-effect: PreventionEffect
-source: CardId
-[k: string]: unknown
-}
-export interface ContTriggeredAbility {
-effect: Clause[]
-source: CardId
-trigger: AbilityTrigger
 [k: string]: unknown
 }
 export interface AskPairFor_TargetId {

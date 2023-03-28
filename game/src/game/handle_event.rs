@@ -4,7 +4,7 @@ mod phase_event;
 use crate::{game::*, event::MoveZonesResult};
 use async_recursion::async_recursion;
 use common::{
-    ability::{AbilityTrigger, AbilityTriggerType, TriggeredAbility, self},
+    ability::{ AbilityTriggerType, TriggeredAbility},
     card_entities::EntType,
 };
 

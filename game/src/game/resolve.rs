@@ -155,8 +155,6 @@ impl Game {
                     .cloned()
                     .collect();
                 self.exile(to_exile, Zone::Battlefield).await;
-
-                for aff in affected {}
             }
             ClauseEffect::Compound(clauses) => {
                 for mut subclause in clauses {

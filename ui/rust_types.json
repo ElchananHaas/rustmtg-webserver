@@ -69,6 +69,24 @@
       ]
     },
     "AbilityTrigger": {
+      "type": "object",
+      "required": [
+        "constraint",
+        "trigger"
+      ],
+      "properties": {
+        "constraint": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Constraint"
+          }
+        },
+        "trigger": {
+          "$ref": "#/definitions/AbilityTriggerType"
+        }
+      }
+    },
+    "AbilityTriggerType": {
       "oneOf": [
         {
           "type": "object",
@@ -172,6 +190,16 @@
               "type": "null"
             }
           ]
+        },
+        "restrictions": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Constraint"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       }
     },
@@ -181,7 +209,8 @@
           "type": "string",
           "enum": [
             "Controller",
-            "Cardname"
+            "Cardname",
+            "All"
           ]
         },
         {
@@ -473,6 +502,7 @@
         "already_dealt_damage",
         "blocked",
         "blocking",
+        "colors",
         "costs",
         "counters",
         "damaged",
@@ -482,7 +512,6 @@
         "known_to",
         "name",
         "owner",
-        "printed_name",
         "subtypes",
         "supertypes",
         "tapped",
@@ -524,6 +553,12 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/CardId"
+          }
+        },
+        "colors": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "null"
           }
         },
         "controller": {
@@ -586,9 +621,6 @@
               "type": "null"
             }
           ]
-        },
-        "printed_name": {
-          "type": "string"
         },
         "pt": {
           "anyOf": [
@@ -686,7 +718,7 @@
         "constraints": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/PermConstraint"
+            "$ref": "#/definitions/Constraint"
           }
         },
         "effect": {
@@ -701,7 +733,8 @@
           "enum": [
             "Destroy",
             "ExileBattlefield",
-            "DrawCard"
+            "DrawCard",
+            "Tap"
           ]
         },
         {
@@ -844,6 +877,124 @@
         "Colorless"
       ]
     },
+    "Constraint": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "IsTapped",
+            "IsCardname",
+            "YouControl",
+            "Multicolored",
+            "Other"
+          ]
+        },
+        {
+          "type": "object",
+          "required": [
+            "CardType"
+          ],
+          "properties": {
+            "CardType": {
+              "$ref": "#/definitions/Type"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "And"
+          ],
+          "properties": {
+            "And": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Constraint"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "Or"
+          ],
+          "properties": {
+            "Or": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Constraint"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "ControlWith"
+          ],
+          "properties": {
+            "ControlWith": {
+              "type": "array",
+              "items": [
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Constraint"
+                  }
+                },
+                {
+                  "type": "integer",
+                  "format": "int64"
+                }
+              ],
+              "maxItems": 2,
+              "minItems": 2
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "HasKeyword"
+          ],
+          "properties": {
+            "HasKeyword": {
+              "$ref": "#/definitions/KeywordAbility"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "Subtype"
+          ],
+          "properties": {
+            "Subtype": {
+              "$ref": "#/definitions/Subtype"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "HasCounter"
+          ],
+          "properties": {
+            "HasCounter": {
+              "$ref": "#/definitions/Counter"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
     "ContDuration": {
       "type": "string",
       "enum": [
@@ -867,43 +1018,6 @@
         }
       ]
     },
-    "ContPrevention": {
-      "type": "object",
-      "required": [
-        "effect",
-        "source"
-      ],
-      "properties": {
-        "effect": {
-          "$ref": "#/definitions/PreventionEffect"
-        },
-        "source": {
-          "$ref": "#/definitions/CardId"
-        }
-      }
-    },
-    "ContTriggeredAbility": {
-      "type": "object",
-      "required": [
-        "effect",
-        "source",
-        "trigger"
-      ],
-      "properties": {
-        "effect": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Clause"
-          }
-        },
-        "source": {
-          "$ref": "#/definitions/CardId"
-        },
-        "trigger": {
-          "$ref": "#/definitions/AbilityTrigger"
-        }
-      }
-    },
     "Continuous": {
       "type": "object",
       "required": [
@@ -920,7 +1034,7 @@
         "constraints": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/PermConstraint"
+            "$ref": "#/definitions/Constraint"
           }
         },
         "duration": {
@@ -1032,11 +1146,9 @@
         "phases",
         "player",
         "players",
-        "prevention_effects",
         "priority",
         "stack",
         "subphases",
-        "triggered_abilities",
         "turn_order"
       ],
       "properties": {
@@ -1120,12 +1232,6 @@
             "$ref": "#/definitions/PlayerView"
           }
         },
-        "prevention_effects": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/ContPrevention"
-          }
-        },
         "priority": {
           "$ref": "#/definitions/PlayerId"
         },
@@ -1149,12 +1255,6 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/Subphase"
-          }
-        },
-        "triggered_abilities": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/ContTriggeredAbility"
           }
         },
         "turn_order": {
@@ -1227,7 +1327,7 @@
             "NumPermanents": {
               "type": "array",
               "items": {
-                "$ref": "#/definitions/PermConstraint"
+                "$ref": "#/definitions/Constraint"
               }
             }
           },
@@ -1251,70 +1351,6 @@
           "format": "int64"
         }
       }
-    },
-    "PermConstraint": {
-      "oneOf": [
-        {
-          "type": "string",
-          "enum": [
-            "IsTapped",
-            "IsCardname",
-            "YouControl",
-            "Other"
-          ]
-        },
-        {
-          "type": "object",
-          "required": [
-            "CardType"
-          ],
-          "properties": {
-            "CardType": {
-              "$ref": "#/definitions/Type"
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": [
-            "Or"
-          ],
-          "properties": {
-            "Or": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/PermConstraint"
-              }
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": [
-            "HasKeyword"
-          ],
-          "properties": {
-            "HasKeyword": {
-              "$ref": "#/definitions/KeywordAbility"
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": [
-            "Subtype"
-          ],
-          "properties": {
-            "Subtype": {
-              "$ref": "#/definitions/Subtype"
-            }
-          },
-          "additionalProperties": false
-        }
-      ]
     },
     "Phase": {
       "type": "string",
@@ -1388,12 +1424,6 @@
         }
       }
     },
-    "PreventionEffect": {
-      "type": "string",
-      "enum": [
-        "Unused"
-      ]
-    },
     "StaticAbility": {
       "type": "object",
       "required": [
@@ -1426,23 +1456,11 @@
         {
           "type": "object",
           "required": [
-            "HasColor"
-          ],
-          "properties": {
-            "HasColor": {
-              "$ref": "#/definitions/Color"
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": [
             "Protection"
           ],
           "properties": {
             "Protection": {
-              "$ref": "#/definitions/PermConstraint"
+              "$ref": "#/definitions/Constraint"
             }
           },
           "additionalProperties": false
@@ -1859,16 +1877,7 @@
     },
     "ZoneMoveTrigger": {
       "type": "object",
-      "required": [
-        "constraint"
-      ],
       "properties": {
-        "constraint": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/PermConstraint"
-          }
-        },
         "dest": {
           "anyOf": [
             {
