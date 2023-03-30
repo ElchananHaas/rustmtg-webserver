@@ -41,11 +41,15 @@ pub fn parse_affected<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, (Affected, Opti
         );
         Ok((tokens, res))
     }
+    fn parse_implicit_it<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, (Affected, Option<Constraint>)> {
+        let (tokens, _) = tag(tokens!["it"])(tokens)?;
+        Ok((tokens, (Affected::ManuallySet(None), None)))
+    }
     fn parse_each<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, (Affected, Option<Constraint>)> {
         let (tokens, _) = tag(tokens!["each"])(tokens)?;
         Ok((tokens, (Affected::All, None)))
     }
-    alt((parse_target, parse_cardname, parse_up_to_target, parse_each))(tokens)
+    alt((parse_target, parse_cardname, parse_up_to_target, parse_each, parse_implicit_it))(tokens)
 }
 pub fn parse_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause> {
     let (tokens, clause) = context(
@@ -115,7 +119,7 @@ fn parse_action_affected_line<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clause>
     let (tokens, addendum) = opt(parse_its_controller_clause)(tokens)?;
     let mut clause = Clause {
         effect,
-        affected: affected,
+        affected,
         constraints,
     };
     if let Some(addendum) = addendum {

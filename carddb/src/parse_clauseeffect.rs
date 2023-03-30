@@ -57,7 +57,7 @@ pub fn parse_action_first_effect<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Clau
     }
     fn parse_exile_effect<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseEffect> {
         let (tokens, _) = tag(tokens!["exile"])(tokens)?;
-        Ok((tokens, ClauseEffect::ExileBattlefield))
+        Ok((tokens, ClauseEffect::Exile))
     }
     fn parse_put_counter<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseEffect> {
         let (tokens, _) = tag(tokens!["put"])(tokens)?;

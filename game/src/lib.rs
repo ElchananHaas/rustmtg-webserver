@@ -2,7 +2,7 @@
 #![feature(const_option)]
 #![feature(let_chains)]
 #![deny(unused_must_use)]
-
+#![allow(irrefutable_let_patterns)]
 use carddb::carddb::CardDB;
 use once_cell::sync::OnceCell;
 pub mod actions;

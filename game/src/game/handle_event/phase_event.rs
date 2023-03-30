@@ -1,12 +1,12 @@
 use crate::{
     client_message::{Ask, AskSelectN},
-    event::{EventResult, TagEvent},
+    event::{EventResult, Event},
     game::{Game, Phase, Subphase},
 };
 use common::{entities::CardId, spellabil::ContDuration};
 
 impl Game {
-    pub async fn phase(&mut self, _events: &mut Vec<TagEvent>, phase: Phase) {
+    pub async fn phase(&mut self, _events: &mut Vec<Event>, phase: Phase) {
         self.phase = Some(phase);
         self.subphase = None;
         self.send_state().await;
@@ -45,7 +45,7 @@ impl Game {
     pub async fn subphase(
         &mut self,
         results: &mut Vec<EventResult>,
-        events: &mut Vec<TagEvent>,
+        events: &mut Vec<Event>,
         subphase: Subphase,
     ) {
         self.subphase = Some(subphase);

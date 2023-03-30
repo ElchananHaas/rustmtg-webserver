@@ -10,6 +10,8 @@ use common::ability::Ability;
 use common::ability::AbilityTrigger;
 use common::ability::AbilityTriggerType;
 use common::ability::ActivatedAbility;
+use common::ability::Replacement;
+use common::ability::ReplacementAbility;
 use common::ability::StaticAbility;
 use common::ability::StaticAbilityEffect;
 use common::ability::TriggeredAbility;
@@ -229,6 +231,7 @@ fn parse_keyword_ability<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, KeywordAbili
         (owned_tokens!["vigilance"], KeywordAbility::Vigilance),
         (owned_tokens!["trample"], KeywordAbility::Trample),
         (owned_tokens!["prowess"], KeywordAbility::Prowess),
+        (owned_tokens!["flash"], KeywordAbility::Flash),
     ];
     for (text, abil) in basics {
         if let Ok((tokens, _)) = (tag::<_, _, VerboseError<_>>(Tokens::from_array(&text)))(tokens) {
@@ -411,6 +414,44 @@ fn parse_protection_from<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, StaticAbilit
         },
     ))
 }
+
+fn parse_zonemove_replacement<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ReplacementAbility> {
+    fn parse_zone_move<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ZoneMoveTrigger> {
+        fn parse_etb<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ZoneMoveTrigger> {
+            let (tokens, _) = tag(tokens!["enter", "the", "battlefield"])(tokens)?;
+            Ok((
+                tokens,
+                ZoneMoveTrigger {
+                    origin: None,
+                    dest: Some(Zone::Battlefield),
+                },
+            ))
+        }
+        alt((parse_etb,))(tokens)
+    }
+    fn parse_and_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Constraint> {
+        let (tokens, _) = tag(tokens!["and", "it"])(tokens)?;
+        parse_constraint(tokens)
+    }
+    let (tokens, _) = tag(tokens!["if"])(tokens)?;
+    let (tokens, _) = opt(tag(tokens!["a"]))(tokens)?;
+    let (tokens, mut constraints) = many1(parse_constraint)(tokens)?;
+    let (tokens, _) = opt(tag(tokens!["would"]))(tokens)?;
+    let (tokens, trigger) = parse_zone_move(tokens)?;
+    let (tokens, add_constraint) = opt(parse_and_clause)(tokens)?;
+    add_constraint.map(|x|constraints.push(x));
+    let (tokens, _) = tag(tokens![","])(tokens)?;
+    let (tokens,new_effect)=parse_clause(tokens)?;
+    let (tokens, _) = tag(tokens!["instead"])(tokens)?;
+    Ok((tokens,ReplacementAbility{
+        keyword:None,
+        effect: Replacement::ZoneMoveReplacement { trigger, new_effect, constraints }
+    }))
+}
+fn parse_replacement_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Ability> {
+    let (tokens, abil) = alt((parse_zonemove_replacement,))(tokens)?;
+    Ok((tokens, Ability::Replacement(abil)))
+}
 fn parse_static_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Ability> {
     let (tokens, abil) = alt((parse_protection_from_x_and_from_y, parse_protection_from))(tokens)?;
     Ok((tokens, Ability::Static(abil)))
@@ -420,6 +461,7 @@ fn parse_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Ability> {
         parse_activated_abil,
         parse_triggered_ability,
         parse_static_abil,
+        parse_replacement_abil,
     ))(tokens)
 }
 fn parse_clause_or_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ParsedLine> {

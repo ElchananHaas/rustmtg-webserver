@@ -2,7 +2,7 @@ use crate::actions::{Action, ActionFilter, CastingOption, StackActionOption};
 use crate::client_message::{Ask, AskSelectN};
 use crate::ent_maps::EntMap;
 use crate::errors::MTGError;
-use crate::event::{Event, EventResult, TagEvent};
+use crate::event::{Event, EventResult};
 use crate::player::{Player, PlayerCon};
 use crate::CARDDB;
 use anyhow::{bail, Result};
@@ -328,6 +328,9 @@ impl Game {
                             self.restore();
                             continue;
                         }
+                        if let Some(card)=self.cards.get_mut(stack_ent){
+                            card.cast=true;
+                        }
                         let stack_opt = StackActionOption {
                             stack_ent,
                             costs: casting_option.costs.clone(),
@@ -412,6 +415,22 @@ impl Game {
                 }else{
                     false
                 } 
+            }
+            Constraint::NotCast => {
+                if let TargetId::Card(card)=target
+                && let Some(ent)=self.cards.get(card){
+                    !ent.cast
+                }else{
+                    false
+                }  
+            }
+            Constraint::NonToken => {
+                if let TargetId::Card(card)=target
+                && let Some(ent)=self.cards.get(card){
+                    ent.ent_type!=EntType::TokenCard
+                }else{
+                    false
+                }  
             }
             Constraint::ControlWith(constraints,num )=>{
                 if let Some(ent)=self.cards.get(source){

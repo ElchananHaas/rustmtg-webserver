@@ -141,8 +141,8 @@ impl Game {
                     .collect();
                 self.destroy(to_destroy).await;
             }
-            ClauseEffect::ExileBattlefield => {
-                let to_exile = (&affected)
+            ClauseEffect::Exile => {
+                let to_exile: Vec<CardId>= (&affected)
                     .into_iter()
                     .filter_map(|x| {
                         if let TargetId::Card(aff) = x {
@@ -153,7 +153,10 @@ impl Game {
                     })
                     .cloned()
                     .collect();
-                self.exile(to_exile, Zone::Battlefield).await;
+                if to_exile.len()>0 &&
+                let Some(origin_zone)=self.locate_zone(to_exile[0]) {
+                    self.exile(to_exile, origin_zone).await;
+                }
             }
             ClauseEffect::Compound(clauses) => {
                 for mut subclause in clauses {
@@ -161,11 +164,11 @@ impl Game {
                     self.resolve_clause(subclause, id).await;
                 }
             }
-            ClauseEffect::PutCounter(coutner_type, quantity) => {
+            ClauseEffect::PutCounter(counter_type, quantity) => {
                 for aff in affected {
                     self.handle_event(Event::PutCounter {
                         affected: aff,
-                        counter: coutner_type,
+                        counter: counter_type,
                         quantity,
                     })
                     .await;

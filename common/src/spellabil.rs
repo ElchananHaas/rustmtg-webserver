@@ -22,6 +22,7 @@ pub enum KeywordAbility {
     Trample,
     Reach,      //Implemented
     Protection, //Partially implemented, add it can't be enchanted.
+    Flash,
 }
 
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
@@ -37,6 +38,8 @@ pub enum Constraint {
     Subtype(Subtype),
     HasCounter(Counter),
     Multicolored,
+    NonToken,
+    NotCast,
     Other,
 }
 
@@ -81,7 +84,7 @@ pub enum NumberComputer {
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub enum ClauseEffect {
     Destroy,
-    ExileBattlefield,
+    Exile,
     AddMana(Vec<ManaCostSymbol>),
     GainLife(i64),
     DrawCard,

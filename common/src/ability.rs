@@ -53,10 +53,24 @@ pub struct ActivatedAbility {
     pub restrictions: Option<Constraint>,
 }
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
+pub enum Replacement {
+    ZoneMoveReplacement {
+        constraints: Vec<Constraint>,
+        trigger: ZoneMoveTrigger,
+        new_effect: Clause,
+    },
+}
+#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
+pub struct ReplacementAbility {
+    pub keyword: Option<KeywordAbility>,
+    pub effect: Replacement,
+}
+#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub enum Ability {
     Activated(ActivatedAbility),
     Triggered(TriggeredAbility),
     Static(StaticAbility),
+    Replacement(ReplacementAbility),
 }
 
 impl Ability {
@@ -66,6 +80,7 @@ impl Ability {
             Self::Activated(abil) => abil.keyword,
             Self::Static(abil) => abil.keyword,
             Self::Triggered(abil) => abil.keyword,
+            Self::Replacement(abil) => abil.keyword,
         }
     }
 }

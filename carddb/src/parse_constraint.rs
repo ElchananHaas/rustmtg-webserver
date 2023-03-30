@@ -26,6 +26,8 @@ pub fn parse_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Constraint> {
         parse_subtype_constraint,
         parse_has_counter,
         parse_multicolored_constraint,
+        parse_nontoken_constraint,
+        parse_not_cast
     ))(tokens)?;
     let (tokens, or_part) = opt(parse_or_constraint)(tokens)?;
     if let Some(or_part) = or_part {
@@ -34,9 +36,18 @@ pub fn parse_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Constraint> {
         Ok((tokens, constraint))
     }
 }
+fn parse_not_cast<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Constraint> {
+    let (tokens, _) = tag(tokens!["wasn't","cast"])(tokens)?;
+    Ok((tokens,Constraint::NotCast))
+}
 fn parse_multicolored_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Constraint> {
     let (tokens, _) = tag(tokens!["multicolored"])(tokens)?;
     Ok((tokens, Constraint::Multicolored))
+}
+
+fn parse_nontoken_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Constraint> {
+    let (tokens, _) = tag(tokens!["nontoken"])(tokens)?;
+    Ok((tokens, Constraint::NonToken))
 }
 
 fn parse_or_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Constraint> {

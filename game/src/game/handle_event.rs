@@ -4,7 +4,7 @@ mod phase_event;
 use crate::{event::MoveZonesResult, game::*};
 use async_recursion::async_recursion;
 use common::{
-    ability::{AbilityTriggerType, TriggeredAbility},
+    ability::{AbilityTriggerType, TriggeredAbility, Replacement},
     card_entities::EntType,
 };
 
@@ -18,14 +18,10 @@ impl Game {
     #[must_use]
     pub async fn handle_event(&mut self, event: Event) -> Vec<EventResult> {
         let mut results: Vec<EventResult> = Vec::new();
-        let mut events: Vec<TagEvent> = Vec::new();
-        events.push(TagEvent {
-            event,
-            replacements: Vec::new(),
-        });
+        let mut events: Vec<Event> = vec![event];
         let mut trigger_ents = self.battlefield.clone();
         loop {
-            let event: TagEvent = match events.pop() {
+            let event: Event = match events.pop() {
                 Some(x) => x,
                 None => {
                     //This fires all triggers once all events have happened.
@@ -39,14 +35,20 @@ impl Game {
                 }
             };
             //Handle prevention effects
-            if !self.allow_event(&event.event) {
+            if !self.allow_event(&event) {
                 continue;
             }
-            //Handle prevention, replacement, triggered abilties here
+            match self.replace(&event).await{
+                None=>{},
+                Some(mut replacements)=>{
+                    events.append(&mut replacements)
+                }
+            }
+            //Handle prevention, replacement
             //By the time the loop reaches here, the game is ready to
             //Execute the event. No more prevention/replacement effects
             //At this point
-            match event.event {
+            match event {
                 Event::PutCounter { affected, counter, quantity }=>{
                     match affected{
                         TargetId::Card(cardid)=>{
@@ -231,7 +233,44 @@ impl Game {
             }
         }
     }
+    //TODO FIX THIS
+    async fn replace(&mut self, event: &Event) -> Option<Vec<Event>>{
+        return match &event{
+            Event::MoveZones { ents, origin, dest }=>{
+                for cardid in &self.battlefield{
+                    if let Some(card)=self.cards.get(*cardid){
+                        for abil in &card.abilities{
+                            if let Ability::Replacement(abil)=abil
+                            && let Replacement::ZoneMoveReplacement{
+                                constraints,
+                                trigger,
+                                new_effect,
+                            }=&abil.effect{
+                                let mut keep=Vec::new();
+                                let mut replace=Vec::new();
+                                for entid in ents{
+                                    if constraints.iter().all(|c|self.passes_constraint(c, *cardid,(*entid).into()))
+                                    && trigger.origin.map_or(true, |zone|Some(zone)==*origin)
+                                    && trigger.dest.map_or(true, |zone|zone==*dest){
+                                        replace.push(entid)
+                                    }else{
+                                        keep.push(entid)
+                                    }
+                                }
+                                if replace.len()==0{
+                                    return None;
+                                }else{
 
+                                }
+                            }
+                        }
+                    }
+                }
+                None
+            }
+            _=> None
+        }
+    }
     fn allow_event(&self, event: &Event) -> bool {
         if let Event::Damage { amount:_, target, source, reason:_ }=event 
         && self.has_protection_from(*source, *target){
@@ -303,7 +342,7 @@ impl Game {
     async fn movezones(
         &mut self,
         results: &mut Vec<EventResult>,
-        _events: &mut Vec<TagEvent>,
+        _events: &mut Vec<Event>,
         ents: Vec<CardId>,
         origin: Option<Zone>,
         dest: Zone,
@@ -422,10 +461,7 @@ impl Game {
             self.handle_event(Event::GainLife { player: card.get_controller(), amount }).await;
         }
     }
-    fn add_event(events: &mut Vec<TagEvent>, event: Event) {
-        events.push(TagEvent {
-            event,
-            replacements: Vec::new(),
-        });
+    fn add_event(events: &mut Vec<Event>, event: Event) {
+        events.push(event);
     }
 }

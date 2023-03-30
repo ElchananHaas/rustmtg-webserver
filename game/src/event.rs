@@ -8,12 +8,6 @@ use common::{
     zones::Zone,
 };
 
-//An event tagged with replacement effects already applied to it
-#[derive(Clone, Debug)]
-pub struct TagEvent {
-    pub event: Event,
-    pub replacements: Vec<i32>,
-}
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum DamageReason {
     Combat,

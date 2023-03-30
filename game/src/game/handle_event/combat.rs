@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::{
     client_message::{Ask, AskPair, AskPairItem},
-    event::{DamageReason, Event, EventResult, TagEvent},
+    event::{DamageReason, Event, EventResult},
     game::{Game, Subphase},
 };
 use common::spellabil::KeywordAbility;
@@ -18,7 +18,7 @@ impl Game {
             .collect::<HashSet<_>>()
     }
 
-    pub async fn attackers(&mut self, _results: &mut Vec<EventResult>, events: &mut Vec<TagEvent>) {
+    pub async fn attackers(&mut self, _results: &mut Vec<EventResult>, events: &mut Vec<Event>) {
         self.backup();
         //Only allow creatures that have haste or don't have summoning sickness to attack
         let legal_attackers = self
@@ -82,10 +82,7 @@ impl Game {
                         card.attacking = Some(attacked);
                     }
                 }
-                events.push(TagEvent {
-                    event: Event::Attack { attacks },
-                    replacements: Vec::new(),
-                });
+                events.push(Event::Attack { attacks });
             } else {
                 self.subphases = vec![Subphase::EndCombat].into();
             }
@@ -94,7 +91,7 @@ impl Game {
         self.cycle_priority().await;
     }
 
-    pub async fn blockers(&mut self, _results: &mut Vec<EventResult>, events: &mut Vec<TagEvent>) {
+    pub async fn blockers(&mut self, _results: &mut Vec<EventResult>, events: &mut Vec<Event>) {
         for opponent in self.opponents(self.active_player) {
             self.backup();
             //Filter only attacking creatures attacking that player
@@ -173,7 +170,7 @@ impl Game {
     pub async fn damagephase(
         &mut self,
         _results: &mut Vec<EventResult>,
-        events: &mut Vec<TagEvent>,
+        events: &mut Vec<Event>,
         subphase: Subphase,
     ) {
         //Handle first strike and normal strike
@@ -234,7 +231,7 @@ impl Game {
     }
     pub async fn blocked_by(
         &mut self,
-        events: &mut Vec<TagEvent>,
+        events: &mut Vec<Event>,
         attacker_id: CardId,
         blocker_id: CardId,
     ) {
@@ -256,7 +253,7 @@ impl Game {
 
     async fn spread_damage(
         &self,
-        events: &mut Vec<TagEvent>,
+        events: &mut Vec<Event>,
         dealer: CardId,
         creatures: &Vec<CardId>,
     ) {
