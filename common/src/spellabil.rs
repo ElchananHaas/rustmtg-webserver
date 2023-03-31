@@ -55,7 +55,7 @@ pub enum Affected {
     Cardname,
     All,
     Target(Option<TargetId>),
-    ManuallySet(Option<TargetId>),
+    ManuallySet(Vec<TargetId>),
     UpToXTarget(i64, Vec<TargetId>),
 }
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq, Eq)]

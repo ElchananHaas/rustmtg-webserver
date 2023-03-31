@@ -439,14 +439,21 @@ fn parse_zonemove_replacement<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Replace
     let (tokens, _) = opt(tag(tokens!["would"]))(tokens)?;
     let (tokens, trigger) = parse_zone_move(tokens)?;
     let (tokens, add_constraint) = opt(parse_and_clause)(tokens)?;
-    add_constraint.map(|x|constraints.push(x));
+    add_constraint.map(|x| constraints.push(x));
     let (tokens, _) = tag(tokens![","])(tokens)?;
-    let (tokens,new_effect)=parse_clause(tokens)?;
+    let (tokens, new_effect) = parse_clause(tokens)?;
     let (tokens, _) = tag(tokens!["instead"])(tokens)?;
-    Ok((tokens,ReplacementAbility{
-        keyword:None,
-        effect: Replacement::ZoneMoveReplacement { trigger, new_effect, constraints }
-    }))
+    Ok((
+        tokens,
+        ReplacementAbility {
+            keyword: None,
+            effect: Replacement::ZoneMoveReplacement {
+                trigger,
+                new_effect,
+                constraints,
+            },
+        },
+    ))
 }
 fn parse_replacement_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Ability> {
     let (tokens, abil) = alt((parse_zonemove_replacement,))(tokens)?;

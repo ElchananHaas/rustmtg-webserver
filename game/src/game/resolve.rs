@@ -65,11 +65,7 @@ impl Game {
                 }
             }
             Affected::ManuallySet(x) => {
-                if let Some(x) = *x {
-                    vec![x]
-                } else {
-                    vec![]
-                }
+                x.clone()
             },
             Affected::Cardname => if let Some(card)=self.cards.get(id)
             && let Some(source)=card.source_of_ability{
@@ -90,7 +86,7 @@ impl Game {
     }
     #[async_recursion]
     #[must_use]
-    async fn resolve_clause(&mut self, clause: Clause, id: CardId) {
+    pub async fn resolve_clause(&mut self, clause: Clause, id: CardId) {
         let affected: Vec<TargetId> =
             self.calculate_affected(id, &clause.affected, &clause.constraints);
         if affected.len() == 0 {
@@ -142,7 +138,7 @@ impl Game {
                 self.destroy(to_destroy).await;
             }
             ClauseEffect::Exile => {
-                let to_exile: Vec<CardId>= (&affected)
+                let to_exile: Vec<CardId> = (&affected)
                     .into_iter()
                     .filter_map(|x| {
                         if let TargetId::Card(aff) = x {
@@ -179,7 +175,7 @@ impl Game {
                     let mut clause = *clause.clone();
                     if let TargetId::Card(affected)=aff
                     && let Some(controller)=self.get_controller(affected){
-                        clause.affected=Affected::ManuallySet(Some(controller.into()));
+                        clause.affected=Affected::ManuallySet(vec![controller.into()]);
                         self.resolve_clause(clause, id).await;
                     }
                 }

@@ -4,7 +4,7 @@ mod phase_event;
 use crate::{event::MoveZonesResult, game::*};
 use async_recursion::async_recursion;
 use common::{
-    ability::{AbilityTriggerType, TriggeredAbility, Replacement},
+    ability::{AbilityTriggerType, Replacement, TriggeredAbility},
     card_entities::EntType,
 };
 
@@ -38,10 +38,11 @@ impl Game {
             if !self.allow_event(&event) {
                 continue;
             }
-            match self.replace(&event).await{
-                None=>{},
-                Some(mut replacements)=>{
-                    events.append(&mut replacements)
+            match self.replacements(&event).await {
+                None => {}
+                Some(mut replacements) => {
+                    events.append(&mut replacements);
+                    continue;
                 }
             }
             //Handle prevention, replacement
@@ -233,43 +234,82 @@ impl Game {
             }
         }
     }
-    //TODO FIX THIS
-    async fn replace(&mut self, event: &Event) -> Option<Vec<Event>>{
-        return match &event{
-            Event::MoveZones { ents, origin, dest }=>{
-                for cardid in &self.battlefield{
-                    if let Some(card)=self.cards.get(*cardid){
-                        for abil in &card.abilities{
-                            if let Ability::Replacement(abil)=abil
-                            && let Replacement::ZoneMoveReplacement{
-                                constraints,
-                                trigger,
-                                new_effect,
-                            }=&abil.effect{
-                                let mut keep=Vec::new();
-                                let mut replace=Vec::new();
-                                for entid in ents{
-                                    if constraints.iter().all(|c|self.passes_constraint(c, *cardid,(*entid).into()))
-                                    && trigger.origin.map_or(true, |zone|Some(zone)==*origin)
-                                    && trigger.dest.map_or(true, |zone|zone==*dest){
-                                        replace.push(entid)
-                                    }else{
-                                        keep.push(entid)
-                                    }
-                                }
-                                if replace.len()==0{
-                                    return None;
-                                }else{
-
-                                }
-                            }
+    async fn replacement_for_cardid(
+        &self,
+        event: &Event,
+        sourceid: CardId,
+        abil: &Replacement,
+    ) -> Option<(Vec<Event>, Vec<Clause>)> {
+        match abil {
+            Replacement::ZoneMoveReplacement {
+                constraints,
+                trigger,
+                new_effect,
+            } => {
+                if let Event::MoveZones { ents, origin, dest } = event {
+                    let mut keep = Vec::new();
+                    let mut replace = Vec::new();
+                    for entid in ents {
+                        if constraints
+                            .iter()
+                            .all(|c| self.passes_constraint(c, sourceid, (*entid).into()))
+                            && trigger.origin.map_or(true, |zone| Some(zone) == *origin)
+                            && trigger.dest.map_or(true, |zone| zone == *dest)
+                        {
+                            replace.push(*entid)
+                        } else {
+                            keep.push(*entid)
+                        }
+                    }
+                    if replace.len() == 0 {
+                        return None;
+                    } else {
+                        let mut new_effect = new_effect.clone();
+                        if let Affected::ManuallySet(_) = new_effect.affected {
+                            let replace = replace.into_iter().map(|x| x.into()).collect();
+                            new_effect.affected = Affected::ManuallySet(replace);
+                        }
+                        let res = (
+                            vec![Event::MoveZones {
+                                ents: keep,
+                                origin: *origin,
+                                dest: *dest,
+                            }],
+                            vec![new_effect],
+                        );
+                        return Some(res);
+                    }
+                }
+            }
+        }
+        None
+    }
+    async fn replacements(&mut self, event: &Event) -> Option<Vec<Event>> {
+        if let Some((events, clauses, cardid)) = self.replacements_h(event).await {
+            for clause in clauses {
+                self.resolve_clause(clause, cardid).await;
+            }
+            Some(events)
+        } else {
+            return None;
+        }
+    }
+    async fn replacements_h(&mut self, event: &Event) -> Option<(Vec<Event>, Vec<Clause>, CardId)> {
+        for cardid in &self.battlefield {
+            if let Some(card) = self.cards.get(*cardid) {
+                for abil in &card.abilities {
+                    if let Ability::Replacement(abil) = abil {
+                        if let Some(replaced) = self
+                            .replacement_for_cardid(event, *cardid, &abil.effect)
+                            .await
+                        {
+                            return Some((replaced.0, replaced.1, *cardid));
                         }
                     }
                 }
-                None
             }
-            _=> None
         }
+        None
     }
     fn allow_event(&self, event: &Event) -> bool {
         if let Event::Damage { amount:_, target, source, reason:_ }=event 

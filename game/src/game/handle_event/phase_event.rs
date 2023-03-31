@@ -1,6 +1,6 @@
 use crate::{
     client_message::{Ask, AskSelectN},
-    event::{EventResult, Event},
+    event::{Event, EventResult},
     game::{Game, Phase, Subphase},
 };
 use common::{entities::CardId, spellabil::ContDuration};

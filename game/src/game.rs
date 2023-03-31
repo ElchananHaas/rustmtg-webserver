@@ -328,8 +328,8 @@ impl Game {
                             self.restore();
                             continue;
                         }
-                        if let Some(card)=self.cards.get_mut(stack_ent){
-                            card.cast=true;
+                        if let Some(card) = self.cards.get_mut(stack_ent) {
+                            card.cast = true;
                         }
                         let stack_opt = StackActionOption {
                             stack_ent,

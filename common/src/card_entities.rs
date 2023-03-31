@@ -63,7 +63,7 @@ pub struct CardEnt {
     pub printed: Option<Box<CardEnt>>, //This stores the printed version of the card so
     //when layers are recalculated, this can be set.
     pub counters: Vec<Counter>,
-    pub cast: bool
+    pub cast: bool,
 }
 impl CardEnt {
     pub fn has_keyword(&self, keyword: KeywordAbility) -> bool {
