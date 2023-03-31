@@ -74,6 +74,10 @@ fn celestial_enforcer() {
 fn containment_priest() {
     test_card(db(), "Containment Priest");
 }
+#[test_log::test]
+fn daybreak_charger() {
+    test_card(db(), "Daybreak Charger");
+}
 #[allow(dead_code)]
 fn test_card(db: &CardDB, card_name: &'static str) -> CardEnt {
     let spawned = db.try_spawn_card(card_name, PlayerId::from(NonZeroU64::new(1).unwrap()));
