@@ -4,8 +4,29 @@ use anyhow::Result;
 use common::{counters::Counter, entities::PlayerId, zones::Zone};
 use test_log;
 
-use crate::tests::common_test::hand_battlefield_setup;
+use crate::tests::common_test::{hand_battlefield_setup, get_hand_card};
 
+
+#[test_log::test(tokio::test)]
+async fn test_containment_priest() -> Result<()> {
+    let (mut game, _hand) = hand_battlefield_setup(
+        vec!["Wishcoin Crab"; 3],
+        vec!["Containment Priest"; 1],
+        None,
+    ).await?;
+    assert!(game.battlefield.len()==1);
+    let card=get_hand_card(&game);
+    game.move_zones(vec![card], Zone::Hand, Zone::Battlefield).await;
+    assert!(game.battlefield.len()==1);
+    let card=get_hand_card(&game);
+    game.move_zones(vec![card], Zone::Hand, Zone::Stack).await;
+    {
+        game.cards.get_mut(game.stack[0]).unwrap().cast=true;
+    }
+    game.resolve(game.stack[0]).await;
+    assert!(game.battlefield.len()==2);
+    Ok(())
+}
 #[test_log::test(tokio::test)]
 async fn test_basri_solidarity() -> Result<()> {
     let (mut game, hand) = hand_battlefield_setup(

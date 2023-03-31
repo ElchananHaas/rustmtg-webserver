@@ -96,6 +96,9 @@ pub fn by_name(state: &Game) -> HashMap<String, Vec<CardId>> {
     res
 }
 
+pub fn get_hand_card(state:&Game)->CardId{
+    *state.players.get(state.active_player).unwrap().hand.iter().next().unwrap()
+}
 #[test_log::test]
 fn test_game_init() -> Result<()> {
     let db = get_db();
