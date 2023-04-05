@@ -19,3 +19,5 @@ serde_with = "2.2.0"
 once_cell = "1.17.0"
 test-log = "0.2.11"
 env_logger = "0.10.0"
+[lib]
+doctest = false

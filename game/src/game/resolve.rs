@@ -73,6 +73,14 @@ impl Game {
             } else {
                 vec![]
             },
+            Affected::EquippedOrEnchanted => {
+                if let Some(card)=self.cards.get(id) 
+                && let Some(e)=card.enchanting_or_equipping{
+                    vec![e]
+                }else{
+                    vec![]
+                }
+            }
 
         };
         return affected

@@ -1,3 +1,4 @@
+use crate::ability::Ability;
 use crate::card_entities::PT;
 use crate::cardtypes::{Subtype, Type};
 use crate::counters::Counter;
@@ -23,6 +24,7 @@ pub enum KeywordAbility {
     Reach,      //Implemented
     Protection, //Partially implemented, add it can't be enchanted.
     Flash,
+    Enchant,
 }
 
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
@@ -57,6 +59,7 @@ pub enum Affected {
     Target(Option<TargetId>),
     ManuallySet(Vec<TargetId>),
     UpToXTarget(i64, Vec<TargetId>),
+    EquippedOrEnchanted,
 }
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq, Eq)]
 pub enum ContDuration {
@@ -75,6 +78,8 @@ pub struct Continuous {
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub enum ContEffect {
     ModifyPT(PT),
+    HasAbility(Box<Ability>),
+    AddSubtype(Vec<Subtype>)
 }
 
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]

@@ -19,7 +19,7 @@ fn lemmatize<'a>(word: &'a str) -> Cow<'a, str> {
     if word.chars().last() != Some('s') {
         return word.into();
     }
-    let dont_trim = ["its", "this"];
+    let dont_trim = ["its", "this", "has", "is"];
     if dont_trim.into_iter().any(|x| x == word) {
         return word.into();
     }

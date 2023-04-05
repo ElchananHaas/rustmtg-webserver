@@ -553,6 +553,7 @@ impl Game {
             Affected::Cardname
             | Affected::Controller
             | Affected::ManuallySet(_)
+            | Affected::EquippedOrEnchanted
             | Affected::All => clause,
             Affected::Target(_) => {
                 if let Some(pl) = self.players.get(player) {

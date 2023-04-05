@@ -6,6 +6,7 @@ use crate::cost::Cost;
 use crate::mana::ManaCostSymbol;
 use crate::spellabil::Clause;
 use crate::spellabil::ClauseEffect;
+use crate::spellabil::ContEffect;
 use crate::spellabil::KeywordAbility;
 use crate::spellabil::{Affected, Constraint};
 use crate::zones::Zone;
@@ -34,11 +35,18 @@ pub struct TriggeredAbility {
     pub effect: Vec<Clause>,
     pub keyword: Option<KeywordAbility>,
 }
-
+#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
+pub struct StaticContEffect{
+    pub effects:Vec<ContEffect>,
+    pub affected:Affected,
+    pub constraints:Vec<Constraint>,
+}
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub enum StaticAbilityEffect {
     GivenByKeyword,
     Protection(Constraint),
+    Enchant(Vec<Constraint>),
+    Cont(StaticContEffect),
 }
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub struct StaticAbility {

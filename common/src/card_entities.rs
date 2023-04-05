@@ -64,6 +64,7 @@ pub struct CardEnt {
     //when layers are recalculated, this can be set.
     pub counters: Vec<Counter>,
     pub cast: bool,
+    pub enchanting_or_equipping: Option<TargetId>
 }
 impl CardEnt {
     pub fn has_keyword(&self, keyword: KeywordAbility) -> bool {

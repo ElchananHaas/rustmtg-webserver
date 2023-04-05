@@ -1,4 +1,5 @@
 use crate::parse_clause::parse_clause;
+use crate::parse_clauseeffect::parse_cont_effect;
 use crate::parse_constraint::parse_constraint;
 use crate::parse_non_body::parse_cost_line;
 use crate::parse_non_body::parse_pt;
@@ -14,14 +15,17 @@ use common::ability::Replacement;
 use common::ability::ReplacementAbility;
 use common::ability::StaticAbility;
 use common::ability::StaticAbilityEffect;
+use common::ability::StaticContEffect;
 use common::ability::TriggeredAbility;
 use common::ability::ZoneMoveTrigger;
 use common::card_entities::CardEnt;
 use common::cost::Cost;
 use common::entities::PlayerId;
 use common::mana::ManaCostSymbol;
+use common::spellabil::Affected;
 use common::spellabil::Clause;
 use common::spellabil::Constraint;
+use common::spellabil::ContEffect;
 use common::spellabil::KeywordAbility;
 use common::zones::Zone;
 use log::debug;
@@ -206,17 +210,14 @@ fn parse_body<'a>(
         Ok(())
     }
 }
-fn parse_keyword_abilities<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Vec<KeywordAbility>> {
-    many0(parse_keyword_abil_and_comma)(tokens)
-}
-fn parse_keyword_abil_and_comma<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, KeywordAbility> {
-    let (tokens, keyword) = parse_keyword_ability(tokens)?;
+
+fn parse_keyword_ability<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Ability> {
+    let (tokens, keyword) = parse_inner_keyword_ability(tokens)?;
     let (tokens, _) = opt(tag(tokens![","]))(tokens)?;
-    let (tokens, _) = opt(tag(tokens!["\n"]))(tokens)?;
-    Ok((tokens, keyword))
+    Ok((tokens, Ability::from_keyword(keyword)))
 }
 //This parses all keywords that are just a phrase with no additional info
-fn parse_keyword_ability<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, KeywordAbility> {
+fn parse_inner_keyword_ability<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, KeywordAbility> {
     let basics = vec![
         (
             owned_tokens!["first", "strike"],
@@ -459,12 +460,52 @@ fn parse_replacement_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Ability> {
     let (tokens, abil) = alt((parse_zonemove_replacement,))(tokens)?;
     Ok((tokens, Ability::Replacement(abil)))
 }
+
+fn parse_enchant<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, StaticAbility> {
+    let (tokens, _) = tag(tokens!["enchant"])(tokens)?;
+    let (tokens, restricts) = many1(parse_constraint)(tokens)?;
+    Ok((
+        tokens,
+        StaticAbility {
+            keyword: Some(KeywordAbility::Enchant),
+            effect: StaticAbilityEffect::Enchant(restricts),
+        },
+    ))
+}
+
+fn parse_grant_enchanted_or_equipped<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, StaticAbility> {
+    let (tokens, _) = tag(tokens!["enchanted"])(tokens)?;
+    let (tokens, _)=parse_constraint(tokens)?;
+    fn parse_granted<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ContEffect> {
+        let (tokens, cont)=parse_cont_effect(tokens)?;
+        let (tokens, _) = opt(tag(tokens![","]))(tokens)?;
+        let (tokens, _) = opt(tag(tokens!["and"]))(tokens)?;
+        Ok((tokens,cont))
+    }
+    let (tokens,abils)=many1(parse_granted)(tokens)?;
+    Ok((tokens,StaticAbility{
+        keyword:None,
+        effect:StaticAbilityEffect::Cont(
+            StaticContEffect{
+                effects:abils,
+                affected:Affected::EquippedOrEnchanted,
+                constraints:vec![]
+            }
+        )
+    }))
+}
 fn parse_static_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Ability> {
-    let (tokens, abil) = alt((parse_protection_from_x_and_from_y, parse_protection_from))(tokens)?;
+    let (tokens, abil) = alt((
+        parse_protection_from_x_and_from_y,
+        parse_protection_from,
+        parse_enchant,
+        parse_grant_enchanted_or_equipped,
+    ))(tokens)?;
     Ok((tokens, Ability::Static(abil)))
 }
-fn parse_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Ability> {
+pub fn parse_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Ability> {
     alt((
+        parse_keyword_ability,
         parse_activated_abil,
         parse_triggered_ability,
         parse_static_abil,
@@ -480,11 +521,7 @@ fn parse_clause_or_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ParsedLine> {
     return Ok((tokens, ParsedLine::Abil(abil)));
 }
 
-fn parse_body_lines<'a>(card: &mut CardEnt, tokens: &'a Tokens) -> Res<&'a Tokens, ()> {
-    let (mut tokens, keywords) = context("parse keywords", parse_keyword_abilities)(tokens)?;
-    for keyword in keywords {
-        card.abilities.push(Ability::from_keyword(keyword));
-    }
+fn parse_body_lines<'a>(card: &mut CardEnt, mut tokens: &'a Tokens) -> Res<&'a Tokens, ()> {
     while tokens.len() > 0 {
         let parsedline;
         (tokens, _) = context("pruning comments", prune_comment)(tokens)?;

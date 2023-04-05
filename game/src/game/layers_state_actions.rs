@@ -2,12 +2,18 @@ use common::{counters::Counter, spellabil::ContEffect};
 
 use crate::game::*;
 
+struct ContAbilContext{
+    pub effect: ContEffect,
+    pub affected: Affected,
+    pub constraints: Vec<Constraint>,
+    pub source: CardId,   
+}
+
 impl Game {
     //Computes layers, state based actions and places abilities on the stack
     pub async fn layers_state_actions(&mut self) {
         self.layers();
         self.state_based_actions().await;
-        self.place_abilities().await;
     }
     async fn state_based_actions(&mut self) {
         let mut to_die = Vec::new();
@@ -27,13 +33,39 @@ impl Game {
             .await;
         self.destroy(to_destroy).await;
     }
-    //Places abilities on the stack
-    async fn place_abilities(&mut self) {
-        //TODO!
+
+    fn cont_abilities(&self)-> Vec<ContAbilContext>{
+        let mut res=Vec::new();
+        for cont in self.cont_effects.clone() {
+            res.push(
+                ContAbilContext{
+                    effect:cont.effect,
+                    affected:cont.affected,
+                    constraints:cont.constraints,
+                    source:cont.source,
+                }
+            );
+        }
+        for &id in &self.battlefield{
+            if let Some(card)=self.cards.get(id){
+                for abil in &card.abilities{
+                    if let Ability::Static(abil)=abil
+                    && let StaticAbilityEffect::Cont(abil)=&abil.effect{
+                        for effect in abil.effects.clone(){
+                            res.push(
+                                ContAbilContext { effect, affected: abil.affected.clone(), constraints: abil.constraints.clone(), source: id }
+                            );
+                        }
+                    }
+                }
+            }
+        }
+        res
     }
     fn layers(&mut self) {
         self.layer_zero();
         self.layer_four();
+        self.layer_six();
         self.layer_seven();
     }
     //Handles the printed charachteristics of cards
@@ -94,9 +126,45 @@ impl Game {
                 };
             }
         }
+        for effect in self.cont_abilities() {
+            match &effect.effect {
+                ContEffect::AddSubtype(subtypes) => {
+                    for affected in self
+                        .calculate_affected(effect.source, &effect.affected, &effect.constraints)
+                        .clone()
+                    {
+                        if let TargetId::Card(id)=affected
+                        && let Some(card)=self.cards.get_mut(id){
+                            for ty in subtypes{
+                                card.subtypes.add(*ty);
+                            }
+                        }
+                    }
+                }
+                _=>{}
+            }
+        }
+    }
+    fn layer_six(&mut self) {
+        for effect in self.cont_abilities() {
+            match &effect.effect {
+                ContEffect::HasAbility(abil) => {
+                    for affected in self
+                        .calculate_affected(effect.source, &effect.affected, &effect.constraints)
+                        .clone()
+                    {
+                        if let TargetId::Card(id)=affected
+                        && let Some(card)=self.cards.get_mut(id){
+                            card.abilities.push(*abil.clone());
+                        }
+                    }
+                }
+                _=>{}
+            }
+        }
     }
     fn layer_seven(&mut self) {
-        for effect in self.cont_effects.clone() {
+        for effect in self.cont_abilities() {
             match effect.effect {
                 ContEffect::ModifyPT(pt) => {
                     for affected in self
@@ -108,10 +176,10 @@ impl Game {
                             && let Some(card_pt)=&mut card.pt{
                                 card_pt.power+=pt.power;
                                 card_pt.toughness+=pt.toughness;
-                                println!("{:?}",card_pt.power);
                             }
                     }
                 }
+                _=>{}
             }
         }
         for id in self.battlefield.clone() {

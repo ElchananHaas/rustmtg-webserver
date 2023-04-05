@@ -365,10 +365,10 @@ pub enum Subtype {
     Yeti,
     Zombie,
     Zubera,
-    EndCreatureMarker,
     Plains,
     Island,
     Swamp,
     Mountain,
     Forest,
+    Aura,
 }
