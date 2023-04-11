@@ -31,7 +31,7 @@ async fn test_swift_response() -> Result<()> {
     {
         let swift = game.cards.get(hand).unwrap();
         assert!(!swift.effect.iter().any(|x| game.is_valid_target(
-            x,
+            &x.constraints,
             hand,
             watchdog.into(),
             Zone::Battlefield
@@ -41,7 +41,7 @@ async fn test_swift_response() -> Result<()> {
     {
         let swift = game.cards.get(hand).unwrap();
         assert!(swift.effect.iter().any(|x| game.is_valid_target(
-            x,
+            &x.constraints,
             hand,
             watchdog.into(),
             Zone::Battlefield

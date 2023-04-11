@@ -39,7 +39,6 @@ async fn cast_creature_test() -> Result<()> {
     game.add_mana(game.active_player, ManaCostSymbol::White)
         .await;
     game.cycle_priority().await;
-    dbg!(&game.battlefield);
     assert!(game.players.get(game.active_player).unwrap().hand.len() == 0);
     assert!(game.stack.len() == 0);
     assert!(game.battlefield.len() == 1);
@@ -172,6 +171,42 @@ async fn basris_lt_self_test() -> Result<()> {
     Ok(())
 }
 
+struct DubClient {
+}
+
+impl MockClient for DubClient{
+    fn select_action(&mut self, _game: &GameState, _ask: &AskSelectN<Action>) -> HashSetObj<usize> {
+        let mut res = HashSetObj::new();
+        res.insert(0);
+        res
+    }
+    fn select_targets(
+            &mut self,
+            _game: &GameState,
+            _ask: &AskSelectN<TargetId>,
+        ) -> HashSetObj<usize> {
+        let mut res = HashSetObj::new();
+        res.insert(0);
+        res
+    }
+}
+#[test_log::test(tokio::test)]
+async fn dub_test() -> Result<()> {
+    let (mut game, _hand) = hand_battlefield_setup(
+        vec!["Dub"],
+        vec!["Staunch Shieldmate"; 1],
+        Some(Box::new(DubClient{})),
+    )
+    .await?;
+    game.phase = Some(Phase::FirstMain);
+    for _ in 0..10{
+        game.add_mana(game.active_player, ManaCostSymbol::White)
+        .await;
+    }
+    dbg!(&game.battlefield);
+    game.cycle_priority().await;
+    Ok(())
+}
 #[test_log::test(tokio::test)]
 async fn empty_test() -> Result<()> {
     let (mut game, _hand) = hand_battlefield_setup(vec![], vec![], None).await?;
@@ -184,7 +219,6 @@ async fn single_test() -> Result<()> {
     let (mut game, _hand) = hand_battlefield_setup(vec![], vec![], None).await?;
     game.command
         .add(CardId::from(NonZeroU64::new(500).unwrap()));
-    //Where is this bug coming from?
     game.cycle_priority().await;
     Ok(())
 }

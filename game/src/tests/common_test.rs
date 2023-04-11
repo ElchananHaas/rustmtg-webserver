@@ -44,7 +44,7 @@ pub async fn hand_battlefield_setup(
     gamebuild.add_player(
         "p2",
         &db,
-        &joined,
+        &vec![],
         PlayerCon::new_test(TestClient::default()),
     )?;
     let mut game = gamebuild.build(&db)?;

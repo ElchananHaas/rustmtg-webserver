@@ -22,7 +22,7 @@ impl Game {
     pub async fn resolve(&mut self, id: CardId) {
         let effects;
         let types;
-        if let Some(ent) = self.cards.get(id) {
+        if let Some(ent) = self.cards.get_mut(id) {
             effects = ent.effect.clone();
             types = ent.types.clone();
         } else {

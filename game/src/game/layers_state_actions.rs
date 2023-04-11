@@ -19,13 +19,26 @@ impl Game {
         let mut to_die = Vec::new();
         let mut to_destroy = Vec::new();
         for &cardid in &self.battlefield.clone() {
-            if let Some(card)=self.cards.get(cardid) &&
-            let Some(pt)=&card.pt{
-                if pt.toughness<=0{
-                    to_die.push(cardid);
+            if let Some(card)=self.cards.get(cardid) {
+                if let Some(pt)=&card.pt{
+                    if pt.toughness<=0{
+                        to_die.push(cardid);
+                    }
+                    else if card.damaged>=pt.toughness{
+                        to_destroy.push(cardid);
+                    }
                 }
-                else if card.damaged>=pt.toughness{
-                    to_destroy.push(cardid);
+                for abil in &card.abilities{
+                    if let Ability::Static(abil)=abil
+                    && let StaticAbilityEffect::Enchant(constraints)=&abil.effect{
+                        if let Some(enchanting)=card.enchanting_or_equipping{
+                            if !constraints.into_iter().all(|c|self.passes_constraint(c, cardid, enchanting)){
+                                to_die.push(cardid);
+                            }
+                        } else{
+                            to_die.push(cardid);
+                        }
+                    }
                 }
             }
         }

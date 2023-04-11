@@ -13,7 +13,7 @@ async fn test_baneslayer() -> Result<()> {
     {
         let murder = game.cards.get(murder_id).unwrap();
         assert!(murder.effect.iter().any(|x| game.is_valid_target(
-            x,
+            &x.constraints,
             murder_id,
             baneslayer.into(),
             Zone::Battlefield
@@ -26,7 +26,7 @@ async fn test_baneslayer() -> Result<()> {
     {
         let murder = game.cards.get(murder_id).unwrap();
         assert!(!murder.effect.iter().any(|x| game.is_valid_target(
-            x,
+            &x.constraints,
             murder_id,
             baneslayer.into(),
             Zone::Battlefield

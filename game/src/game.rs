@@ -532,15 +532,49 @@ impl Game {
         stack_ent: CardId,
     ) -> Result<(), MTGError> {
         let mut selected = Vec::new();
+        let mut enchanting=None;
         if let Some(card) = self.cards.get(stack_ent) {
             for x in &card.effect {
                 selected.push(self.clause_select_targets(player, stack_ent, x).await?);
             }
+            for abil in &card.abilities{
+                if enchanting.is_none(){
+                    enchanting=self.select_enchant_target(player, stack_ent, abil).await?;
+                }
+            }
         }
         if let Some(card) = self.cards.get_mut(stack_ent) {
             card.effect = selected;
+            card.enchanting_or_equipping=enchanting;
         }
         Ok(())
+    }
+    async fn select_enchant_target(
+        &self,
+        player: PlayerId,
+        stack_ent: CardId,
+        abil: &Ability,
+    ) -> Result<Option<TargetId>, MTGError> {
+        if let Ability::Static(abil)=abil 
+        && let StaticAbilityEffect::Enchant(c)= &abil.effect{
+            if let Some(pl) = self.players.get(player) {
+                let valid = self.valid_targets(c, stack_ent);
+                if valid.len() == 0 {
+                    return Err(MTGError::NoValidTargets);
+                }
+                let ask = AskSelectN {
+                    ents: valid.clone(),
+                    min: 1,
+                    max: 1,
+                };
+                let choice = pl.ask_user_selectn(&Ask::Target(ask.clone()), &ask).await;
+                let target = valid[choice.into_iter().next().unwrap()];
+                return Ok(Some(target));
+            } else {
+                return Err(MTGError::PlayerDoesntExist);
+            }
+        };
+        Ok(None)
     }
     async fn clause_select_targets(
         &self,
@@ -557,7 +591,7 @@ impl Game {
             | Affected::All => clause,
             Affected::Target(_) => {
                 if let Some(pl) = self.players.get(player) {
-                    let valid = self.valid_targets(&clause, stack_ent);
+                    let valid = self.valid_targets(&clause.constraints, stack_ent);
                     if valid.len() == 0 {
                         return Err(MTGError::NoValidTargets);
                     }
@@ -577,7 +611,7 @@ impl Game {
             Affected::UpToXTarget(n, _) => {
                 println!("selectng up to x targets");
                 if let Some(pl) = self.players.get(player) {
-                    let valid = self.valid_targets(&clause, stack_ent);
+                    let valid = self.valid_targets(&clause.constraints, stack_ent);
                     let ask = AskSelectN {
                         ents: valid.clone(),
                         min: 0,
@@ -593,10 +627,10 @@ impl Game {
             }
         });
     }
-    pub fn valid_targets(&self, clause: &Clause, source: CardId) -> Vec<TargetId> {
+    pub fn valid_targets(&self, constraints: &Vec<Constraint>, source: CardId) -> Vec<TargetId> {
         let mut valid = Vec::new();
         for &(card, zone) in &self.cards_and_zones() {
-            if self.is_valid_target(&clause, source, card.into(), zone) {
+            if self.is_valid_target(constraints, source, card.into(), zone) {
                 valid.push(TargetId::Card(card));
             }
         }
@@ -604,14 +638,13 @@ impl Game {
     }
     pub fn is_valid_target(
         &self,
-        clause: &Clause,
+        constraints: &Vec<Constraint>,
         source: CardId,
         target: TargetId,
         _zone: Zone,
     ) -> bool {
         let source = self.stack_ent_source(source);
-        if !clause
-            .constraints
+        if constraints
             .iter()
             .all(|x| self.passes_constraint(x, source, target))
         {
@@ -628,8 +661,10 @@ impl Game {
         if !castopt.filter.check() {
             return Err(MTGError::CantCast);
         }
+        self.send_state().await;
         self.select_targets(castopt.player, castopt.stack_ent)
             .await?;
+        self.send_state().await;
         let cost_paid = self.request_cost_payment(&castopt).await?;
         println!("cost paid {:?}", cost_paid);
         if self.is_mana_ability(castopt.stack_ent) {
