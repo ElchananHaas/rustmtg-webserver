@@ -205,6 +205,15 @@ async fn dub_test() -> Result<()> {
     }
     let shieldmate=*game.battlefield.iter().next().unwrap();
     assert!(game.battlefield.len()==1);
+    {
+        let shieldmate=game.cards.get(shieldmate).unwrap();
+        assert!(shieldmate.pt==Some(PT{
+            power:1,
+            toughness:3
+        }));
+        assert!(shieldmate.subtypes.len()==2);
+        assert!(shieldmate.abilities.len()==0);
+    }
     game.cycle_priority().await;
     assert!(game.battlefield.len()==2);
     {
