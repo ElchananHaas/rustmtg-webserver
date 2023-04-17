@@ -74,6 +74,7 @@ impl GameBuilder {
             backup: None,
             rng: rand::rngs::StdRng::from_entropy(),
             cont_effects: Vec::new(),
+            log: Arc::new(Mutex::new(Vec::new())),
         })
     }
 }

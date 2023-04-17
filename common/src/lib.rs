@@ -11,6 +11,6 @@ pub mod mana;
 pub mod spellabil;
 pub mod token_attribute;
 pub mod zones;
-
+pub mod log;
 #[cfg(test)]
 mod tests {}

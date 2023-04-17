@@ -205,6 +205,11 @@ async fn dub_test() -> Result<()> {
     }
     dbg!(&game.battlefield);
     game.cycle_priority().await;
+    dbg!(&game.battlefield);
+    dbg!(&game.get_active_player().graveyard);
+    {
+        dbg!(&*game.get_log());
+    }
     Ok(())
 }
 #[test_log::test(tokio::test)]

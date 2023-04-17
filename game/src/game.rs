@@ -14,6 +14,7 @@ use common::cardtypes::Subtype;
 use common::cost::{Cost, PaidCost};
 use common::entities::{CardId, ManaId, PlayerId, TargetId, MIN_CARDID};
 use common::hashset_obj::HashSetObj;
+use common::log::LogEntry;
 use common::mana::{Color, Mana, ManaCostSymbol};
 use common::spellabil::{Affected, Clause, ClauseEffect, Constraint, Continuous, KeywordAbility};
 use common::zones::Zone;
@@ -23,8 +24,10 @@ use rand::seq::SliceRandom;
 use rand::SeedableRng;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
 use std::cmp::max;
 use std::collections::{HashMap, VecDeque};
+use std::sync::{Mutex, Arc};
 
 pub mod build_game;
 mod compute_actions;
@@ -33,6 +36,7 @@ mod handle_event;
 mod layers_state_actions;
 mod resolve;
 mod serialize_game;
+pub mod log;
 
 pub type Players = EntMap<PlayerId, Player>;
 pub type Cards = EntMap<CardId, CardEnt>;
@@ -69,6 +73,8 @@ pub struct Game {
     #[serde(skip, default = "rng_from_entropy")]
     rng: rand::rngs::StdRng, //Store the RNG to allow for deterministic replay
                              //if I choose to implement it
+    #[serde(skip)]
+    log: Arc<Mutex<Vec<LogEntry>>>
 }
 
 fn get_carddb() -> &'static CardDB {
@@ -121,7 +127,12 @@ impl Game {
         }
         self.outcome
     }
-
+    pub fn get_active_player<'a>(&'a self)->&'a Player{
+        self.players.get(self.active_player).unwrap()
+    }
+    pub fn get_active_player_mut<'a>(&'a mut self)->&'a mut Player{
+        self.players.get_mut(self.active_player).unwrap()
+    }
     //backs the game up in case a spell casting or attacker/blocker
     //declaration fails. Only backs up what is needed
     pub fn backup(&mut self) {
@@ -644,7 +655,7 @@ impl Game {
         _zone: Zone,
     ) -> bool {
         let source = self.stack_ent_source(source);
-        if constraints
+        if !constraints
             .iter()
             .all(|x| self.passes_constraint(x, source, target))
         {

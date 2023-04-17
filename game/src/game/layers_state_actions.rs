@@ -1,4 +1,4 @@
-use common::{counters::Counter, spellabil::ContEffect};
+use common::{counters::Counter, spellabil::ContEffect, log::LogPermEntry};
 
 use crate::game::*;
 
@@ -23,9 +23,11 @@ impl Game {
                 if let Some(pt)=&card.pt{
                     if pt.toughness<=0{
                         to_die.push(cardid);
+                        self.log_perm_entry(cardid, LogPermEntry::DiesFromZeroOrLessToughness);
                     }
                     else if card.damaged>=pt.toughness{
                         to_destroy.push(cardid);
+                        self.log_perm_entry(cardid, LogPermEntry::DestroyFromDamage);
                     }
                 }
                 for abil in &card.abilities{
@@ -34,9 +36,11 @@ impl Game {
                         if let Some(enchanting)=card.enchanting_or_equipping{
                             if !constraints.into_iter().all(|c|self.passes_constraint(c, cardid, enchanting)){
                                 to_die.push(cardid);
+                                self.log_perm_entry(cardid, LogPermEntry::EnchantmentFallsOff);
                             }
                         } else{
                             to_die.push(cardid);
+                            self.log_perm_entry(cardid, LogPermEntry::DetachedEnchantmentDies);
                         }
                     }
                 }
