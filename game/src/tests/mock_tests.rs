@@ -5,7 +5,7 @@ use common::{
     entities::{CardId, TargetId},
     hashset_obj::HashSetObj,
     mana::ManaCostSymbol,
-    zones::Zone,
+    zones::Zone, card_entities::PT, cardtypes::Subtype, spellabil::KeywordAbility,
 };
 use test_log;
 
@@ -203,13 +203,23 @@ async fn dub_test() -> Result<()> {
         game.add_mana(game.active_player, ManaCostSymbol::White)
         .await;
     }
-    dbg!(&game.battlefield);
+    let shieldmate=*game.battlefield.iter().next().unwrap();
+    assert!(game.battlefield.len()==1);
     game.cycle_priority().await;
-    dbg!(&game.battlefield);
-    dbg!(&game.get_active_player().graveyard);
+    assert!(game.battlefield.len()==2);
     {
         dbg!(&*game.get_log());
     }
+    let modded_shieldmate=game.cards.get(shieldmate).unwrap();
+    assert!(modded_shieldmate.pt==Some(PT{
+        power:3,
+        toughness:5
+    }));
+    assert!(modded_shieldmate.subtypes.contains(&Subtype::Knight));
+    assert!(modded_shieldmate.subtypes.len()==3);
+    assert!(modded_shieldmate.abilities.len()==1);
+    let abil=&modded_shieldmate.abilities[0];
+    assert!(abil.keyword()==Some(KeywordAbility::FirstStrike));
     Ok(())
 }
 #[test_log::test(tokio::test)]

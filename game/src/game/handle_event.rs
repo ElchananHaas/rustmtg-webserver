@@ -433,9 +433,14 @@ impl Game {
                     });
                     return;
                 }else{
-                    let mut newcard=card.printed.as_ref().expect("set printed card").as_ref().clone();
-                    newcard.owner=card.owner;
-                    newcard.printed=Some(Box::new(newcard.clone()));
+                    let newcard=if origin==Some(Zone::Stack){
+                        card.clone()
+                    }else{
+                        let mut newcard=card.printed.as_ref().expect("set printed card").as_ref().clone();
+                        newcard.owner=card.owner;
+                        newcard.printed=Some(Box::new(newcard.clone()));
+                        newcard
+                    };
                     let (newent, newcard) = self.cards.insert(newcard);
                     match dest {
                         Zone::Exile | Zone::Stack | Zone::Command | Zone::Battlefield | Zone::Graveyard => {
