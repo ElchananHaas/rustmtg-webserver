@@ -1,12 +1,12 @@
-use common::{counters::Counter, spellabil::ContEffect, log::LogPermEntry};
+use common::{counters::Counter, log::LogPermEntry, spellabil::ContEffect};
 
 use crate::game::*;
 
-struct ContAbilContext{
+struct ContAbilContext {
     pub effect: ContEffect,
     pub affected: Affected,
     pub constraints: Vec<Constraint>,
-    pub source: CardId,   
+    pub source: CardId,
 }
 
 impl Game {
@@ -19,18 +19,17 @@ impl Game {
         let mut to_die = Vec::new();
         let mut to_destroy = Vec::new();
         for &cardid in &self.battlefield.clone() {
-            if let Some(card)=self.cards.get(cardid) {
-                if let Some(pt)=&card.pt{
-                    if pt.toughness<=0{
+            if let Some(card) = self.cards.get(cardid) {
+                if let Some(pt) = &card.pt {
+                    if pt.toughness <= 0 {
                         to_die.push(cardid);
                         self.log_perm_entry(cardid, LogPermEntry::DiesFromZeroOrLessToughness);
-                    }
-                    else if card.damaged>=pt.toughness{
+                    } else if card.damaged >= pt.toughness {
                         to_destroy.push(cardid);
                         self.log_perm_entry(cardid, LogPermEntry::DestroyFromDamage);
                     }
                 }
-                for abil in &card.abilities{
+                for abil in &card.abilities {
                     if let Ability::Static(abil)=abil
                     && let StaticAbilityEffect::Enchant(constraints)=&abil.effect{
                         if let Some(enchanting)=card.enchanting_or_equipping{
@@ -51,21 +50,19 @@ impl Game {
         self.destroy(to_destroy).await;
     }
 
-    fn cont_abilities(&self)-> Vec<ContAbilContext>{
-        let mut res=Vec::new();
+    fn cont_abilities(&self) -> Vec<ContAbilContext> {
+        let mut res = Vec::new();
         for cont in self.cont_effects.clone() {
-            res.push(
-                ContAbilContext{
-                    effect:cont.effect,
-                    affected:cont.affected,
-                    constraints:cont.constraints,
-                    source:cont.source,
-                }
-            );
+            res.push(ContAbilContext {
+                effect: cont.effect,
+                affected: cont.affected,
+                constraints: cont.constraints,
+                source: cont.source,
+            });
         }
-        for &id in &self.battlefield{
-            if let Some(card)=self.cards.get(id){
-                for abil in &card.abilities{
+        for &id in &self.battlefield {
+            if let Some(card) = self.cards.get(id) {
+                for abil in &card.abilities {
                     if let Ability::Static(abil)=abil
                     && let StaticAbilityEffect::Cont(abil)=&abil.effect{
                         for effect in abil.effects.clone(){
@@ -158,7 +155,7 @@ impl Game {
                         }
                     }
                 }
-                _=>{}
+                _ => {}
             }
         }
     }
@@ -176,7 +173,7 @@ impl Game {
                         }
                     }
                 }
-                _=>{}
+                _ => {}
             }
         }
     }
@@ -196,7 +193,7 @@ impl Game {
                             }
                     }
                 }
-                _=>{}
+                _ => {}
             }
         }
         for id in self.battlefield.clone() {

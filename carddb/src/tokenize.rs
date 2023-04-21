@@ -19,7 +19,7 @@ fn lemmatize<'a>(word: &'a str) -> Cow<'a, str> {
     if word.chars().last() != Some('s') {
         return word.into();
     }
-    let dont_trim = ["its", "this", "has", "is"];
+    let dont_trim = ["its", "this", "has", "is", "unless"];
     if dont_trim.into_iter().any(|x| x == word) {
         return word.into();
     }
@@ -27,7 +27,17 @@ fn lemmatize<'a>(word: &'a str) -> Cow<'a, str> {
         return word;
     }
     let mut word = word.to_string();
-    word.pop();
+    let dont_ies = ["dies"];
+    if word.chars().rev().take(3).collect::<Vec<_>>() == vec!['s', 'e', 'i']
+        && (!dont_ies.iter().any(|&x| x == &word))
+    {
+        for _ in 0..3 {
+            word.pop();
+        }
+        word.push('y');
+    } else {
+        word.pop();
+    }
     return word.into();
 }
 fn parse_token<'a>(mut text: &'a str) -> IResult<&'a str, Cow<'a, str>, ()> {

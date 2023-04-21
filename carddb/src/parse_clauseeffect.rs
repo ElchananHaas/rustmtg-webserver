@@ -1,7 +1,8 @@
 use common::{
     card_entities::PT,
+    cardtypes::{ParseType, Subtype},
     counters::Counter,
-    spellabil::{ClauseEffect, ContEffect, NumberComputer}, cardtypes::{Subtype, ParseType, Subtypes},
+    spellabil::{ClauseEffect, ContEffect, NumberComputer},
 };
 
 use nom::bytes::complete::tag;
@@ -11,7 +12,9 @@ use nom::{branch::alt, multi::many1};
 use texttoken::{tokens, Tokens};
 
 use crate::{
-    carddb::{Res, parse_abil}, parse_constraint::parse_constraint, token_builder::parse_token_attributes,
+    carddb::{parse_abil, Res},
+    parse_constraint::parse_constraint,
+    token_builder::parse_token_attributes,
     util::parse_number,
 };
 
@@ -97,24 +100,51 @@ fn parse_until_end_turn<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ClauseEffect>
 }
 
 pub fn parse_cont_effect<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ContEffect> {
-    alt((parse_pt_modification,parse_has_abil,parse_add_subtypes))(tokens)
-}
-fn parse_pt_modification<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ContEffect> {
-    let (tokens, _) = tag(tokens!["get"])(tokens)?;
-    let (tokens, power) = parse_number(tokens)?;
-    let (tokens, _) = tag(tokens!["/"])(tokens)?;
-    let (tokens, toughness) = parse_number(tokens)?;
-    Ok((tokens, ContEffect::ModifyPT(PT { power, toughness })))
-}
-fn parse_has_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ContEffect> {
-    let (tokens, _) = tag(tokens!["has"])(tokens)?;
-    let (tokens,abil)= parse_abil(tokens)?;
-    Ok((tokens,ContEffect::HasAbility(Box::new(abil))))
-}
+    fn parse_cant_attack_or_block<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ContEffect> {
+        let (tokens, _) = tag(tokens!["can't", "attack", "or", "block"])(tokens)?;
+        Ok((tokens, ContEffect::CantAttackOrBlock))
+    }
+    fn parse_cant_activate_non_mana_abils<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ContEffect> {
+        let (tokens, _) = tag(tokens![
+            "its",
+            "activated",
+            "ability",
+            "can't",
+            "be",
+            "activated",
+            "unless",
+            "they're",
+            "mana",
+            "ability"
+        ])(tokens)?;
+        Ok((tokens, ContEffect::CantAttackOrBlock))
+    }
+    fn parse_pt_modification<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ContEffect> {
+        let (tokens, _) = tag(tokens!["get"])(tokens)?;
+        let (tokens, power) = parse_number(tokens)?;
+        let (tokens, _) = tag(tokens!["/"])(tokens)?;
+        let (tokens, toughness) = parse_number(tokens)?;
+        Ok((tokens, ContEffect::ModifyPT(PT { power, toughness })))
+    }
+    fn parse_has_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ContEffect> {
+        let (tokens, _) = tag(tokens!["has"])(tokens)?;
+        let (tokens, abil) = parse_abil(tokens)?;
+        Ok((tokens, ContEffect::HasAbility(Box::new(abil))))
+    }
 
-fn parse_add_subtypes<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ContEffect> {
-    let (tokens, _) = tag(tokens!["is","a"])(tokens)?;
-    let (tokens, subtype) = Subtype::parse(tokens)?;
-    let (tokens, _) = opt(tag(tokens!["in", "addition", "to", "its", "other", "type"]))(tokens)?;
-    Ok((tokens,ContEffect::AddSubtype(vec![subtype])))
+    fn parse_add_subtypes<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ContEffect> {
+        let (tokens, _) = tag(tokens!["is", "a"])(tokens)?;
+        let (tokens, subtype) = Subtype::parse(tokens)?;
+        let (tokens, _) =
+            opt(tag(tokens!["in", "addition", "to", "its", "other", "type"]))(tokens)?;
+        Ok((tokens, ContEffect::AddSubtype(vec![subtype])))
+    }
+
+    alt((
+        parse_pt_modification,
+        parse_has_abil,
+        parse_add_subtypes,
+        parse_cant_attack_or_block,
+        parse_cant_activate_non_mana_abils,
+    ))(tokens)
 }

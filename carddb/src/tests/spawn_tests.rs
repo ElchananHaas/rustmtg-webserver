@@ -82,6 +82,10 @@ fn daybreak_charger() {
 fn dub() {
     test_card(db(), "Dub");
 }
+#[test_log::test]
+fn faithsfetters() {
+    test_card(db(), "Faith's Fetters");
+}
 #[allow(dead_code)]
 fn test_card(db: &CardDB, card_name: &'static str) -> CardEnt {
     let spawned = db.try_spawn_card(card_name, PlayerId::from(NonZeroU64::new(1).unwrap()));

@@ -475,24 +475,25 @@ fn parse_enchant<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, StaticAbility> {
 
 fn parse_grant_enchanted_or_equipped<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, StaticAbility> {
     let (tokens, _) = tag(tokens!["enchanted"])(tokens)?;
-    let (tokens, _)=parse_constraint(tokens)?;
+    let (tokens, _) = parse_constraint(tokens)?;
     fn parse_granted<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ContEffect> {
-        let (tokens, cont)=parse_cont_effect(tokens)?;
+        let (tokens, cont) = parse_cont_effect(tokens)?;
         let (tokens, _) = opt(tag(tokens![","]))(tokens)?;
         let (tokens, _) = opt(tag(tokens!["and"]))(tokens)?;
-        Ok((tokens,cont))
+        Ok((tokens, cont))
     }
-    let (tokens,abils)=many1(parse_granted)(tokens)?;
-    Ok((tokens,StaticAbility{
-        keyword:None,
-        effect:StaticAbilityEffect::Cont(
-            StaticContEffect{
-                effects:abils,
-                affected:Affected::EquippedOrEnchanted,
-                constraints:vec![]
-            }
-        )
-    }))
+    let (tokens, abils) = many1(parse_granted)(tokens)?;
+    Ok((
+        tokens,
+        StaticAbility {
+            keyword: None,
+            effect: StaticAbilityEffect::Cont(StaticContEffect {
+                effects: abils,
+                affected: Affected::EquippedOrEnchanted,
+                constraints: vec![],
+            }),
+        },
+    ))
 }
 fn parse_static_abil<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Ability> {
     let (tokens, abil) = alt((

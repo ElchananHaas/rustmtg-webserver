@@ -1,16 +1,16 @@
 use crate::entities::CardId;
 
 #[derive(Clone, Debug)]
-pub enum LogEntry{
-    PermEntry{
+pub enum LogEntry {
+    PermEntry {
         id: CardId,
         name: String,
-        event: LogPermEntry
-    }
+        event: LogPermEntry,
+    },
 }
 
 #[derive(Clone, Debug)]
-pub enum LogPermEntry{
+pub enum LogPermEntry {
     DiesFromZeroOrLessToughness,
     DestroyFromDamage,
     DetachedEnchantmentDies,

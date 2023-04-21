@@ -17,6 +17,7 @@ use crate::{
 pub fn parse_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Constraint> {
     let type_constraint = nom::combinator::map(Type::parse, |t| Constraint::CardType(t));
     let (tokens, constraint) = alt((
+        parse_perm,
         parse_tapped_constraint,
         parse_other_constraint,
         type_constraint,
@@ -35,6 +36,10 @@ pub fn parse_constraint<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Constraint> {
     } else {
         Ok((tokens, constraint))
     }
+}
+fn parse_perm<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Constraint> {
+    let (tokens, _) = tag(tokens!["permanent"])(tokens)?;
+    Ok((tokens, Constraint::Permanent))
 }
 fn parse_not_cast<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Constraint> {
     let (tokens, _) = tag(tokens!["wasn't", "cast"])(tokens)?;

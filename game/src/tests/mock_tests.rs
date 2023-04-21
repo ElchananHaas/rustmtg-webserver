@@ -2,10 +2,13 @@ use std::num::NonZeroU64;
 
 use anyhow::Result;
 use common::{
+    card_entities::PT,
+    cardtypes::Subtype,
     entities::{CardId, TargetId},
     hashset_obj::HashSetObj,
     mana::ManaCostSymbol,
-    zones::Zone, card_entities::PT, cardtypes::Subtype, spellabil::KeywordAbility,
+    spellabil::KeywordAbility,
+    zones::Zone,
 };
 use test_log;
 
@@ -171,20 +174,19 @@ async fn basris_lt_self_test() -> Result<()> {
     Ok(())
 }
 
-struct DubClient {
-}
+struct DubClient {}
 
-impl MockClient for DubClient{
+impl MockClient for DubClient {
     fn select_action(&mut self, _game: &GameState, _ask: &AskSelectN<Action>) -> HashSetObj<usize> {
         let mut res = HashSetObj::new();
         res.insert(0);
         res
     }
     fn select_targets(
-            &mut self,
-            _game: &GameState,
-            _ask: &AskSelectN<TargetId>,
-        ) -> HashSetObj<usize> {
+        &mut self,
+        _game: &GameState,
+        _ask: &AskSelectN<TargetId>,
+    ) -> HashSetObj<usize> {
         let mut res = HashSetObj::new();
         res.insert(0);
         res
@@ -195,40 +197,46 @@ async fn dub_test() -> Result<()> {
     let (mut game, _hand) = hand_battlefield_setup(
         vec!["Dub"],
         vec!["Staunch Shieldmate"; 1],
-        Some(Box::new(DubClient{})),
+        Some(Box::new(DubClient {})),
     )
     .await?;
     game.phase = Some(Phase::FirstMain);
-    for _ in 0..10{
+    for _ in 0..10 {
         game.add_mana(game.active_player, ManaCostSymbol::White)
-        .await;
+            .await;
     }
-    let shieldmate=*game.battlefield.iter().next().unwrap();
-    assert!(game.battlefield.len()==1);
+    let shieldmate = *game.battlefield.iter().next().unwrap();
+    assert!(game.battlefield.len() == 1);
     {
-        let shieldmate=game.cards.get(shieldmate).unwrap();
-        assert!(shieldmate.pt==Some(PT{
-            power:1,
-            toughness:3
-        }));
-        assert!(shieldmate.subtypes.len()==2);
-        assert!(shieldmate.abilities.len()==0);
+        let shieldmate = game.cards.get(shieldmate).unwrap();
+        assert!(
+            shieldmate.pt
+                == Some(PT {
+                    power: 1,
+                    toughness: 3
+                })
+        );
+        assert!(shieldmate.subtypes.len() == 2);
+        assert!(shieldmate.abilities.len() == 0);
     }
     game.cycle_priority().await;
-    assert!(game.battlefield.len()==2);
+    assert!(game.battlefield.len() == 2);
     {
         dbg!(&*game.get_log());
     }
-    let modded_shieldmate=game.cards.get(shieldmate).unwrap();
-    assert!(modded_shieldmate.pt==Some(PT{
-        power:3,
-        toughness:5
-    }));
+    let modded_shieldmate = game.cards.get(shieldmate).unwrap();
+    assert!(
+        modded_shieldmate.pt
+            == Some(PT {
+                power: 3,
+                toughness: 5
+            })
+    );
     assert!(modded_shieldmate.subtypes.contains(&Subtype::Knight));
-    assert!(modded_shieldmate.subtypes.len()==3);
-    assert!(modded_shieldmate.abilities.len()==1);
-    let abil=&modded_shieldmate.abilities[0];
-    assert!(abil.keyword()==Some(KeywordAbility::FirstStrike));
+    assert!(modded_shieldmate.subtypes.len() == 3);
+    assert!(modded_shieldmate.abilities.len() == 1);
+    let abil = &modded_shieldmate.abilities[0];
+    assert!(abil.keyword() == Some(KeywordAbility::FirstStrike));
     Ok(())
 }
 #[test_log::test(tokio::test)]

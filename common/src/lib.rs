@@ -7,10 +7,10 @@ pub mod cost;
 pub mod counters;
 pub mod entities;
 pub mod hashset_obj;
+pub mod log;
 pub mod mana;
 pub mod spellabil;
 pub mod token_attribute;
 pub mod zones;
-pub mod log;
 #[cfg(test)]
 mod tests {}

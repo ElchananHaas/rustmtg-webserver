@@ -42,6 +42,7 @@ pub enum Constraint {
     Multicolored,
     NonToken,
     NotCast,
+    Permanent,
     Other,
 }
 
@@ -79,7 +80,8 @@ pub struct Continuous {
 pub enum ContEffect {
     ModifyPT(PT),
     HasAbility(Box<Ability>),
-    AddSubtype(Vec<Subtype>)
+    AddSubtype(Vec<Subtype>),
+    CantAttackOrBlock,
 }
 
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]

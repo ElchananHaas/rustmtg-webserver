@@ -27,16 +27,16 @@ use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::cmp::max;
 use std::collections::{HashMap, VecDeque};
-use std::sync::{Mutex, Arc};
+use std::sync::{Arc, Mutex};
 
 pub mod build_game;
 mod compute_actions;
 mod event_generators;
 mod handle_event;
 mod layers_state_actions;
+pub mod log;
 mod resolve;
 mod serialize_game;
-pub mod log;
 
 pub type Players = EntMap<PlayerId, Player>;
 pub type Cards = EntMap<CardId, CardEnt>;
@@ -72,9 +72,9 @@ pub struct Game {
     backup: Option<Box<Game>>,
     #[serde(skip, default = "rng_from_entropy")]
     rng: rand::rngs::StdRng, //Store the RNG to allow for deterministic replay
-                             //if I choose to implement it
+    //if I choose to implement it
     #[serde(skip)]
-    log: Arc<Mutex<Vec<LogEntry>>>
+    log: Arc<Mutex<Vec<LogEntry>>>,
 }
 
 fn get_carddb() -> &'static CardDB {
@@ -127,10 +127,10 @@ impl Game {
         }
         self.outcome
     }
-    pub fn get_active_player<'a>(&'a self)->&'a Player{
+    pub fn get_active_player<'a>(&'a self) -> &'a Player {
         self.players.get(self.active_player).unwrap()
     }
-    pub fn get_active_player_mut<'a>(&'a mut self)->&'a mut Player{
+    pub fn get_active_player_mut<'a>(&'a mut self) -> &'a mut Player {
         self.players.get_mut(self.active_player).unwrap()
     }
     //backs the game up in case a spell casting or attacker/blocker
@@ -419,6 +419,13 @@ impl Game {
         target: TargetId,
     ) -> bool {
         match constraint{
+            Constraint::Permanent => {
+                if let TargetId::Card(card)=target{
+                    self.cards.get(card).is_some()
+                } else{
+                    false
+                }
+            }
             Constraint::HasCounter(counter) => {
                 if let TargetId::Card(card)=target
                 && let Some(ent)=self.cards.get(card){
@@ -543,20 +550,20 @@ impl Game {
         stack_ent: CardId,
     ) -> Result<(), MTGError> {
         let mut selected = Vec::new();
-        let mut enchanting=None;
+        let mut enchanting = None;
         if let Some(card) = self.cards.get(stack_ent) {
             for x in &card.effect {
                 selected.push(self.clause_select_targets(player, stack_ent, x).await?);
             }
-            for abil in &card.abilities{
-                if enchanting.is_none(){
-                    enchanting=self.select_enchant_target(player, stack_ent, abil).await?;
+            for abil in &card.abilities {
+                if enchanting.is_none() {
+                    enchanting = self.select_enchant_target(player, stack_ent, abil).await?;
                 }
             }
         }
         if let Some(card) = self.cards.get_mut(stack_ent) {
             card.effect = selected;
-            card.enchanting_or_equipping=enchanting;
+            card.enchanting_or_equipping = enchanting;
         }
         Ok(())
     }

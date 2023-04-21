@@ -36,10 +36,10 @@ pub struct TriggeredAbility {
     pub keyword: Option<KeywordAbility>,
 }
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
-pub struct StaticContEffect{
-    pub effects:Vec<ContEffect>,
-    pub affected:Affected,
-    pub constraints:Vec<Constraint>,
+pub struct StaticContEffect {
+    pub effects: Vec<ContEffect>,
+    pub affected: Affected,
+    pub constraints: Vec<Constraint>,
 }
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
 pub enum StaticAbilityEffect {
