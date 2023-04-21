@@ -117,7 +117,7 @@ pub fn parse_cont_effect<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ContEffect> 
             "mana",
             "ability"
         ])(tokens)?;
-        Ok((tokens, ContEffect::CantAttackOrBlock))
+        Ok((tokens, ContEffect::CantActivateNonManaAbil))
     }
     fn parse_pt_modification<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, ContEffect> {
         let (tokens, _) = tag(tokens!["get"])(tokens)?;

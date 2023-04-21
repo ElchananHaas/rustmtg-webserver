@@ -82,6 +82,7 @@ pub enum ContEffect {
     HasAbility(Box<Ability>),
     AddSubtype(Vec<Subtype>),
     CantAttackOrBlock,
+    CantActivateNonManaAbil,
 }
 
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]

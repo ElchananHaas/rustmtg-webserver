@@ -806,23 +806,32 @@ impl Game {
             {
                 return false;
             }
-            //TODO Check for loyalty abilities when implemented
-            let mut mana_abil = false;
-            let mut other_effect = false;
-            for clause in &card.effect {
-                match clause.effect {
-                    ClauseEffect::AddMana(_) => {
-                        mana_abil = true;
-                    }
-                    _ => {
-                        other_effect = true;
-                    }
-                }
-            }
-            mana_abil & !other_effect
+            self.effect_is_mana_abil(&card.costs, &card.effect)
         } else {
             false
         }
+    }
+    fn effect_is_mana_abil(&self,cost:&Vec<Cost>,effect:&Vec<Clause>)->bool{
+        //TODO Check for loyalty abilities when implemented
+        let mut mana_abil = false;
+        for clause in effect {
+            match &clause.effect {
+                ClauseEffect::AddMana(_) => {
+                    mana_abil = true;
+                }
+                _ => {
+                    return false;
+                }
+            }
+            match &clause.affected{
+                Affected::Target(_)|
+                Affected::UpToXTarget(_,_)=>{
+                    return false;
+                }
+                _=>{}
+            }
+        }
+        mana_abil
     }
     fn construct_activated_ability(
         &mut self,

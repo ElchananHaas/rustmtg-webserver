@@ -144,20 +144,34 @@ impl Game {
     ) -> Vec<Action> {
         let mut actions = Vec::new();
         let controller = card.get_controller();
-        for i in 0..card.abilities.len() {
+        let conts=self.cont_abilities();
+        'outer: for i in 0..card.abilities.len() {
             if zone == Zone::Battlefield && controller == player_id {
                 let abil = &card.abilities[i];
                 let abil = match abil {
                     Ability::Activated(abil) => abil,
                     _ => continue,
                 };
-                //TODO handle correct target for restictions
                 if !abil
                     .restrictions
                     .iter()
                     .all(|r| self.passes_constraint(r, card_id, card_id.into()))
                 {
                     continue;
+                }
+                for cont in &conts{
+                    match &cont.effect{
+                        ContEffect::CantActivateNonManaAbil=>{
+                            for affected in self.calculate_affected(cont.source, &cont.affected, &cont.constraints){
+                                if let TargetId::Card(c)=affected
+                                && c==card_id
+                                && !self.effect_is_mana_abil(&abil.costs, &abil.effect){
+                                    continue 'outer;
+                                }
+                            }
+                        }
+                        _=>{}
+                    }
                 }
                 let maybe_pay = self.maybe_can_pay(&abil.costs, player_id, card_id);
                 if !maybe_pay {
