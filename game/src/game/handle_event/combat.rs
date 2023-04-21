@@ -5,7 +5,7 @@ use crate::{
     event::{DamageReason, Event, EventResult},
     game::{Game, Subphase},
 };
-use common::spellabil::KeywordAbility;
+use common::spellabil::{KeywordAbility, ContEffect};
 use common::{
     entities::{CardId, PlayerId, TargetId},
     hashset_obj::HashSetObj,
@@ -287,6 +287,20 @@ impl Game {
     }
     //Checks if this attacking arragment is legal.
     fn attackers_legal(&self, attacks: &HashMap<CardId, TargetId>) -> bool {
+        let conts=self.cont_abilities();
+        for cont in conts{
+            match &cont.effect{
+                ContEffect::CantAttackOrBlock=>{
+                    for affected in self.calculate_affected(cont.source, &cont.affected, &cont.constraints){
+                        if let TargetId::Card(c)=affected
+                        && attacks.get(&c).is_some(){
+                            return false;
+                        }
+                    }
+                }
+                _=>{}
+            }
+        }
         true
     }
     //checks if the blocker can legally block the attacker
@@ -309,6 +323,20 @@ impl Game {
                 if !self.can_block(attacker, blocker) {
                     return false;
                 }
+            }
+        }
+        let conts=self.cont_abilities();
+        for cont in conts{
+            match &cont.effect{
+                ContEffect::CantAttackOrBlock=>{
+                    for affected in self.calculate_affected(cont.source, &cont.affected, &cont.constraints){
+                        if let TargetId::Card(c)=affected
+                        && blocks.get(&c).is_some(){
+                            return false;
+                        }
+                    }
+                }
+                _=>{}
             }
         }
         true

@@ -2,13 +2,6 @@ use common::{counters::Counter, log::LogPermEntry, spellabil::ContEffect};
 
 use crate::game::*;
 
-struct ContAbilContext {
-    pub effect: ContEffect,
-    pub affected: Affected,
-    pub constraints: Vec<Constraint>,
-    pub source: CardId,
-}
-
 impl Game {
     //Computes layers, state based actions and places abilities on the stack
     pub async fn layers_state_actions(&mut self) {
@@ -50,32 +43,6 @@ impl Game {
         self.destroy(to_destroy).await;
     }
 
-    fn cont_abilities(&self) -> Vec<ContAbilContext> {
-        let mut res = Vec::new();
-        for cont in self.cont_effects.clone() {
-            res.push(ContAbilContext {
-                effect: cont.effect,
-                affected: cont.affected,
-                constraints: cont.constraints,
-                source: cont.source,
-            });
-        }
-        for &id in &self.battlefield {
-            if let Some(card) = self.cards.get(id) {
-                for abil in &card.abilities {
-                    if let Ability::Static(abil)=abil
-                    && let StaticAbilityEffect::Cont(abil)=&abil.effect{
-                        for effect in abil.effects.clone(){
-                            res.push(
-                                ContAbilContext { effect, affected: abil.affected.clone(), constraints: abil.constraints.clone(), source: id }
-                            );
-                        }
-                    }
-                }
-            }
-        }
-        res
-    }
     fn layers(&mut self) {
         self.layer_zero();
         self.layer_four();

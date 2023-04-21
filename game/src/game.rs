@@ -16,7 +16,7 @@ use common::entities::{CardId, ManaId, PlayerId, TargetId, MIN_CARDID};
 use common::hashset_obj::HashSetObj;
 use common::log::LogEntry;
 use common::mana::{Color, Mana, ManaCostSymbol};
-use common::spellabil::{Affected, Clause, ClauseEffect, Constraint, Continuous, KeywordAbility};
+use common::spellabil::{Affected, Clause, ClauseEffect, Constraint, Continuous, KeywordAbility, ContEffect};
 use common::zones::Zone;
 use enum_map::EnumMap;
 use futures::future;
@@ -900,7 +900,43 @@ impl Game {
         }
         return false;
     }
+
+    fn cont_abilities(&self) -> Vec<ContAbilContext> {
+        let mut res = Vec::new();
+        for cont in self.cont_effects.clone() {
+            res.push(ContAbilContext {
+                effect: cont.effect,
+                affected: cont.affected,
+                constraints: cont.constraints,
+                source: cont.source,
+            });
+        }
+        for &id in &self.battlefield {
+            if let Some(card) = self.cards.get(id) {
+                for abil in &card.abilities {
+                    if let Ability::Static(abil)=abil
+                    && let StaticAbilityEffect::Cont(abil)=&abil.effect{
+                        for effect in abil.effects.clone(){
+                            res.push(
+                                ContAbilContext { effect, affected: abil.affected.clone(), constraints: abil.constraints.clone(), source: id }
+                            );
+                        }
+                    }
+                }
+            }
+        }
+        res
+    }
 }
+
+
+struct ContAbilContext {
+    pub effect: ContEffect,
+    pub affected: Affected,
+    pub constraints: Vec<Constraint>,
+    pub source: CardId,
+}
+
 
 pub enum ActionPriorityType {
     Pass,
