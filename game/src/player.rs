@@ -139,10 +139,6 @@ impl Player {
             } else {
                 continue 'outer;
             };
-            let response: HashMap<CardId, HashSetObj<T>> = response
-                .into_iter()
-                .map(|(key, value)| (key, value.into_iter().collect()))
-                .collect();
             for (card, pairing) in response.iter() {
                 if let Some(input) = ask.pairs.get(card) {
                     let items = input.items.clone();
@@ -270,10 +266,14 @@ impl TestClient {
                 } else {
                     ClientResponse::Indicies(mock_client.select_action(game, act))
                 }
-            }
+            },
             Ask::Target(ask) => {
                 let resp = mock_client.select_targets(game, ask);
                 ClientResponse::Indicies(resp)
+            },
+            Ask::Attackers(attacks) => {
+                let resp = mock_client.select_attacks(game, attacks);
+                ClientResponse::AttaksOrBlocks(resp)
             }
             _ => {
                 dbg!(ask);
@@ -294,6 +294,11 @@ impl TestClient {
                     .serialize(&mut json_serial)
                     .expect("serialized to json correctly");
             }
+            ClientResponse::AttaksOrBlocks(data) => {
+                data
+                    .serialize(&mut json_serial)
+                    .expect("serialized to json correctly");
+            }
         };
         let msg = std::str::from_utf8(&buffer).expect("json is valid text");
         return Ok(Message::text(msg));
@@ -311,6 +316,7 @@ impl Default for TestClient {
 pub enum ClientResponse {
     None,
     Indicies(HashSetObj<usize>),
+    AttaksOrBlocks(HashMap<CardId, HashSetObj<TargetId>>),
 }
 
 pub trait MockClient: Send + Sync {
@@ -324,6 +330,15 @@ pub trait MockClient: Send + Sync {
         _game: &GameState,
         ask: &AskSelectN<TargetId>,
     ) -> HashSetObj<usize> {
+        println!("query");
+        dbg!(ask);
+        panic!("Select targets not overriden");
+    }
+    fn select_attacks(
+        &mut self,
+        _game: &GameState,
+        ask: &AskPair<TargetId>,
+    ) -> HashMap<CardId, HashSetObj<TargetId>> {
         println!("query");
         dbg!(ask);
         panic!("Select targets not overriden");

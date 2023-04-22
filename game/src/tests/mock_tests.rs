@@ -16,7 +16,7 @@ use crate::{
     actions::Action,
     client_message::{AskSelectN, GameState},
     event::Event,
-    game::Phase,
+    game::{Phase, Subphase},
     player::MockClient,
     tests::common_test::{by_name, cards_with_name, hand_battlefield_setup},
 };
@@ -237,6 +237,24 @@ async fn dub_test() -> Result<()> {
     assert!(modded_shieldmate.abilities.len() == 1);
     let abil = &modded_shieldmate.abilities[0];
     assert!(abil.keyword() == Some(KeywordAbility::FirstStrike));
+    Ok(())
+}
+struct FaithsFettersClient {}
+
+impl MockClient for FaithsFettersClient {
+}
+#[test_log::test(tokio::test)]
+async fn faiths_fetters_test()-> Result<()> {
+    let (mut game, _hand) = hand_battlefield_setup(
+        vec!["Faith's Fetters"],
+        vec!["Staunch Shieldmate"; 1],
+        Some(Box::new(FaithsFettersClient {})),
+    ).await?;
+    game.phase = Some(Phase::Combat);
+    game.subphase = Some(Subphase::Attackers);
+    let shieldmate = *game.battlefield.iter().next().unwrap();
+    game.cards.get_mut(shieldmate).map(|card|card.etb_this_cycle=false);
+    game.handle_event(Event::Subphase { subphase: Subphase::Attackers }).await;
     Ok(())
 }
 #[test_log::test(tokio::test)]
