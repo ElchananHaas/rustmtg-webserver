@@ -1,4 +1,4 @@
-use std::num::NonZeroU64;
+use std::{num::NonZeroU64, collections::HashMap};
 
 use anyhow::Result;
 use common::{
@@ -239,16 +239,52 @@ async fn dub_test() -> Result<()> {
     assert!(abil.keyword() == Some(KeywordAbility::FirstStrike));
     Ok(())
 }
-struct FaithsFettersClient {}
+struct FaithsFettersClient {
+    expect_can_attack:bool
+}
 
 impl MockClient for FaithsFettersClient {
+    fn select_attacks(
+            &mut self,
+            _game: &GameState,
+            ask: &crate::client_message::AskPair<TargetId>,
+        ) -> std::collections::HashMap<CardId, HashSetObj<TargetId>> {
+            dbg!(ask);
+        let mut res=HashMap::new();
+        if self.expect_can_attack{
+            assert!(ask.pairs.len()==1);
+        } else{
+            assert!(ask.pairs.len()==0);
+        }
+        for (&card,pairing) in ask.pairs.iter(){
+            let mut attacking=HashSetObj::new();
+            attacking.insert(*(&pairing.items).into_iter().next().unwrap());
+            res.insert(card,attacking);
+        }
+        dbg!(&res);
+       res 
+    }
 }
 #[test_log::test(tokio::test)]
-async fn faiths_fetters_test()-> Result<()> {
+async fn faiths_fetters_no_ench_test()-> Result<()> {
     let (mut game, _hand) = hand_battlefield_setup(
         vec!["Faith's Fetters"],
         vec!["Staunch Shieldmate"; 1],
-        Some(Box::new(FaithsFettersClient {})),
+        Some(Box::new(FaithsFettersClient {expect_can_attack:true})),
+    ).await?;
+    game.phase = Some(Phase::Combat);
+    game.subphase = Some(Subphase::Attackers);
+    let shieldmate = *game.battlefield.iter().next().unwrap();
+    game.cards.get_mut(shieldmate).map(|card|card.etb_this_cycle=false);
+    game.handle_event(Event::Subphase { subphase: Subphase::Attackers }).await;
+    Ok(())
+}
+#[test_log::test(tokio::test)]
+async fn faiths_fetters_attached_test()-> Result<()> {
+    let (mut game, _hand) = hand_battlefield_setup(
+        vec!["Faith's Fetters"],
+        vec!["Staunch Shieldmate"; 1],
+        Some(Box::new(FaithsFettersClient {expect_can_attack:false})),
     ).await?;
     game.phase = Some(Phase::Combat);
     game.subphase = Some(Subphase::Attackers);

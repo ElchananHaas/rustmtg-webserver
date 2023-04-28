@@ -341,7 +341,7 @@ pub trait MockClient: Send + Sync {
     ) -> HashMap<CardId, HashSetObj<TargetId>> {
         println!("query");
         dbg!(ask);
-        panic!("Select targets not overriden");
+        panic!("Select attacks not overriden");
     }
 }
 pub struct PanicClient {}
