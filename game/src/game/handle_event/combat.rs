@@ -20,10 +20,11 @@ impl Game {
 
     pub async fn attackers(&mut self, _results: &mut Vec<EventResult>, events: &mut Vec<Event>) {
         self.backup();
+        let cant_attack=self.cant_attack();
         //Only allow creatures that have haste or don't have summoning sickness to attack
         let legal_attackers = self
             .players_creatures(self.active_player)
-            .filter(|e| self.can_tap(*e))
+            .filter(|e| self.can_tap(*e) && (!cant_attack.contains(e)))
             .collect::<Vec<CardId>>();
         loop {
             let attacks;
@@ -285,20 +286,29 @@ impl Game {
             }
         }
     }
-    //Checks if this attacking arragment is legal.
-    fn attackers_legal(&self, attacks: &HashMap<CardId, TargetId>) -> bool {
+    fn cant_attack(&self) -> HashSet<CardId>{
+        let mut res=HashSet::new();
         let conts=self.cont_abilities();
         for cont in conts{
             match &cont.effect{
                 ContEffect::CantAttackOrBlock=>{
                     for affected in self.calculate_affected(cont.source, &cont.affected, &cont.constraints){
-                        if let TargetId::Card(c)=affected
-                        && attacks.get(&c).is_some(){
-                            return false;
+                        if let TargetId::Card(c)=affected{
+                            res.insert(c);
                         }
                     }
                 }
                 _=>{}
+            }
+        }
+        res
+    }
+    //Checks if this attacking arragment is legal.
+    fn attackers_legal(&self, attacks: &HashMap<CardId, TargetId>) -> bool {
+        let cant_attack=self.cant_attack();
+        for attack in attacks{
+            if cant_attack.contains(attack.0){
+                return false
             }
         }
         true

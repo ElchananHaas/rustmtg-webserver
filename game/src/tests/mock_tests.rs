@@ -9,11 +9,11 @@ use common::{
     mana::ManaCostSymbol,
     spellabil::KeywordAbility,
     zones::Zone,
+    actions::Action,
 };
 use test_log;
 
 use crate::{
-    actions::Action,
     client_message::{AskSelectN, GameState},
     event::Event,
     game::{Phase, Subphase},
@@ -177,20 +177,6 @@ async fn basris_lt_self_test() -> Result<()> {
 struct DubClient {}
 
 impl MockClient for DubClient {
-    fn select_action(&mut self, _game: &GameState, _ask: &AskSelectN<Action>) -> HashSetObj<usize> {
-        let mut res = HashSetObj::new();
-        res.insert(0);
-        res
-    }
-    fn select_targets(
-        &mut self,
-        _game: &GameState,
-        _ask: &AskSelectN<TargetId>,
-    ) -> HashSetObj<usize> {
-        let mut res = HashSetObj::new();
-        res.insert(0);
-        res
-    }
 }
 #[test_log::test(tokio::test)]
 async fn dub_test() -> Result<()> {
@@ -264,6 +250,24 @@ impl MockClient for FaithsFettersClient {
         dbg!(&res);
        res 
     }
+    fn select_action(&mut self, _game: &GameState, ask: &AskSelectN<Action>) -> HashSetObj<usize> {
+        assert!(ask.min==0);
+        assert!(ask.max==1);
+        let mut res = HashSetObj::new();
+        res.insert(0);
+        res
+    }
+    fn select_targets(
+        &mut self,
+        _game: &GameState,
+        ask: &AskSelectN<TargetId>,
+    ) -> HashSetObj<usize> {
+        assert!(ask.min == 1);
+        assert!(ask.max == 1);
+        let mut res = HashSetObj::new();
+        res.insert(0);
+        res
+    }
 }
 #[test_log::test(tokio::test)]
 async fn faiths_fetters_no_ench_test()-> Result<()> {
@@ -279,6 +283,7 @@ async fn faiths_fetters_no_ench_test()-> Result<()> {
     game.handle_event(Event::Subphase { subphase: Subphase::Attackers }).await;
     Ok(())
 }
+
 #[test_log::test(tokio::test)]
 async fn faiths_fetters_attached_test()-> Result<()> {
     let (mut game, _hand) = hand_battlefield_setup(
@@ -286,9 +291,15 @@ async fn faiths_fetters_attached_test()-> Result<()> {
         vec!["Staunch Shieldmate"; 1],
         Some(Box::new(FaithsFettersClient {expect_can_attack:false})),
     ).await?;
+    game.phase = Some(Phase::FirstMain);
+    for _ in 0..10{
+        game.add_mana(game.active_player, ManaCostSymbol::White)
+        .await;
+    }
+    let shieldmate = *game.battlefield.iter().next().unwrap();
+    game.cycle_priority().await;
     game.phase = Some(Phase::Combat);
     game.subphase = Some(Subphase::Attackers);
-    let shieldmate = *game.battlefield.iter().next().unwrap();
     game.cards.get_mut(shieldmate).map(|card|card.etb_this_cycle=false);
     game.handle_event(Event::Subphase { subphase: Subphase::Attackers }).await;
     Ok(())

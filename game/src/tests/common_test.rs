@@ -48,6 +48,7 @@ pub async fn hand_battlefield_setup(
         PlayerCon::new_test(TestClient::default()),
     )?;
     let mut game = gamebuild.build(&db)?;
+    game.panic_on_restore=true;
     let pl = game.active_player;
     let mut library = game.players.get(pl).unwrap().library.clone();
     for _ in 0..battlefield.len() {

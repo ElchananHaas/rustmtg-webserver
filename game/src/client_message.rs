@@ -1,5 +1,6 @@
-use crate::{actions::Action, game::Game, player::PlayerView};
+use crate::{game::Game, player::PlayerView};
 use common::{
+    actions::Action,
     card_entities::CardEnt,
     entities::{CardId, PlayerId, TargetId},
     hashset_obj::HashSetObj,

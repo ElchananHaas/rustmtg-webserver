@@ -1,4 +1,4 @@
-use crate::actions::Action;
+use common::actions::Action;
 use crate::client_message::{Ask, AskPair, AskSelectN, ClientMessage, GameState};
 use crate::game::Cards;
 use anyhow::Result;
@@ -321,6 +321,11 @@ pub enum ClientResponse {
 
 pub trait MockClient: Send + Sync {
     fn select_action(&mut self, _game: &GameState, ask: &AskSelectN<Action>) -> HashSetObj<usize> {
+        if ask.ents.len()==1 && ask.max==1{
+            let mut res = HashSetObj::new();
+            res.insert(0);
+            return res
+        }
         println!("query");
         dbg!(ask);
         panic!("Select action not overriden");
@@ -330,6 +335,11 @@ pub trait MockClient: Send + Sync {
         _game: &GameState,
         ask: &AskSelectN<TargetId>,
     ) -> HashSetObj<usize> {
+        if ask.ents.len()==1 && ask.max==1{
+            let mut res = HashSetObj::new();
+            res.insert(0);
+            return res
+        }
         println!("query");
         dbg!(ask);
         panic!("Select targets not overriden");

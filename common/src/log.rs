@@ -1,4 +1,4 @@
-use crate::entities::CardId;
+use crate::{entities::CardId, actions::StackActionOption};
 
 #[derive(Clone, Debug)]
 pub enum LogEntry {
@@ -15,4 +15,7 @@ pub enum LogPermEntry {
     DestroyFromDamage,
     DetachedEnchantmentDies,
     EnchantmentFallsOff,
+    CastFailedFromRestriction,
+    ManaCostNotPaid,
+    Cast(StackActionOption),
 }

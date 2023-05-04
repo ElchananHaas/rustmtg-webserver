@@ -1,4 +1,4 @@
-use crate::actions::{Action, ActionFilter, CastingOption, StackActionOption};
+use common::actions::{Action, ActionFilter, CastingOption, StackActionOption};
 use crate::client_message::{Ask, AskSelectN};
 use crate::ent_maps::EntMap;
 use crate::errors::MTGError;
@@ -14,7 +14,7 @@ use common::cardtypes::Subtype;
 use common::cost::{Cost, PaidCost};
 use common::entities::{CardId, ManaId, PlayerId, TargetId, MIN_CARDID};
 use common::hashset_obj::HashSetObj;
-use common::log::LogEntry;
+use common::log::{LogEntry, LogPermEntry};
 use common::mana::{Color, Mana, ManaCostSymbol};
 use common::spellabil::{Affected, Clause, ClauseEffect, Constraint, Continuous, KeywordAbility, ContEffect};
 use common::zones::Zone;
@@ -24,7 +24,6 @@ use rand::seq::SliceRandom;
 use rand::SeedableRng;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::cell::RefCell;
 use std::cmp::max;
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
@@ -75,6 +74,7 @@ pub struct Game {
     //if I choose to implement it
     #[serde(skip)]
     log: Arc<Mutex<Vec<LogEntry>>>,
+    pub panic_on_restore:bool,
 }
 
 fn get_carddb() -> &'static CardDB {
@@ -142,6 +142,10 @@ impl Game {
         self.backup = Some(Box::new(self.clone()));
     }
     pub fn restore(&mut self) {
+        if self.panic_on_restore{
+            dbg!(&*self.get_log());
+            panic!("restoring set to panic mode!");
+        }
         println!("restoring!");
         let mut b = None;
         std::mem::swap(&mut b, &mut self.backup);
@@ -657,11 +661,15 @@ impl Game {
     pub fn is_valid_target(
         &self,
         constraints: &Vec<Constraint>,
-        source: CardId,
+        stack_ent: CardId,
         target: TargetId,
         _zone: Zone,
     ) -> bool {
-        let source = self.stack_ent_source(source);
+        //Spells and abilities can't target themselves
+        if TargetId::from(stack_ent)==target {
+            return false;
+        }
+        let source = self.stack_ent_source(stack_ent);
         if !constraints
             .iter()
             .all(|x| self.passes_constraint(x, source, target))
@@ -676,7 +684,9 @@ impl Game {
     //The spell has already been moved to the stack for this operation
     async fn handle_cast(&mut self, castopt: StackActionOption) -> Result<(), MTGError> {
         println!("Handling cast {:?}", castopt);
+        self.log_perm_entry(castopt.stack_ent, LogPermEntry::Cast(castopt.clone()));
         if !castopt.filter.check() {
+            self.log_perm_entry(castopt.stack_ent, LogPermEntry::CastFailedFromRestriction);
             return Err(MTGError::CantCast);
         }
         self.send_state().await;
@@ -738,6 +748,7 @@ impl Game {
                     continue 'outer;
                 }
             }
+            self.log_perm_entry(action.stack_ent, LogPermEntry::ManaCostNotPaid);
             return Err(MTGError::CostNotPaid);
         }
         if let Some(player) = self.players.get_mut(player) {
