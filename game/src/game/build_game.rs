@@ -75,7 +75,7 @@ impl GameBuilder {
             rng: rand::rngs::StdRng::from_entropy(),
             cont_effects: Vec::new(),
             log: Arc::new(Mutex::new(Vec::new())),
-            panic_on_restore: false
+            panic_on_restore: false,
         })
     }
 }

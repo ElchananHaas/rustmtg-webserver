@@ -1,7 +1,7 @@
-use common::actions::Action;
 use crate::client_message::{Ask, AskPair, AskSelectN, ClientMessage, GameState};
 use crate::game::Cards;
 use anyhow::Result;
+use common::actions::Action;
 use common::counters::Counter;
 use common::entities::{CardId, ManaId, PlayerId, TargetId};
 use common::hashset_obj::HashSetObj;
@@ -266,11 +266,11 @@ impl TestClient {
                 } else {
                     ClientResponse::Indicies(mock_client.select_action(game, act))
                 }
-            },
+            }
             Ask::Target(ask) => {
                 let resp = mock_client.select_targets(game, ask);
                 ClientResponse::Indicies(resp)
-            },
+            }
             Ask::Attackers(attacks) => {
                 let resp = mock_client.select_attacks(game, attacks);
                 ClientResponse::AttaksOrBlocks(resp)
@@ -295,8 +295,7 @@ impl TestClient {
                     .expect("serialized to json correctly");
             }
             ClientResponse::AttaksOrBlocks(data) => {
-                data
-                    .serialize(&mut json_serial)
+                data.serialize(&mut json_serial)
                     .expect("serialized to json correctly");
             }
         };
@@ -321,10 +320,10 @@ pub enum ClientResponse {
 
 pub trait MockClient: Send + Sync {
     fn select_action(&mut self, _game: &GameState, ask: &AskSelectN<Action>) -> HashSetObj<usize> {
-        if ask.ents.len()==1 && ask.max==1{
+        if ask.ents.len() == 1 && ask.max == 1 {
             let mut res = HashSetObj::new();
             res.insert(0);
-            return res
+            return res;
         }
         println!("query");
         dbg!(ask);
@@ -335,10 +334,10 @@ pub trait MockClient: Send + Sync {
         _game: &GameState,
         ask: &AskSelectN<TargetId>,
     ) -> HashSetObj<usize> {
-        if ask.ents.len()==1 && ask.max==1{
+        if ask.ents.len() == 1 && ask.max == 1 {
             let mut res = HashSetObj::new();
             res.insert(0);
-            return res
+            return res;
         }
         println!("query");
         dbg!(ask);

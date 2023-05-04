@@ -97,7 +97,6 @@ impl Game {
                     self.blocked_by(&mut events, attacker, blocker).await;
                 }
                 Event::Blocked { attacker: _ } => {}
-                Event::AttackUnblocked { attacker: _ } => {}
                 Event::Discard {
                     player: _,
                     cards,

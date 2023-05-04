@@ -1,6 +1,7 @@
 #![feature(min_specialization)]
 
 pub mod ability;
+pub mod actions;
 pub mod card_entities;
 pub mod cardtypes;
 pub mod cost;
@@ -12,6 +13,5 @@ pub mod mana;
 pub mod spellabil;
 pub mod token_attribute;
 pub mod zones;
-pub mod actions;
 #[cfg(test)]
 mod tests {}

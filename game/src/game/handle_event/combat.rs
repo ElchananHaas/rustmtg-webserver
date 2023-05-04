@@ -5,7 +5,7 @@ use crate::{
     event::{DamageReason, Event, EventResult},
     game::{Game, Subphase},
 };
-use common::spellabil::{KeywordAbility, ContEffect};
+use common::spellabil::{ContEffect, KeywordAbility};
 use common::{
     entities::{CardId, PlayerId, TargetId},
     hashset_obj::HashSetObj,
@@ -20,7 +20,7 @@ impl Game {
 
     pub async fn attackers(&mut self, _results: &mut Vec<EventResult>, events: &mut Vec<Event>) {
         self.backup();
-        let cant_attack=self.cant_attack();
+        let cant_attack = self.cant_attack();
         //Only allow creatures that have haste or don't have summoning sickness to attack
         let legal_attackers = self
             .players_creatures(self.active_player)
@@ -104,9 +104,13 @@ impl Game {
                         .is(creature, |card| card.attacking == Some(opponent.into()))
                 })
                 .collect::<Vec<_>>();
+            let cant_block = self.cant_block();
             let legal_blockers = self
                 .players_creatures(opponent)
-                .filter(|&creature| self.cards.is(creature, |card| !card.tapped))
+                .filter(|creature| {
+                    self.cards.is(*creature, |card| !card.tapped)
+                        && (!cant_block.contains(creature))
+                })
                 .collect::<Vec<_>>();
             loop {
                 //This will be adjusted for creatures that can make multiple blocks
@@ -157,12 +161,6 @@ impl Game {
                 }
                 break;
             }
-        }
-        for attacker in self
-            .all_creatures()
-            .filter(|&creature| self.cards.is(creature, |card| card.attacking.is_some()))
-        {
-            Game::add_event(events, Event::AttackUnblocked { attacker });
         }
         self.cycle_priority().await;
         println!("exiting blockers");
@@ -286,29 +284,31 @@ impl Game {
             }
         }
     }
-    fn cant_attack(&self) -> HashSet<CardId>{
-        let mut res=HashSet::new();
-        let conts=self.cont_abilities();
-        for cont in conts{
-            match &cont.effect{
-                ContEffect::CantAttackOrBlock=>{
-                    for affected in self.calculate_affected(cont.source, &cont.affected, &cont.constraints){
-                        if let TargetId::Card(c)=affected{
+    fn cant_attack(&self) -> HashSet<CardId> {
+        let mut res = HashSet::new();
+        let conts = self.cont_abilities();
+        for cont in conts {
+            match &cont.effect {
+                ContEffect::CantAttackOrBlock => {
+                    for affected in
+                        self.calculate_affected(cont.source, &cont.affected, &cont.constraints)
+                    {
+                        if let TargetId::Card(c) = affected {
                             res.insert(c);
                         }
                     }
                 }
-                _=>{}
+                _ => {}
             }
         }
         res
     }
     //Checks if this attacking arragment is legal.
     fn attackers_legal(&self, attacks: &HashMap<CardId, TargetId>) -> bool {
-        let cant_attack=self.cant_attack();
-        for attack in attacks{
-            if cant_attack.contains(attack.0){
-                return false
+        let cant_attack = self.cant_attack();
+        for attack in attacks {
+            if cant_attack.contains(attack.0) {
+                return false;
             }
         }
         true
@@ -327,6 +327,25 @@ impl Game {
         }
         true
     }
+    fn cant_block(&self) -> HashSet<CardId> {
+        let mut res = HashSet::new();
+        let conts = self.cont_abilities();
+        for cont in conts {
+            match &cont.effect {
+                ContEffect::CantAttackOrBlock => {
+                    for affected in
+                        self.calculate_affected(cont.source, &cont.affected, &cont.constraints)
+                    {
+                        if let TargetId::Card(c) = affected {
+                            res.insert(c);
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        res
+    }
     fn blocks_legal(&self, blocks: &HashMap<CardId, HashSetObj<CardId>>) -> bool {
         for (&blocker, attackers) in blocks {
             for &attacker in attackers {
@@ -335,18 +354,10 @@ impl Game {
                 }
             }
         }
-        let conts=self.cont_abilities();
-        for cont in conts{
-            match &cont.effect{
-                ContEffect::CantAttackOrBlock=>{
-                    for affected in self.calculate_affected(cont.source, &cont.affected, &cont.constraints){
-                        if let TargetId::Card(c)=affected
-                        && blocks.get(&c).is_some(){
-                            return false;
-                        }
-                    }
-                }
-                _=>{}
+        let cant_block = self.cant_attack();
+        for block in blocks {
+            if cant_block.contains(block.0) {
+                return false;
             }
         }
         true

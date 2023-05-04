@@ -1,4 +1,3 @@
-use common::actions::{Action, ActionFilter, CastingOption, StackActionOption};
 use crate::client_message::{Ask, AskSelectN};
 use crate::ent_maps::EntMap;
 use crate::errors::MTGError;
@@ -9,6 +8,7 @@ use anyhow::{bail, Result};
 use async_recursion::async_recursion;
 use carddb::carddb::CardDB;
 use common::ability::{Ability, StaticAbilityEffect};
+use common::actions::{Action, ActionFilter, CastingOption, StackActionOption};
 use common::card_entities::{CardEnt, EntType};
 use common::cardtypes::Subtype;
 use common::cost::{Cost, PaidCost};
@@ -16,7 +16,9 @@ use common::entities::{CardId, ManaId, PlayerId, TargetId, MIN_CARDID};
 use common::hashset_obj::HashSetObj;
 use common::log::{LogEntry, LogPermEntry};
 use common::mana::{Color, Mana, ManaCostSymbol};
-use common::spellabil::{Affected, Clause, ClauseEffect, Constraint, Continuous, KeywordAbility, ContEffect};
+use common::spellabil::{
+    Affected, Clause, ClauseEffect, Constraint, ContEffect, Continuous, KeywordAbility,
+};
 use common::zones::Zone;
 use enum_map::EnumMap;
 use futures::future;
@@ -74,7 +76,7 @@ pub struct Game {
     //if I choose to implement it
     #[serde(skip)]
     log: Arc<Mutex<Vec<LogEntry>>>,
-    pub panic_on_restore:bool,
+    pub panic_on_restore: bool,
 }
 
 fn get_carddb() -> &'static CardDB {
@@ -142,7 +144,7 @@ impl Game {
         self.backup = Some(Box::new(self.clone()));
     }
     pub fn restore(&mut self) {
-        if self.panic_on_restore{
+        if self.panic_on_restore {
             dbg!(&*self.get_log());
             panic!("restoring set to panic mode!");
         }
@@ -666,7 +668,7 @@ impl Game {
         _zone: Zone,
     ) -> bool {
         //Spells and abilities can't target themselves
-        if TargetId::from(stack_ent)==target {
+        if TargetId::from(stack_ent) == target {
             return false;
         }
         let source = self.stack_ent_source(stack_ent);
@@ -822,7 +824,7 @@ impl Game {
             false
         }
     }
-    fn effect_is_mana_abil(&self,cost:&Vec<Cost>,effect:&Vec<Clause>)->bool{
+    fn effect_is_mana_abil(&self, cost: &Vec<Cost>, effect: &Vec<Clause>) -> bool {
         //TODO Check for loyalty abilities when implemented
         let mut mana_abil = false;
         for clause in effect {
@@ -834,12 +836,11 @@ impl Game {
                     return false;
                 }
             }
-            match &clause.affected{
-                Affected::Target(_)|
-                Affected::UpToXTarget(_,_)=>{
+            match &clause.affected {
+                Affected::Target(_) | Affected::UpToXTarget(_, _) => {
                     return false;
                 }
-                _=>{}
+                _ => {}
             }
         }
         mana_abil
@@ -949,14 +950,12 @@ impl Game {
     }
 }
 
-
 struct ContAbilContext {
     pub effect: ContEffect,
     pub affected: Affected,
     pub constraints: Vec<Constraint>,
     pub source: CardId,
 }
-
 
 pub enum ActionPriorityType {
     Pass,

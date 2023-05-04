@@ -1,4 +1,4 @@
-use crate::{entities::CardId, actions::StackActionOption};
+use crate::{actions::StackActionOption, entities::CardId};
 
 #[derive(Clone, Debug)]
 pub enum LogEntry {

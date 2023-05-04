@@ -43,9 +43,6 @@ pub enum Event {
         attacker: CardId,
         blocker: CardId,
     },
-    AttackUnblocked {
-        attacker: CardId,
-    },
     Cast {
         player: PlayerId,
         spell: CardId,
