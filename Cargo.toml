@@ -6,4 +6,6 @@ members=[
     "texttoken",
     "carddb",
     "game",
+    "mtg_log_macro",
+    "mtg_log",
 ]

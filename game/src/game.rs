@@ -824,8 +824,10 @@ impl Game {
             false
         }
     }
-    fn effect_is_mana_abil(&self, cost: &Vec<Cost>, effect: &Vec<Clause>) -> bool {
-        //TODO Check for loyalty abilities when implemented
+    fn effect_is_mana_abil(&self, costs: &Vec<Cost>, effect: &Vec<Clause>) -> bool {
+        for _cost in costs{
+                    //TODO Check for loyalty abilities when implemented
+        }
         let mut mana_abil = false;
         for clause in effect {
             match &clause.effect {
