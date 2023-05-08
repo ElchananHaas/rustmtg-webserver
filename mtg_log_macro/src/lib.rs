@@ -1,5 +1,5 @@
 use quote;
-use syn::{parse_macro_input,DeriveInput,Data,Fields,Type, FieldsNamed, spanned::Spanned, FieldsUnnamed};
+use syn::{parse_macro_input,DeriveInput,Data,Fields,Type, FieldsNamed, spanned::Spanned, FieldsUnnamed, DataEnum, DataStruct, Field};
 
 use proc_macro2::TokenStream;
 
@@ -8,34 +8,39 @@ pub fn derive_mtg_log(input: proc_macro::TokenStream) -> proc_macro::TokenStream
     // Parse the string representation
     let ast = parse_macro_input!(input as DeriveInput);
     let name=quote::format_ident!("Log{}", ast.ident);
-    // Build the impl
-    let new_struct_contents = log_struct(&ast.data);
     let generics: syn::Generics=ast.generics;
-    let res=quote::quote!{
-        struct #name #generics #new_struct_contents 
-    };
-    //panic!("{:?}",res);
-    res.into()
-}
-
-fn log_struct(data: &Data) -> TokenStream{
-    let data=data.clone();
-    match data{
+    // Build the impl
+    let new_struct_contents = match ast.data.clone(){
         Data::Struct(data) => {
-            match data.fields {
-                Fields::Named(fields)=>{
-                    modify_fields_named(fields)
-                }
-                Fields::Unnamed(fields)=>{
-                    modify_fields_unnamed(fields)
-                }
-                Fields::Unit => { 
-                    let field=Fields::Unit;
-                    quote::quote!( #field ;)
-                }
+            let fields = modify_fields(data.fields);
+            quote::quote!{
+                struct #name #generics #fields ;
+            }
+        },
+        Data::Enum(data) => {
+            let fields=modify_fields_enum(data);
+            quote::quote!{
+                enum #name #generics #fields ;
             }
         }
         _=> todo!("This data type isn't implemented yet")
+    };
+    //panic!("{:?}",res);
+    new_struct_contents.into()
+}
+
+fn modify_fields(fields:Fields) -> TokenStream{
+    match fields {
+        Fields::Named(fields)=>{
+            modify_fields_named(fields)
+        }
+        Fields::Unnamed(fields)=>{
+            modify_fields_unnamed(fields)
+        }
+        Fields::Unit => { 
+            let field=Fields::Unit;
+            quote::quote!( #field )
+        }
     }
 }
 fn modify_fields_named(mut fields: FieldsNamed) -> TokenStream{
@@ -54,5 +59,17 @@ fn modify_fields_unnamed(mut fields: FieldsUnnamed) -> TokenStream{
             <#ty as MTGLog>::LogType
         });
     }
-    quote::quote!( #fields ;)
+    quote::quote!( #fields )
+}
+fn modify_fields_enum(fields: DataEnum) -> TokenStream{
+    let mut variants = Vec::new();
+    for field in fields.variants{
+        let ident=field.ident;
+        let fields=modify_fields(field.fields);
+        variants.push(quote::quote!(
+            #ident #fields
+        ))
+    }
+    let res=quote::quote!(  { #( #variants , )* } );
+    res
 }
