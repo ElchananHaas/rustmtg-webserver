@@ -10,7 +10,7 @@ struct Test{
 struct Unnamed(usize);
 
 #[derive(MTGLoggable)]
-enum Simple{
+pub enum Simple{
     Apple,
     Orange(i32)
 }
