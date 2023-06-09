@@ -1,5 +1,4 @@
 use crate::client_message::{Ask, AskSelectN};
-use crate::ent_maps::EntMap;
 use crate::errors::MTGError;
 use crate::event::{Event, EventResult};
 use crate::player::{Player, PlayerCon};
@@ -7,6 +6,7 @@ use crate::CARDDB;
 use anyhow::{bail, Result};
 use async_recursion::async_recursion;
 use carddb::carddb::CardDB;
+use common::ent_maps::EntMap;
 use common::ability::{Ability, StaticAbilityEffect};
 use common::actions::{Action, ActionFilter, CastingOption, StackActionOption};
 use common::card_entities::{CardEnt, EntType};

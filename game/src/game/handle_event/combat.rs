@@ -217,11 +217,11 @@ impl Game {
         self.players_creatures(player)
             .filter(move |&ent| {
                 if subphase == Subphase::FirstStrikeDamage {
-                    self.cards.has_keyword(ent, KeywordAbility::FirstStrike)
-                        || self.cards.has_keyword(ent, KeywordAbility::DoubleStrike)
+                    self.has_keyword(ent, KeywordAbility::FirstStrike)
+                        || self.has_keyword(ent, KeywordAbility::DoubleStrike)
                 } else if subphase == Subphase::Damage {
-                    self.cards.has_keyword(ent, KeywordAbility::DoubleStrike)
-                        || !self.cards.is(ent, |card| card.already_dealt_damage)
+                    self.has_keyword(ent, KeywordAbility::DoubleStrike)
+                        || !self.cards.get(ent).is_some_and(|card| card.already_dealt_damage)
                 } else {
                     panic!("This function may only be called within the damage phases")
                 }

@@ -6,7 +6,6 @@
 use carddb::carddb::CardDB;
 use once_cell::sync::OnceCell;
 pub mod client_message;
-pub mod ent_maps;
 pub mod errors;
 pub mod event;
 pub mod game;
