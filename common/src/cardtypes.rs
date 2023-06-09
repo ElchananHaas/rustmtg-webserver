@@ -7,6 +7,8 @@ use std::hash::Hash;
 use std::str::FromStr;
 use strum_macros::EnumString;
 use texttoken::Tokens;
+use mtg_log_macro::MTGLoggable;
+use crate::log::{MTGLog,GameContext};
 
 use crate::hashset_obj::HashSetObj;
 
@@ -77,7 +79,7 @@ impl HashSetObj<Type> {
     }
 }
 #[derive(
-    Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize, Deserialize, JsonSchema, EnumString,
+    Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize, Deserialize, JsonSchema, EnumString, MTGLoggable
 )]
 #[strum(serialize_all = "lowercase")]
 pub enum Type {
@@ -90,7 +92,7 @@ pub enum Type {
     Sorcery,
 }
 #[derive(
-    Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize, Deserialize, JsonSchema, EnumString,
+    Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize, Deserialize, JsonSchema, EnumString, MTGLoggable
 )]
 #[strum(serialize_all = "lowercase")]
 pub enum Supertype {
@@ -100,7 +102,7 @@ pub enum Supertype {
     Snow,
 }
 #[derive(
-    Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize, Deserialize, JsonSchema, EnumString,
+    Clone, Copy, PartialEq, Eq, Debug, Hash, Serialize, Deserialize, JsonSchema, EnumString, MTGLoggable
 )]
 #[strum(serialize_all = "lowercase")]
 pub enum Subtype {

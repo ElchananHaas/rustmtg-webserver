@@ -3,6 +3,8 @@ use std::num::NonZeroU64;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde::{Deserializer, Serializer};
+use mtg_log_macro::MTGLoggable;
+use crate::log::{MTGLog,GameContext};
 
 pub trait IdDeserializer {
     fn custom_from(x: NonZeroU64) -> Self;
@@ -43,7 +45,7 @@ pub struct CardId(NonZeroU64); //a reference to a card, spell token or permanent
     Copy, Clone, PartialEq, Eq, Debug, Hash, Serialize, Deserialize, JsonSchema, PartialOrd, Ord,
 )]
 pub struct ManaId(NonZeroU64);
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash, MTGLoggable)]
 pub enum TargetId {
     Player(PlayerId),
     Card(CardId),

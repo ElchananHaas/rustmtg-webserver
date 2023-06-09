@@ -3,12 +3,10 @@ use crate::mana::ManaCostSymbol;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_derive::Serialize;
+use mtg_log_macro::MTGLoggable;
+use crate::log::{MTGLog,GameContext};
 
-/*
-!!!!!!!!!TODO
-Allow the game to interactively ask for costs to be paid
-*/
-#[derive(Clone, Copy, Debug, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, JsonSchema, PartialEq, Eq, MTGLoggable)]
 pub enum Cost {
     Mana(ManaCostSymbol),
     Selftap,

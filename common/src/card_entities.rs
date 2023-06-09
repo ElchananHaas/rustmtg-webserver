@@ -18,7 +18,10 @@ use crate::{
     entities::{CardId, PlayerId, TargetId},
     spellabil::KeywordAbility,
 };
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema, Debug)]
+
+use mtg_log_macro::MTGLoggable;
+use crate::log::{MTGLog,GameContext};
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema, Debug, MTGLoggable)]
 pub enum EntType {
     RealCard,
     TokenCard,
@@ -86,7 +89,7 @@ impl CardEnt {
         self.controller = controller;
     }
 }
-#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema, PartialEq, MTGLoggable)]
 pub struct PT {
     pub power: i64,
     pub toughness: i64,

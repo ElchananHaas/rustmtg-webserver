@@ -3,9 +3,11 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_derive::Serialize;
 use strum::EnumString;
+use mtg_log_macro::MTGLoggable;
+use crate::log::{MTGLog,GameContext};
 
 #[derive(
-    Clone, Copy, Debug, PartialEq, Serialize, Deserialize, Enum, JsonSchema, EnumString, Eq, Hash,
+    Clone, Copy, Debug, PartialEq, Serialize, Deserialize, Enum, JsonSchema, EnumString, Eq, Hash, MTGLoggable
 )]
 #[strum(serialize_all = "lowercase")]
 pub enum Color {
@@ -16,7 +18,7 @@ pub enum Color {
     Green,
     Colorless,
 }
-#[derive(Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema, )]
 pub struct Mana {
     pub color: Color,
     pub restriction: Option<ManaRestriction>,
@@ -38,7 +40,7 @@ impl Mana {
 //because we want to sort generic mana to the bottom for
 //fulfilling with mana symbols last
 #[derive(
-    Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord, JsonSchema,
+    Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord, JsonSchema, MTGLoggable
 )]
 pub enum ManaCostSymbol {
     White,

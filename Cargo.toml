@@ -7,4 +7,5 @@ members=[
     "carddb",
     "game",
     "mtg_log_macro",
+    "proc_test"
 ]

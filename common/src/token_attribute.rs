@@ -1,5 +1,7 @@
+use mtg_log_macro::MTGLoggable;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use crate::log::{MTGLog,GameContext};
 
 use crate::{
     ability::Ability,
@@ -8,7 +10,7 @@ use crate::{
     mana::Color,
 };
 
-#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq, MTGLoggable)]
 pub enum TokenAttribute {
     PT(PT),
     HasColor(Color),

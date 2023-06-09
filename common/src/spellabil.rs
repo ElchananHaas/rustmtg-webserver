@@ -5,12 +5,14 @@ use crate::counters::Counter;
 use crate::entities::CardId;
 use crate::mana::ManaCostSymbol;
 use crate::{entities::TargetId, token_attribute::TokenAttribute};
+use mtg_log_macro::MTGLoggable;
+use crate::log::{MTGLog,GameContext};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_derive::Serialize;
 use strum_macros::EnumString;
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, JsonSchema, EnumString)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, JsonSchema, EnumString, MTGLoggable)]
 #[strum(serialize_all = "lowercase")]
 pub enum KeywordAbility {
     FirstStrike,  //Implemented
@@ -27,7 +29,7 @@ pub enum KeywordAbility {
     Enchant,
 }
 
-#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq, MTGLoggable)]
 pub enum Constraint {
     IsTapped,
     CardType(Type),
@@ -46,13 +48,13 @@ pub enum Constraint {
     Other,
 }
 
-#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq, MTGLoggable)]
 pub struct Clause {
     pub effect: ClauseEffect,
     pub affected: Affected,
     pub constraints: Vec<Constraint>,
 }
-#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq, MTGLoggable)]
 pub enum Affected {
     Controller,
     Cardname,
@@ -62,12 +64,12 @@ pub enum Affected {
     UpToXTarget(i64, Vec<TargetId>),
     EquippedOrEnchanted,
 }
-#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq, Eq)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq, Eq, MTGLoggable)]
 pub enum ContDuration {
     Perpetual,
     EndOfTurn,
 }
-#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq, MTGLoggable)]
 pub struct Continuous {
     pub effect: ContEffect,
     pub affected: Affected,
@@ -76,7 +78,7 @@ pub struct Continuous {
     pub source: CardId,
 }
 
-#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq, MTGLoggable)]
 pub enum ContEffect {
     ModifyPT(PT),
     HasAbility(Box<Ability>),
@@ -85,11 +87,11 @@ pub enum ContEffect {
     CantActivateNonManaAbil,
 }
 
-#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq, MTGLoggable)]
 pub enum NumberComputer {
     NumPermanents(Vec<Constraint>),
 }
-#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq, MTGLoggable)]
 pub enum ClauseEffect {
     Destroy,
     Exile,
