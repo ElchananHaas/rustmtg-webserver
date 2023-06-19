@@ -1,7 +1,7 @@
-use crate::{actions::StackActionOption, entities::{CardId, PlayerId}, ent_maps::EntMap, card_entities::CardEnt};
+use crate::{ entities::{CardId, PlayerId}, ent_maps::EntMap, card_entities::CardEnt};
 
 pub struct GameContext<'a>{
-    cards: &'a EntMap<CardId,CardEnt>,
+    pub cards: &'a EntMap<CardId,CardEnt>,
 }
 
 pub trait MTGLog{
@@ -9,6 +9,7 @@ pub trait MTGLog{
     fn mtg_log(&self, game_context: &GameContext) -> Self::LogType;
 }
 #[allow(dead_code)] //Not dead, used for logging
+#[derive(Clone,Debug)]
 pub struct CardIdContext{
     card_id: CardId,
     name: Option<String>,
@@ -65,23 +66,4 @@ impl MTGLog for PlayerId{
     fn mtg_log(&self, _game_context: &GameContext) -> Self::LogType{
         *self
     }
-}
-#[derive(Clone, Debug)]
-pub enum LogEntry {
-    PermEntry {
-        id: CardId,
-        name: String,
-        event: LogPermEntry,
-    },
-}
-
-#[derive(Clone, Debug)]
-pub enum LogPermEntry {
-    DiesFromZeroOrLessToughness,
-    DestroyFromDamage,
-    DetachedEnchantmentDies,
-    EnchantmentFallsOff,
-    CastFailedFromRestriction,
-    ManaCostNotPaid,
-    Cast(StackActionOption),
 }

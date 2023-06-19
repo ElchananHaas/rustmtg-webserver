@@ -1,6 +1,6 @@
-use common::{counters::Counter, log::LogPermEntry, spellabil::ContEffect};
+use common::{counters::Counter, spellabil::ContEffect};
 
-use crate::game::*;
+use crate::{game::*, log::Entry};
 
 impl Game {
     //Computes layers, state based actions and places abilities on the stack
@@ -16,10 +16,10 @@ impl Game {
                 if let Some(pt) = &card.pt {
                     if pt.toughness <= 0 {
                         to_die.push(cardid);
-                        self.log_perm_entry(cardid, LogPermEntry::DiesFromZeroOrLessToughness);
+                        self.log(Entry::DiesFromZeroOrLessToughness(cardid));
                     } else if card.damaged >= pt.toughness {
                         to_destroy.push(cardid);
-                        self.log_perm_entry(cardid, LogPermEntry::DestroyFromDamage);
+                        self.log(Entry::DestroyFromDamage(cardid));
                     }
                 }
                 for abil in &card.abilities {
@@ -28,11 +28,11 @@ impl Game {
                         if let Some(enchanting)=card.enchanting_or_equipping{
                             if !constraints.into_iter().all(|c|self.passes_constraint(c, cardid, enchanting)){
                                 to_die.push(cardid);
-                                self.log_perm_entry(cardid, LogPermEntry::EnchantmentFallsOff);
+                                self.log(Entry::EnchantmentFallsOff(cardid));
                             }
                         } else{
                             to_die.push(cardid);
-                            self.log_perm_entry(cardid, LogPermEntry::DetachedEnchantmentDies);
+                            self.log(Entry::DetachedEnchantmentDies(cardid));
                         }
                     }
                 }

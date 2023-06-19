@@ -6,33 +6,6 @@ use serde::{Deserializer, Serializer};
 use mtg_log_macro::MTGLoggable;
 use crate::log::{MTGLog,GameContext};
 
-pub trait IdDeserializer {
-    fn custom_from(x: NonZeroU64) -> Self;
-}
-impl IdDeserializer for PlayerId {
-    fn custom_from(x: NonZeroU64) -> Self {
-        Self(x)
-    }
-}
-impl IdDeserializer for CardId {
-    fn custom_from(x: NonZeroU64) -> Self {
-        Self(x)
-    }
-}
-impl IdDeserializer for ManaId {
-    fn custom_from(x: NonZeroU64) -> Self {
-        Self(x)
-    }
-}
-impl IdDeserializer for TargetId {
-    fn custom_from(x: NonZeroU64) -> Self {
-        if x.get() < MIN_CARDID {
-            Self::Player(PlayerId::from(x))
-        } else {
-            Self::Card(CardId::from(x))
-        }
-    }
-}
 #[derive(
     Copy, Clone, PartialEq, Eq, Debug, Hash, Serialize, Deserialize, JsonSchema, PartialOrd, Ord,
 )]

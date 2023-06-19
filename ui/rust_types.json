@@ -65,6 +65,18 @@
             }
           },
           "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "Replacement"
+          ],
+          "properties": {
+            "Replacement": {
+              "$ref": "#/definitions/ReplacementAbility"
+            }
+          },
+          "additionalProperties": false
         }
       ]
     },
@@ -210,7 +222,8 @@
           "enum": [
             "Controller",
             "Cardname",
-            "All"
+            "All",
+            "EquippedOrEnchanted"
           ]
         },
         {
@@ -239,14 +252,10 @@
           ],
           "properties": {
             "ManuallySet": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/TargetId"
-                },
-                {
-                  "type": "null"
-                }
-              ]
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/TargetId"
+              }
             }
           },
           "additionalProperties": false
@@ -502,6 +511,7 @@
         "already_dealt_damage",
         "blocked",
         "blocking",
+        "cast",
         "colors",
         "costs",
         "counters",
@@ -555,6 +565,9 @@
             "$ref": "#/definitions/CardId"
           }
         },
+        "cast": {
+          "type": "boolean"
+        },
         "colors": {
           "type": "object",
           "additionalProperties": {
@@ -592,6 +605,16 @@
           "items": {
             "$ref": "#/definitions/Clause"
           }
+        },
+        "enchanting_or_equipping": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TargetId"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "ent_type": {
           "$ref": "#/definitions/EntType"
@@ -732,7 +755,7 @@
           "type": "string",
           "enum": [
             "Destroy",
-            "ExileBattlefield",
+            "Exile",
             "DrawCard",
             "Tap"
           ]
@@ -886,6 +909,9 @@
             "IsCardname",
             "YouControl",
             "Multicolored",
+            "NonToken",
+            "NotCast",
+            "Permanent",
             "Other"
           ]
         },
@@ -1005,6 +1031,13 @@
     "ContEffect": {
       "oneOf": [
         {
+          "type": "string",
+          "enum": [
+            "CantAttackOrBlock",
+            "CantActivateNonManaAbil"
+          ]
+        },
+        {
           "type": "object",
           "required": [
             "ModifyPT"
@@ -1012,6 +1045,33 @@
           "properties": {
             "ModifyPT": {
               "$ref": "#/definitions/PT"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "HasAbility"
+          ],
+          "properties": {
+            "HasAbility": {
+              "$ref": "#/definitions/Ability"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "AddSubtype"
+          ],
+          "properties": {
+            "AddSubtype": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Subtype"
+              }
             }
           },
           "additionalProperties": false
@@ -1077,25 +1137,7 @@
       ]
     },
     "EntMap_for_ManaId_and_Mana": {
-      "type": "object",
-      "required": [
-        "count",
-        "ents"
-      ],
-      "properties": {
-        "count": {
-          "writeOnly": true,
-          "type": "integer",
-          "format": "uint64",
-          "minimum": 1.0
-        },
-        "ents": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/Mana"
-          }
-        }
-      }
+      "type": "object"
     },
     "EntType": {
       "type": "string",
@@ -1143,6 +1185,7 @@
         "lands_played_this_turn",
         "mana",
         "outcome",
+        "panic_on_restore",
         "phases",
         "player",
         "players",
@@ -1206,6 +1249,9 @@
         },
         "outcome": {
           "$ref": "#/definitions/GameOutcome"
+        },
+        "panic_on_restore": {
+          "type": "boolean"
         },
         "phase": {
           "anyOf": [
@@ -1277,7 +1323,9 @@
         "Lifelink",
         "Trample",
         "Reach",
-        "Protection"
+        "Protection",
+        "Flash",
+        "Enchant"
       ]
     },
     "Mana": {
@@ -1424,6 +1472,62 @@
         }
       }
     },
+    "Replacement": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "ZoneMoveReplacement"
+          ],
+          "properties": {
+            "ZoneMoveReplacement": {
+              "type": "object",
+              "required": [
+                "constraints",
+                "new_effect",
+                "trigger"
+              ],
+              "properties": {
+                "constraints": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Constraint"
+                  }
+                },
+                "new_effect": {
+                  "$ref": "#/definitions/Clause"
+                },
+                "trigger": {
+                  "$ref": "#/definitions/ZoneMoveTrigger"
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "ReplacementAbility": {
+      "type": "object",
+      "required": [
+        "effect"
+      ],
+      "properties": {
+        "effect": {
+          "$ref": "#/definitions/Replacement"
+        },
+        "keyword": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/KeywordAbility"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
     "StaticAbility": {
       "type": "object",
       "required": [
@@ -1464,8 +1568,60 @@
             }
           },
           "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "Enchant"
+          ],
+          "properties": {
+            "Enchant": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Constraint"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "Cont"
+          ],
+          "properties": {
+            "Cont": {
+              "$ref": "#/definitions/StaticContEffect"
+            }
+          },
+          "additionalProperties": false
         }
       ]
+    },
+    "StaticContEffect": {
+      "type": "object",
+      "required": [
+        "affected",
+        "constraints",
+        "effects"
+      ],
+      "properties": {
+        "affected": {
+          "$ref": "#/definitions/Affected"
+        },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Constraint"
+          }
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ContEffect"
+          }
+        }
+      }
     },
     "Subphase": {
       "type": "string",
@@ -1747,12 +1903,12 @@
         "Yeti",
         "Zombie",
         "Zubera",
-        "EndCreatureMarker",
         "Plains",
         "Island",
         "Swamp",
         "Mountain",
-        "Forest"
+        "Forest",
+        "Aura"
       ]
     },
     "TargetId": {

@@ -424,6 +424,7 @@ dependencies = [
  "futures",
  "futures-util",
  "log",
+ "mtg_log_macro",
  "nom",
  "once_cell",
  "rand",

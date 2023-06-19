@@ -1,5 +1,24 @@
 use mtg_log_macro::MTGLoggable;
+/* 
+pub struct GameContext{
+}
 
+pub trait MTGLog{
+    type LogType;
+    fn mtg_log(&self, game_context: &GameContext) -> Self::LogType;
+}
+impl MTGLog for i32{
+    type LogType = ();
+}
+impl MTGLog for u64{
+    type LogType = ();
+}
+impl MTGLog for usize{
+    type LogType = ();
+}
+impl<T> MTGLog for Option<T>{
+    type LogType = ();
+}
 #[derive(MTGLoggable)]
 struct Test{
     x:i32,
@@ -29,8 +48,26 @@ pub struct ZoneMoveTrigger {
     pub origin: Option<i32>,
     pub dest: Option<i32>,
 }
-#[derive(MTGLoggable)]
+//#[derive(MTGLoggable)]
 struct Unit;
+struct LogUnit;
+impl  Default for LogUnit {
+    fn default() -> Self {
+        LogUnit
+    }
+}
+impl ::core::fmt::Debug for LogUnit {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        ::core::fmt::Formatter::write_str(f, "LogUnit")
+    }
+}
+impl MTGLog for Unit {
+    type LogType = LogUnit;
+    fn mtg_log(&self, game_context: &GameContext) -> Self::LogType {
+        Self::LogType
+    }
+}
+*/
 #[cfg(test)]
 mod tests {
     use super::*;

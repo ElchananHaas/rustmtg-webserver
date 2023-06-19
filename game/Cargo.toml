@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 common = { path = "../common" }
 carddb = { path = "../carddb" }
+mtg_log_macro = { path = "../mtg_log_macro" }
 anyhow = "1.0.51"
 tokio = { version = "1", features = ["full"] }
 warp = "0.3.2"

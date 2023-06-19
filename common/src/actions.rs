@@ -1,4 +1,6 @@
+use mtg_log_macro::MTGLoggable;
 use schemars::JsonSchema;
+use crate::log::{MTGLog, GameContext};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -11,7 +13,7 @@ use crate::{
 //Checks to see if casting option's rules were followed
 //The zone it can be cast from will implicitly be enabled by
 //the code generating casting options
-#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema, MTGLoggable)]
 pub enum ActionFilter {
     None,
 }
@@ -36,7 +38,7 @@ pub struct CastingOption {
                                 //There is a bigger issue if a spell is caatable and the engine thinks it isn't
                                 //As opposed to the other way around.
 }
-#[derive(Clone, Serialize, Debug)]
+#[derive(Clone, Serialize, Debug, MTGLoggable)]
 pub struct StackActionOption {
     pub stack_ent: CardId,
     pub costs: Vec<Cost>,

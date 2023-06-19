@@ -1,5 +1,5 @@
 use quote::{self, format_ident};
-use syn::{parse_macro_input,DeriveInput,Data,Fields,Type, FieldsNamed, spanned::Spanned, FieldsUnnamed, DataEnum, token::{Token, Comma}, punctuated::Punctuated, Variant};
+use syn::{parse_macro_input,DeriveInput,Data,Fields,Type, FieldsNamed, spanned::Spanned, FieldsUnnamed, DataEnum, token::{Comma}, punctuated::Punctuated, Variant};
 
 use proc_macro2::{TokenStream, Ident};
 
@@ -21,10 +21,12 @@ pub fn derive_mtg_log(input: proc_macro::TokenStream) -> proc_macro::TokenStream
             let fields = modify_fields(data.fields);
             if needs_semicolon{
                 quote::quote!{
+                    #[derive(Debug)]
                     #vis struct #name #generics #fields ;
                 }
             } else {
                 quote::quote!{
+                    #[derive(Debug)]
                     #vis struct #name #generics #fields
                 }
             }
@@ -32,6 +34,7 @@ pub fn derive_mtg_log(input: proc_macro::TokenStream) -> proc_macro::TokenStream
         Data::Enum(data) => {
             let fields=modify_fields_enum(data);
             quote::quote!{
+                #[derive(Debug)]
                 #vis enum #name #generics #fields
             }
         }
@@ -79,7 +82,6 @@ fn impl_for_fields_inner(fields:Fields) -> TokenStream{
         Fields::Named(fields) => {
             impl_for_fields_named(fields)
         }
-        _=>unimplemented!()
     }
 }
 fn impl_for_fields_named(fields: FieldsNamed) -> TokenStream{
@@ -100,7 +102,7 @@ fn impl_for_fields_unnamed(fields: FieldsUnnamed) -> TokenStream{
     let mut new_code=Vec::new();
     for (i,field) in fields.unnamed.into_iter().enumerate(){
         new_code.push(quote::quote_spanned!{ field.ty.span()=>
-            MTGLog::mtg_log(&self.#i,game_context)
+            MTGLog::mtg_log(&self.#i ,game_context)
         })
     }
     quote::quote!(

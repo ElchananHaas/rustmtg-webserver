@@ -1,6 +1,7 @@
 use crate::client_message::{Ask, AskSelectN};
 use crate::errors::MTGError;
 use crate::event::{Event, EventResult};
+use crate::log::{LogEntry, Entry};
 use crate::player::{Player, PlayerCon};
 use crate::CARDDB;
 use anyhow::{bail, Result};
@@ -14,7 +15,7 @@ use common::cardtypes::Subtype;
 use common::cost::{Cost, PaidCost};
 use common::entities::{CardId, ManaId, PlayerId, TargetId, MIN_CARDID};
 use common::hashset_obj::HashSetObj;
-use common::log::{LogEntry, LogPermEntry};
+use common::log::{MTGLog, GameContext};
 use common::mana::{Color, Mana, ManaCostSymbol};
 use common::spellabil::{
     Affected, Clause, ClauseEffect, Constraint, ContEffect, Continuous, KeywordAbility,
@@ -35,7 +36,6 @@ mod compute_actions;
 mod event_generators;
 mod handle_event;
 mod layers_state_actions;
-pub mod log;
 mod resolve;
 mod serialize_game;
 
@@ -75,7 +75,7 @@ pub struct Game {
     rng: rand::rngs::StdRng, //Store the RNG to allow for deterministic replay
     //if I choose to implement it
     #[serde(skip)]
-    log: Arc<Mutex<Vec<LogEntry>>>,
+    game_log: Arc<Mutex<Vec<LogEntry>>>,
     pub panic_on_restore: bool,
 }
 
@@ -686,9 +686,9 @@ impl Game {
     //The spell has already been moved to the stack for this operation
     async fn handle_cast(&mut self, castopt: StackActionOption) -> Result<(), MTGError> {
         println!("Handling cast {:?}", castopt);
-        self.log_perm_entry(castopt.stack_ent, LogPermEntry::Cast(castopt.clone()));
+        self.log(Entry::Cast(castopt.clone()));
         if !castopt.filter.check() {
-            self.log_perm_entry(castopt.stack_ent, LogPermEntry::CastFailedFromRestriction);
+            self.log(Entry::CastFailedFromRestriction(castopt.stack_ent));
             return Err(MTGError::CantCast);
         }
         self.send_state().await;
@@ -750,7 +750,7 @@ impl Game {
                     continue 'outer;
                 }
             }
-            self.log_perm_entry(action.stack_ent, LogPermEntry::ManaCostNotPaid);
+            self.log(Entry::ManaCostNotPaid(action.stack_ent));
             return Err(MTGError::CostNotPaid);
         }
         if let Some(player) = self.players.get_mut(player) {
@@ -949,6 +949,15 @@ impl Game {
             }
         }
         res
+    }
+    pub fn log(&self, entry: Entry) {
+        let context=GameContext{
+            cards: &self.cards,
+        };
+        self.get_log().push(entry.mtg_log(&context));
+    }
+    pub fn get_log(&self) -> std::sync::MutexGuard<'_, Vec<LogEntry>> {
+        self.game_log.as_ref().lock().unwrap()
     }
 }
 
