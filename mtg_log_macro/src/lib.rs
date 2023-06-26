@@ -1,14 +1,17 @@
 use quote::{self, format_ident};
-use syn::{parse_macro_input,DeriveInput,Data,Fields,Type, FieldsNamed, spanned::Spanned, FieldsUnnamed, DataEnum, token::{Comma}, punctuated::Punctuated, Variant};
+use syn::{parse_macro_input,DeriveInput,Data,Fields,Type, FieldsNamed, spanned::Spanned, FieldsUnnamed, DataEnum, token::{Comma}, punctuated::Punctuated, Variant, DataStruct};
 
 use proc_macro2::{TokenStream, Ident};
 
+fn log_name(id: &Ident)->Ident{
+    quote::format_ident!("Log{}", id)
+}
 #[proc_macro_derive(MTGLoggable)]
 pub fn derive_mtg_log(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // Parse the string representation
     let ast = parse_macro_input!(input as DeriveInput);
     let pass_ast=ast.clone();
-    let name=quote::format_ident!("Log{}", ast.ident);
+    let name=log_name(&ast.ident);
     let vis=ast.vis;
     let generics: syn::Generics=ast.generics;
     // Build the impl
@@ -50,7 +53,7 @@ fn impl_mtglog(name: &Ident, ast:&DeriveInput) -> TokenStream{
     let orig_name=&ast.ident;
     let body=match ast.data.clone(){
         Data::Struct(data) => {
-            impl_for_fields(data.fields)
+            impl_for_fields(name,&data.fields)
         },
         Data::Enum(data)=>{
             impl_for_enum(data.variants)
@@ -67,12 +70,9 @@ fn impl_mtglog(name: &Ident, ast:&DeriveInput) -> TokenStream{
     }
 }
 
-fn impl_for_fields(fields:Fields) -> TokenStream{
-    let inner=impl_for_fields_inner(fields);
-    quote::quote!(Self::LogType #inner)
-}
-fn impl_for_fields_inner(fields:Fields) -> TokenStream{
-    match fields{
+
+fn impl_for_fields(name: &Ident, fields: &Fields) -> TokenStream{
+    let inner = match fields.clone(){
         Fields::Unit => {
             quote::quote!( )
         },
@@ -82,7 +82,10 @@ fn impl_for_fields_inner(fields:Fields) -> TokenStream{
         Fields::Named(fields) => {
             impl_for_fields_named(fields)
         }
-    }
+    };
+    quote::quote!(
+        #name #inner
+    )
 }
 fn impl_for_fields_named(fields: FieldsNamed) -> TokenStream{
     let mut new_code=Vec::new();
@@ -101,6 +104,7 @@ fn impl_for_fields_named(fields: FieldsNamed) -> TokenStream{
 fn impl_for_fields_unnamed(fields: FieldsUnnamed) -> TokenStream{
     let mut new_code=Vec::new();
     for (i,field) in fields.unnamed.into_iter().enumerate(){
+        let i= syn::Index::from(i);
         new_code.push(quote::quote_spanned!{ field.ty.span()=>
             MTGLog::mtg_log(&self.#i ,game_context)
         })
