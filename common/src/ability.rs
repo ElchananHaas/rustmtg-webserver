@@ -24,6 +24,7 @@ pub struct ZoneMoveTrigger {
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq, MTGLoggable)]
 pub enum AbilityTriggerType {
     ZoneMove(ZoneMoveTrigger),
+    Attacks,
 }
 #[derive(Clone, Serialize, Deserialize, JsonSchema, Debug, PartialEq, MTGLoggable)]
 pub struct AbilityTrigger {

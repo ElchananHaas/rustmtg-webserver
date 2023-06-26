@@ -201,10 +201,6 @@ impl Game {
                 } => {
                     //Similar to spell casting
                 }
-                //They have already been declared attackers by now,
-                //and being declared an attacker can't be replaced
-                //so this event is just for triggers
-                Event::Attack { attacks: _ } => {}
                 Event::Lose { player } => {
                     //TODO add in the logic to have the game terminate such as setting winners
                     todo!();
@@ -226,9 +222,11 @@ impl Game {
                     let (id,card)=self.cards.insert(new_card);
                     self.stack.push(id);
                     let controller=card.get_controller();
+                    self.log(Entry::TriggeredAbil(id));
                     self.send_state().await;
-                    let _=self.select_targets(controller, id).await;//Fix this later to see if there is a valid target assignment,
-                    //becuase if so the player must take it.
+                    let _=self.select_targets(controller, id).await;
+                    //TODO check if there is a valid target assignment,
+                    //because if so the player must take it.
                 }
             }
         }
@@ -348,6 +346,23 @@ impl Game {
                                 effect: abil.effect.clone(),
                             })
                         }
+                    }
+                }
+            },
+            AbilityTriggerType::Attacks => {
+                if let EventResult::Attacks(attackers) = event {
+                    let responsible=attackers.iter().filter(
+                        |&(attacker,attacked)|
+                        trigger.constraint.iter().all(|c|
+                            self.passes_constraint(c, *attacker,* attacked)
+                        )
+                    ).collect::<Vec<_>>();
+                    if responsible.len() > 0 {
+                        res.push(Event::TriggeredAbil {
+                            event: Box::new(event.clone()),
+                            source: source_id,
+                            effect: abil.effect.clone(),
+                        })
                     }
                 }
             }

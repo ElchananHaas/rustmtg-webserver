@@ -1,4 +1,4 @@
-use common::{entities::CardId, actions::StackActionOption};
+use common::{entities::CardId, actions::StackActionOption, spellabil::Clause};
 use mtg_log_macro::MTGLoggable;
 use common::log::{MTGLog, GameContext};
 #[derive(Debug, Clone, MTGLoggable)]
@@ -9,5 +9,8 @@ pub enum Entry{
     EnchantmentFallsOff(CardId),
     CastFailedFromRestriction(CardId),
     ManaCostNotPaid(CardId),
-    Cast(StackActionOption)
+    Cast(StackActionOption),
+    Resolve(CardId, Vec<Clause>),
+    Text(&'static str),
+    TriggeredAbil(CardId)
 }

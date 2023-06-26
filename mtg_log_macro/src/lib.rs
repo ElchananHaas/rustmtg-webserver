@@ -1,5 +1,5 @@
 use quote::{self, format_ident};
-use syn::{parse_macro_input,DeriveInput,Data,Fields,Type, FieldsNamed, spanned::Spanned, FieldsUnnamed, DataEnum, token::{Comma}, punctuated::Punctuated, Variant, DataStruct};
+use syn::{parse_macro_input,DeriveInput,Data,Fields,Type, FieldsNamed, spanned::Spanned, FieldsUnnamed, DataEnum, token::{Comma}, punctuated::Punctuated, Variant};
 
 use proc_macro2::{TokenStream, Ident};
 

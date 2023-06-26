@@ -18,7 +18,7 @@ impl Game {
             .collect::<HashSet<_>>()
     }
 
-    pub async fn attackers(&mut self, _results: &mut Vec<EventResult>, events: &mut Vec<Event>) {
+    pub async fn attackers(&mut self, results: &mut Vec<EventResult>, _events: &mut Vec<Event>) {
         self.backup();
         let cant_attack = self.cant_attack();
         //Only allow creatures that have haste or don't have summoning sickness to attack
@@ -83,7 +83,7 @@ impl Game {
                         card.attacking = Some(attacked);
                     }
                 }
-                events.push(Event::Attack { attacks });
+                results.push(EventResult::Attacks(attacks));
             } else {
                 self.subphases = vec![Subphase::EndCombat].into();
             }

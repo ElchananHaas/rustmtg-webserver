@@ -365,8 +365,20 @@ fn parse_death_trigger<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, AbilityTrigger
         },
     ))
 }
+
+fn parse_attacks_trigger<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, AbilityTrigger> {
+    let (tokens, constraint) = many1(parse_constraint)(tokens)?;
+    let (tokens, _) = tag(tokens!["attack"])(tokens)?;
+    Ok((
+        tokens,
+        AbilityTrigger {
+            trigger: AbilityTriggerType::Attacks,
+            constraint,
+        },
+    ))
+}
 fn parse_ability_trigger<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, AbilityTrigger> {
-    alt((parse_etb_trigger, parse_death_trigger))(tokens)
+    alt((parse_etb_trigger, parse_death_trigger, parse_attacks_trigger))(tokens)
 }
 fn parse_comma_if_clause<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Constraint> {
     let (tokens, _) = tag(tokens![",", "if"])(tokens)?;

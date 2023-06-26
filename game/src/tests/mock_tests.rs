@@ -288,6 +288,7 @@ async fn faiths_fetters_no_ench_test() -> Result<()> {
         subphase: Subphase::Attackers,
     })
     .await;
+    game.cycle_priority().await;
     Ok(())
 }
 
@@ -317,8 +318,51 @@ async fn faiths_fetters_attached_test() -> Result<()> {
         subphase: Subphase::Attackers,
     })
     .await;
+    game.cycle_priority().await;
     Ok(())
 }
+struct FalconerAdeptClient {
+}
+
+impl MockClient for FalconerAdeptClient {
+    fn select_attacks(
+        &mut self,
+        _game: &GameState,
+        ask: &crate::client_message::AskPair<TargetId>,
+    ) -> std::collections::HashMap<CardId, HashSetObj<TargetId>> {
+        let mut res = HashMap::new();
+        assert!(ask.pairs.len() == 1);
+        for (&card, pairing) in ask.pairs.iter() {
+            let mut attacking = HashSetObj::new();
+            attacking.insert(*(&pairing.items).into_iter().next().unwrap());
+            res.insert(card, attacking);
+        }
+        res
+    }
+}
+
+#[test_log::test(tokio::test)]
+async fn falconer_adept_test() -> Result<()> {
+    let (mut game, _hand) = hand_battlefield_setup(
+        vec![],
+        vec!["Falconer Adept"; 1],
+        Some(Box::new(FalconerAdeptClient{})),
+    )
+    .await?;
+    assert!(game.battlefield.len()==1);
+    game.cards.get_mut(*game.battlefield.iter().next().unwrap()).unwrap().etb_this_cycle=false;
+    game.phase = Some(Phase::Combat);
+    game.handle_event(Event::Subphase {
+        subphase: Subphase::Attackers,
+    })
+    .await;
+    game.cycle_priority().await;
+    let names=by_name(&game);
+    assert!(names.contains_key("Bird"));
+    assert!(game.battlefield.len()==2);
+    Ok(())
+}
+
 #[test_log::test(tokio::test)]
 async fn empty_test() -> Result<()> {
     let (mut game, _hand) = hand_battlefield_setup(vec![], vec![], None).await?;

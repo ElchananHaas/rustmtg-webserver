@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+#![allow(unused_variables)]
 use mtg_log_macro::MTGLoggable;
 
 pub struct GameContext{
@@ -53,7 +55,3 @@ pub struct ZoneMoveTrigger {
 #[derive(MTGLoggable)]
 struct Unit;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-}

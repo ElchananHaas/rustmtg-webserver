@@ -61,6 +61,12 @@ impl MTGLog for i64{
         *self
     }
 }
+impl MTGLog for &str{
+    type LogType = String;
+    fn mtg_log(&self, _game_context: &GameContext) -> Self::LogType{
+        self.to_string()
+    }
+}
 impl MTGLog for PlayerId{
     type LogType = PlayerId;
     fn mtg_log(&self, _game_context: &GameContext) -> Self::LogType{

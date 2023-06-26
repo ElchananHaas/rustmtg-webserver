@@ -165,7 +165,7 @@ impl Game {
         }
         for id in self.battlefield.clone() {
             if let Some(card) = self.cards.get_mut(id) {
-                if let Some(mut pt) = card.pt.as_mut() {
+                if let Some(pt) = card.pt.as_mut() {
                     for counter in &card.counters {
                         match counter {
                             Counter::Plus1Plus1 => {

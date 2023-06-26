@@ -17,4 +17,5 @@ pub enum TokenAttribute {
     Type(Type),
     Subtype(Subtype),
     Ability(Ability),
+    EntersTappedAndAttacking,
 }

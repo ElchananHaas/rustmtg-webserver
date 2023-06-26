@@ -43,6 +43,11 @@ fn parse_keyword_ability<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, TokenAttribu
     Err(nom_error(tokens, "failed to parse type"))
   }
 }
+
+fn parse_enters_tapped_and_attacking<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, TokenAttribute> {
+  let (tokens, _) = tag(tokens!["that's","tapped","and","attacking"])(tokens)?;
+  Ok((tokens,TokenAttribute::EntersTappedAndAttacking))
+}
 fn parse_token_attribute<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, TokenAttribute> {
     alt((
         parse_pt,
@@ -50,6 +55,7 @@ fn parse_token_attribute<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, TokenAttribu
         parse_type,
         parse_subtype,
         parse_keyword_ability,
+        parse_enters_tapped_and_attacking,
     ))(tokens)
 }
 pub fn parse_token_attributes<'a>(tokens: &'a Tokens) -> Res<&'a Tokens, Vec<TokenAttribute>> {

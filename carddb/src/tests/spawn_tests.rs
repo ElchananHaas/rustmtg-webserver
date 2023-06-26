@@ -83,8 +83,12 @@ fn dub() {
     test_card(db(), "Dub");
 }
 #[test_log::test]
-fn faithsfetters() {
+fn faiths_fetters() {
     test_card(db(), "Faith's Fetters");
+}
+#[test_log::test]
+fn falconer_adept() {
+    test_card(db(), "Falconer Adept");
 }
 #[allow(dead_code)]
 fn test_card(db: &CardDB, card_name: &'static str) -> CardEnt {

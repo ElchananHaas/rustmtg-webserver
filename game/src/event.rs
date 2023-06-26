@@ -47,9 +47,6 @@ pub enum Event {
         player: PlayerId,
         spell: CardId,
     },
-    Attack {
-        attacks: HashMap<CardId, TargetId>,
-    },
     Activate {
         controller: PlayerId,
         ability: CardId,
@@ -111,4 +108,5 @@ pub enum EventResult {
     MoveZones(Vec<MoveZonesResult>),
     Tap(CardId),
     Untap(CardId),
+    Attacks(HashMap<CardId, TargetId>),
 }

@@ -22,10 +22,12 @@ impl Game {
     pub async fn resolve(&mut self, id: CardId) {
         let effects;
         let types;
-        if let Some(ent) = self.cards.get_mut(id) {
+        if let Some(ent) = self.cards.get(id) {
             effects = ent.effect.clone();
             types = ent.types.clone();
+            self.log(Entry::Resolve(id, ent.effect.clone()));
         } else {
+            self.log(Entry::Text("Card to resolve didn't exist"));
             return;
         }
         for effect in effects {
@@ -225,6 +227,17 @@ impl Game {
                                 }
                                 TokenAttribute::Ability(abil) => {
                                     ent.abilities.push(abil);
+                                },
+                                TokenAttribute::EntersTappedAndAttacking => {
+                                    ent.tapped = true;
+                                    let valid_attacks=self.attack_targets(affected);
+                                    if valid_attacks.len() == 1{
+                                        ent.attacking = valid_attacks.iter().next().cloned();
+                                    }
+                                    if valid_attacks.len() > 1 {
+                                        todo!("Make tokens ETB attacking able to handle
+                                        multiple attack targets");
+                                    }
                                 }
                             }
                         }
